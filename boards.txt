@@ -140,3 +140,201 @@ nano33ble.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
 nano33ble.debug.server.openocd.scripts.1={programmer.transport_script}
 nano33ble.debug.server.openocd.scripts.2=target/nrf52.cfg
 nano33ble.debug.cortex-debug.custom.request=attach
+
+##############################################################################################################
+
+ek_ra8d1.name=EK_RA8D1
+ek_ra8d1.build.core=arduino
+ek_ra8d1.build.crossprefix=arm-zephyr-eabi-
+ek_ra8d1.build.compiler_path={runtime.tools.arm-zephyr-eabi-0.16.8.path}/bin/
+
+ek_ra8d1.menu.debug.false=Standard
+ek_ra8d1.menu.debug.true=Debug
+
+ek_ra8d1.menu.debug.false.post_build_arg=
+ek_ra8d1.menu.debug.true.post_build_arg=debug
+
+ek_ra8d1.build.variant=ek_ra8d1
+ek_ra8d1.build.mcu=cortex-m85+nomve
+ek_ra8d1.build.fpu=-mfpu=fpv5-d16
+ek_ra8d1.build.architecture=cortex-m85+nomve
+ek_ra8d1.compiler.zephyr.arch.define=
+
+ek_ra8d1.build.board={build.variant}
+
+ek_ra8d1.build.float-abi=-mfloat-abi=hard
+ek_ra8d1.build.extra_flags=
+ek_ra8d1.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
+ek_ra8d1.build.architecture=cortex-m85+nomve
+ek_ra8d1.build.board=ek_ra8d1
+ek_ra8d1.build.extra_ldflags=
+ek_ra8d1.compiler.zephyr.arch.define=
+ek_ra8d1.compiler.zephyr.defines=-DLL_EXTENSION_BUILD -DCONFIG_ARDUINO_API_SERIAL_BUFFER_SIZE=256 -DHSE_VALUE=16000000 -DKERNEL -DK_HEAP_MEM_POOL_SIZE=16384 -DPICOLIBC_LONG_LONG_PRINTF_SCANF -DSTM32H747xx -DUSE_FULL_LL_DRIVER -DUSE_HAL_DRIVER -D__LINUX_ERRNO_EXTENSIONS__ -D__PROGRAM_START -D__ZEPHYR__=1  -imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h -imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h
+ek_ra8d1.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit
+#ek_ra8d1.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -msingle-pic-base -mpic-register=r9 -mno-pic-data-is-text-relative -fPIC -mlong-calls
+ek_ra8d1.compiler.zephyr.cflags=-fno-strict-aliasing -fno-printf-return-value -fno-common -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wno-pointer-sign -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -Werror=implicit-int -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
+ek_ra8d1.compiler.zephyr.cxxflags={compiler.zephyr.ldflags} -fdata-sections -ffunction-sections -fno-unwind-tables -fno-strict-aliasing -fno-printf-return-value -fno-common -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
+ek_ra8d1.compiler.zephyr.includes={build.variant.path}/includes.txt
+ek_ra8d1.compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lnosys -nostdlib
+
+#ek_ra8d1.recipe.hooks.objcopy.postobjcopy.4.pattern=cp {build.variant.path}/flasher.jlink "{build.path}/flasher.jlink"
+#ek_ra8d1.recipe.hooks.objcopy.postobjcopy.5.pattern=sed -i 's|SKETCH|"{build.path}/{build.project_name}.llext.dfu.bin"|g' "{build.path}/flasher.jlink"
+
+ek_ra8d1.compiler.zephyr=
+ek_ra8d1.vid.0=0x2341
+ek_ra8d1.pid.0=0x0077
+ek_ra8d1.upload_port.0.vid=0x2341
+ek_ra8d1.upload_port.0.pid=0x0077
+
+ek_ra8d1.upload.tool=pyocd
+ek_ra8d1.upload.tool.default=pyocd
+ek_ra8d1.upload.protocol=
+ek_ra8d1.upload.transport=
+ek_ra8d1.upload.vid=0x2341
+ek_ra8d1.upload.pid=0x0366
+ek_ra8d1.upload.interface=0
+ek_ra8d1.upload.use_1200bps_touch=false
+ek_ra8d1.upload.wait_for_upload_port=false
+ek_ra8d1.upload.native_usb=true
+ek_ra8d1.upload.maximum_size=1966080
+ek_ra8d1.upload.maximum_data_size=523624
+ek_ra8d1.upload.address=0x2032000
+ek_ra8d1.upload.target=R7FA8D1AH
+
+ek_ra8d1.bootloader.tool=pyocd
+ek_ra8d1.bootloader.tool.default=pyocd
+ek_ra8d1.bootloader.file=zephyr-ek_ra8d1.elf
+ek_ra8d1.bootloader.target=R7FA8D1AH
+
+
+##############################################################################################################
+
+frdm_mcxn947.name=MCXN947
+frdm_mcxn947.build.core=arduino
+frdm_mcxn947.build.crossprefix=arm-zephyr-eabi-
+frdm_mcxn947.build.compiler_path={runtime.tools.arm-zephyr-eabi-0.16.8.path}/bin/
+
+frdm_mcxn947.menu.debug.false=Standard
+frdm_mcxn947.menu.debug.true=Debug
+
+frdm_mcxn947.menu.debug.false.post_build_arg=
+frdm_mcxn947.menu.debug.true.post_build_arg=debug
+
+frdm_mcxn947.build.variant=frdm_mcxn947_mcxn947_cpu0
+frdm_mcxn947.build.mcu=cortex-m33
+frdm_mcxn947.build.fpu=-mfpu=fpv5-sp-d16
+frdm_mcxn947.build.architecture=cortex-m33
+frdm_mcxn947.compiler.zephyr.arch.define=
+
+frdm_mcxn947.build.board={build.variant}
+
+frdm_mcxn947.build.float-abi=-mfloat-abi=hard
+frdm_mcxn947.build.extra_flags=
+frdm_mcxn947.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
+frdm_mcxn947.build.board=frdm_mcxn947
+frdm_mcxn947.build.extra_ldflags=
+frdm_mcxn947.compiler.zephyr.arch.define=
+frdm_mcxn947.compiler.zephyr.defines=-DLL_EXTENSION_BUILD -DCONFIG_ARDUINO_API_SERIAL_BUFFER_SIZE=256 -DCPU_MCXN947VDF_cm33_core0 -DKERNEL -DK_HEAP_MEM_POOL_SIZE=16384 -DLPFLEXCOMM_INIT_NOT_USED_IN_DRIVER=1 -DNDEBUG -DPICOLIBC_DOUBLE_PRINTF_SCANF -D__LINUX_ERRNO_EXTENSIONS__ -D__PROGRAM_START -D__ZEPHYR__=1 -imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h -imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h
+frdm_mcxn947.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit
+frdm_mcxn947.compiler.zephyr.cflags=-fno-strict-aliasing -fno-printf-return-value -fno-common -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wno-pointer-sign -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -Werror=implicit-int -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
+frdm_mcxn947.compiler.zephyr.cxxflags={compiler.zephyr.ldflags} -fdata-sections -ffunction-sections -fno-unwind-tables -fno-strict-aliasing -fno-printf-return-value -fno-common -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
+frdm_mcxn947.compiler.zephyr.includes={build.variant.path}/includes.txt
+frdm_mcxn947.compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lnosys -nostdlib
+frdm_mcxn947.compiler.zephyr=
+frdm_mcxn947.vid.0=0x1fc9
+frdm_mcxn947.pid.0=0x0143
+frdm_mcxn947.upload_port.0.vid=0x1fc9
+frdm_mcxn947.upload_port.0.pid=0x0143
+frdm_mcxn947.upload.address=0x100F0000
+frdm_mcxn947.upload.target=mcxn947vdf
+
+frdm_mcxn947.upload.tool=pyocd
+frdm_mcxn947.upload.tool.default=pyocd
+frdm_mcxn947.upload.protocol=
+frdm_mcxn947.upload.transport=
+frdm_mcxn947.upload.vid=0x1fc9
+frdm_mcxn947.upload.pid=0x0143
+frdm_mcxn947.upload.interface=0
+frdm_mcxn947.upload.use_1200bps_touch=false
+frdm_mcxn947.upload.wait_for_upload_port=false
+frdm_mcxn947.upload.native_usb=true
+frdm_mcxn947.upload.maximum_size=1966080
+frdm_mcxn947.upload.maximum_data_size=523624
+
+frdm_mcxn947.bootloader.tool=pyocd
+frdm_mcxn947.bootloader.tool.default=pyocd
+frdm_mcxn947.bootloader.file=zephyr-frdm_mcxn947_mcxn947_cpu0.elf
+frdm_mcxn947.bootloader.target=mcxn947vdf
+
+
+##########################################################################################
+
+portentah7.name=Arduino Portenta H7
+portentah7.build.core=arduino
+portentah7.build.crossprefix=arm-zephyr-eabi-
+portentah7.build.compiler_path={runtime.tools.arm-zephyr-eabi-0.16.8.path}/bin/
+
+portentah7.menu.debug.false=Standard
+portentah7.menu.debug.true=Debug
+
+portentah7.menu.debug.false.post_build_arg=
+portentah7.menu.debug.true.post_build_arg=debug
+
+portentah7.build.variant=arduino_portenta_h7
+portentah7.build.mcu=cortex-m7
+portentah7.build.fpu=-mfpu=fpv5-d16
+portentah7.build.architecture=cortex-m7
+portentah7.compiler.zephyr.arch.define=-DCORE_CM7
+
+portentah7.build.board={build.variant}
+
+portentah7.build.float-abi=-mfloat-abi=softfp
+portentah7.build.extra_flags=
+portentah7.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
+portentah7.build.architecture=cortex-m7
+portentah7.build.board=PORTENTA_H7
+portentah7.build.extra_ldflags=
+portentah7.compiler.zephyr.defines=-DLL_EXTENSION_BUILD -DCONFIG_ARDUINO_API_SERIAL_BUFFER_SIZE=256 -DHSE_VALUE=25000000 -DKERNEL -DK_HEAP_MEM_POOL_SIZE=16384 -DPICOLIBC_LONG_LONG_PRINTF_SCANF -DSTM32H747xx -DUSE_FULL_LL_DRIVER -DUSE_HAL_DRIVER -D__LINUX_ERRNO_EXTENSIONS__ -D__PROGRAM_START -D__ZEPHYR__=1  -imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h -imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h
+portentah7.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit
+portentah7.compiler.zephyr.cflags=-fno-strict-aliasing -fno-printf-return-value -fno-common -mcpu=cortex-m7 -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wno-pointer-sign -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -Werror=implicit-int -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
+portentah7.compiler.zephyr.cxxflags={compiler.zephyr.ldflags} -fdata-sections -ffunction-sections -fno-unwind-tables -fno-strict-aliasing -fno-printf-return-value -fno-common -mcpu=cortex-m7 -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
+portentah7.compiler.zephyr.includes={build.variant.path}/includes.txt
+portentah7.compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lnosys -nostdlib
+portentah7.compiler.zephyr=
+portentah7.vid.0=0x2341
+portentah7.pid.0=0x005b
+portentah7.upload_port.0.vid=0x2341
+portentah7.upload_port.0.pid=0x035b
+
+portentah7.upload.tool=dfu-util
+portentah7.upload.tool.default=dfu-util
+portentah7.upload.protocol=
+portentah7.upload.transport=
+portentah7.upload.vid=0x2341
+portentah7.upload.pid=0x035b
+portentah7.upload.interface=0
+portentah7.upload.use_1200bps_touch=true
+portentah7.upload.wait_for_upload_port=true
+portentah7.upload.native_usb=true
+portentah7.upload.maximum_size=1966080
+portentah7.upload.maximum_data_size=523624
+
+portentah7.upload.address=0x08100000
+
+portentah7.upload.maximum_size=786432
+portentah7.upload.maximum_data_size=523624
+
+portentah7.bootloader.tool=dfu-util
+portentah7.bootloader.tool.default=dfu-util
+portentah7.bootloader.vid=0x2341
+portentah7.bootloader.pid=0x035b
+portentah7.bootloader.interface=0
+portentah7.bootloader.file=zephyr-arduino_portenta_h7.bin
+portentah7.bootloader.address=0x08040000
+
+portentah7.debug.tool=gdb
+portentah7.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
+portentah7.debug.server.openocd.scripts.1={programmer.transport_script}
+portentah7.debug.server.openocd.scripts.2=target/stm32h7x_dual_bank.cfg
+portentah7.debug.cortex-debug.custom.request=attach
+portentah7.debug.svd_file={runtime.platform.path}/svd/STM32H747_CM7.svd

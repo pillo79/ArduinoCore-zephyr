@@ -1,0 +1,6 @@
+device R7FA8D1AH
+si SWD
+speed 4000
+connect
+loadbin SKETCH 0x2032000
+exit
