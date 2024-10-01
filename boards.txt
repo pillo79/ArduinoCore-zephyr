@@ -70,3 +70,73 @@ giga.debug.server.openocd.scripts.1={programmer.transport_script}
 giga.debug.server.openocd.scripts.2=target/stm32h7x_dual_bank.cfg
 giga.debug.cortex-debug.custom.request=attach
 giga.debug.svd_file={runtime.platform.path}/svd/STM32H747_CM7.svd
+
+##########################################################################################
+
+nano33ble.name=Arduino Nano 33 BLE
+nano33ble.build.core=arduino
+nano33ble.build.crossprefix=arm-zephyr-eabi-
+nano33ble.build.compiler_path={runtime.tools.arm-zephyr-eabi-0.16.8.path}/bin/
+
+nano33ble.menu.debug.false=Standard
+nano33ble.menu.debug.true=Debug
+
+nano33ble.menu.debug.false.post_build_arg=
+nano33ble.menu.debug.true.post_build_arg=debug
+
+nano33ble.build.variant=arduino_nano_33_ble_sense
+nano33ble.build.mcu=cortex-m4
+nano33ble.build.fpu=-mfpu=fpv4-sp-d16
+nano33ble.build.architecture=cortex-m4
+nano33ble.compiler.zephyr.arch.define=
+
+nano33ble.build.board={build.variant}
+
+nano33ble.build.float-abi=-mfloat-abi=hard
+nano33ble.build.extra_flags=
+nano33ble.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
+nano33ble.build.architecture=cortex-m4
+nano33ble.build.board=ARDUINO_NANO33BLE
+nano33ble.build.extra_ldflags=
+nano33ble.compiler.zephyr.defines=-DLL_EXTENSION_BUILD -DCONFIG_ARDUINO_API_SERIAL_BUFFER_SIZE=256 -DNRF52840_XXAA -DKERNEL -DK_HEAP_MEM_POOL_SIZE=32768 -DPICOLIBC_LONG_LONG_PRINTF_SCANF -D__LINUX_ERRNO_EXTENSIONS__ -D__PROGRAM_START -D__ZEPHYR__=1  -imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h -imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h
+nano33ble.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit
+nano33ble.compiler.zephyr.cflags=-fno-strict-aliasing -fno-printf-return-value -fno-common -mcpu=cortex-m4 -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wno-pointer-sign -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -Werror=implicit-int -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
+nano33ble.compiler.zephyr.cxxflags={compiler.zephyr.ldflags} -fdata-sections -ffunction-sections -fno-unwind-tables -fno-strict-aliasing -fno-printf-return-value -fno-common -mcpu=cortex-m4 -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
+nano33ble.compiler.zephyr.includes={build.variant.path}/includes.txt
+nano33ble.compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lnosys -nostdlib
+nano33ble.compiler.zephyr=
+nano33ble.vid.0=0x2341
+nano33ble.pid.0=0x035a
+nano33ble.upload_port.0.vid=0x2341
+nano33ble.upload_port.0.pid=0x005a
+
+nano33ble.upload.tool=bossac
+nano33ble.upload.tool.default=bossac
+nano33ble.upload.protocol=
+nano33ble.upload.transport=
+nano33ble.upload.vid=0x2341
+nano33ble.upload.pid=0x005a
+nano33ble.upload.interface=0
+nano33ble.upload.use_1200bps_touch=true
+nano33ble.upload.wait_for_upload_port=true
+nano33ble.upload.native_usb=true
+nano33ble.upload.maximum_size=1966080
+nano33ble.upload.maximum_data_size=523624
+nano33ble.upload.address=0xD0000
+
+nano33ble.upload.maximum_size=786432
+nano33ble.upload.maximum_data_size=523624
+
+nano33ble.bootloader.tool=bossac
+nano33ble.bootloader.tool.default=bossac
+nano33ble.bootloader.vid=0x2341
+nano33ble.bootloader.pid=0x035b
+nano33ble.bootloader.interface=0
+nano33ble.bootloader.file=zephyr-arduino_nano_33_ble_sense.bin
+nano33ble.bootloader.address=0x0000
+
+nano33ble.debug.tool=gdb
+nano33ble.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
+nano33ble.debug.server.openocd.scripts.1={programmer.transport_script}
+nano33ble.debug.server.openocd.scripts.2=target/nrf52.cfg
+nano33ble.debug.cortex-debug.custom.request=attach
