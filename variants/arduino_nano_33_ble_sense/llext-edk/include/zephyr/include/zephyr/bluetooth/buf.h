@@ -44,6 +44,8 @@ enum bt_buf_type {
 	BT_BUF_ISO_IN,
 	/** H:4 data */
 	BT_BUF_H4,
+	/** RAW data */
+	BT_BUF_RAW,
 };
 
 /** @brief This is a base type for bt_buf user data. */
