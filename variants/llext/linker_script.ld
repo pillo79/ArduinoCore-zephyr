@@ -53,6 +53,10 @@ SECTIONS {
         KEEP(*(.init_array))
     }
 
+    .fini_array : {
+        KEEP(*(.fini_array))
+    }
+
     .symtab : {
         KEEP(*(.symtab))
     }
