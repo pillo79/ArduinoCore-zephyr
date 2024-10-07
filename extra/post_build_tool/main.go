@@ -36,6 +36,9 @@ func main() {
 	// Create the new content with the length in front
 	len_str := fmt.Sprintf("%d", length)
 	newContent := append([]byte(len_str), 0, byte(debug))
+	// make newContent 16 bytes
+	tmp := make([]byte, 16-len(newContent))
+	newContent = append(newContent, tmp...)
 	newContent = append(newContent, content...)
 
 	// Write the new content to the new file
