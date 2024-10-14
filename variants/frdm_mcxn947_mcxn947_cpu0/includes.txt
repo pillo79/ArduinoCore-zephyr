@@ -4,6 +4,7 @@
 -iwithprefixbefore/llext-edk/include/zephyr/soc/nxp/mcx
 -iwithprefixbefore/llext-edk/include/zephyr/lib/libc/common/include
 -iwithprefixbefore/llext-edk/include/zephyr/lib/posix/options/getopt/
+-iwithprefixbefore/llext-edk/include/zephyr/include/zephyr/posix/
 -iwithprefixbefore/llext-edk/include/zephyr/soc/nxp/mcx/mcxnx4x/.
 -iwithprefixbefore/llext-edk/include/zephyr-arduino-core/include
 -iwithprefixbefore/llext-edk/include/modules/hal/cmsis/CMSIS/Core/Include
