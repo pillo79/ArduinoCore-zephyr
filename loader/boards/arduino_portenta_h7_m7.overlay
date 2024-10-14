@@ -1,0 +1,94 @@
+&zephyr_udc0 {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+		status = "okay";
+	};
+};
+
+&usart1 {
+	status = "okay";
+};
+
+&uart4 {
+	status = "okay";
+};
+
+&usart6 {
+	status = "okay";
+};
+
+&cdc_acm_uart0 {
+	status = "okay";
+};
+
+&i2c4 {
+	status = "okay";
+};
+
+&rng {
+	status = "okay";
+};
+
+/ {
+	chosen {
+		zephyr,console = &usart6;
+		zephyr,shell-uart = &usart6;
+		zephyr,cdc-acm-uart0 = &usart6;
+	};
+};
+
+/ {
+	soc {
+		flash-controller@52002000 {
+			flash0: flash@8000000 {
+				compatible = "st,stm32-nv-flash", "soc-nv-flash";
+				write-block-size = <32>;
+				erase-block-size = <DT_SIZE_K(128)>;
+				/* maximum erase time for a 128K sector */
+				max-erase-time = <4000>;
+
+				reg = <0x08000000 DT_SIZE_K(1024)>;
+				status = "okay";
+
+				partitions {
+					compatible = "fixed-partitions";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					user_sketch: partition@0 {
+						reg = <0x0E0000 0x20000>;
+					};
+				};
+			};
+		};
+	};
+};
+
+/ {
+	zephyr,user {
+		digital-pin-gpios = <&gpioh 15 GPIO_ACTIVE_LOW>,
+				    <&gpiok 1 GPIO_ACTIVE_LOW>,
+				    <&gpioj 11 GPIO_ACTIVE_LOW>,
+				    <&gpiog 7 GPIO_ACTIVE_LOW>,
+				    <&gpioc 7 GPIO_ACTIVE_LOW>,
+				    <&gpioc 6 GPIO_ACTIVE_LOW>,
+				    <&gpioa 8 GPIO_ACTIVE_LOW>,
+				    <&gpioi 0 GPIO_ACTIVE_LOW>,
+				    <&gpioc 3 GPIO_ACTIVE_LOW>,
+				    <&gpioi 1 GPIO_ACTIVE_LOW>,
+				    <&gpioc 2 GPIO_ACTIVE_LOW>,
+				    <&gpioh 8 GPIO_ACTIVE_LOW>,
+				    <&gpioh 7 GPIO_ACTIVE_LOW>,
+				    <&gpioa 10 GPIO_ACTIVE_LOW>,
+				    <&gpioa 9 GPIO_ACTIVE_LOW>,
+					<&gpiok 5 GPIO_ACTIVE_LOW>;	// LEDR
+
+		builtin-led-gpios = <&gpiok 5 GPIO_ACTIVE_LOW>,
+                        <&gpiok 6 GPIO_ACTIVE_LOW>,
+                        <&gpiok 7 GPIO_ACTIVE_LOW>;
+
+		serials = <&cdc_acm_uart0>,<&usart6>, <&usart1>, <&uart4>;
+		cdc-acm = <&cdc_acm_uart0>;
+		i2cs = <&i2c4>;
+	};
+};
