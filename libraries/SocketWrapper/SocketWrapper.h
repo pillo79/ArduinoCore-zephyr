@@ -115,6 +115,8 @@ public:
             return false;
         }
 
+        zsock_ioctl(sock_fd, ZFD_IOCTL_FIONBIO);
+
         if (::bind(sock_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
             ::close(sock_fd);
             sock_fd = -1;
