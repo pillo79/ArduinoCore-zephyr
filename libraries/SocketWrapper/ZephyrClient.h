@@ -7,6 +7,12 @@ class ZephyrClient : public arduino::Client, ZephyrSocketWrapper {
 private:
     bool _connected = false;
 
+protected:
+    void setSocket(int sock) {
+        sock_fd = sock;
+        _connected = true;
+    }
+
 public:
     int connect(const char* host, uint16_t port) override {
         auto ret = ZephyrSocketWrapper::connect((char*)host, port);
@@ -68,4 +74,5 @@ public:
     operator bool() {
         return sock_fd != -1;
     }
+    friend class ZephyrServer;
 };

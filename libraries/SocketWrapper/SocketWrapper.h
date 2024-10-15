@@ -1,3 +1,5 @@
+#pragma once
+
 #include <zephyr/net/socket.h>
 
 class ZephyrSocketWrapper {
@@ -6,6 +8,7 @@ protected:
 
 public:
     ZephyrSocketWrapper() : sock_fd(-1) {}
+    ZephyrSocketWrapper(int sock_fd) : sock_fd(sock_fd) {}
 
     ~ZephyrSocketWrapper() {
         if (sock_fd != -1) {
@@ -99,6 +102,48 @@ public:
             ::close(sock_fd);
             sock_fd = -1;
         }
+    }
+
+    bool bind(uint16_t port) {
+        struct sockaddr_in addr;
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        addr.sin_addr.s_addr = INADDR_ANY;
+
+        sock_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (sock_fd < 0) {
+            return false;
+        }
+
+        if (::bind(sock_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+            ::close(sock_fd);
+            sock_fd = -1;
+            return false;
+        }
+
+        return true;
+    }
+
+    bool listen(int backlog = 5) {
+        if (sock_fd == -1) {
+            return false;
+        }
+
+        if (::listen(sock_fd, backlog) < 0) {
+            ::close(sock_fd);
+            sock_fd = -1;
+            return false;
+        }
+
+        return true;
+    }
+
+    int accept() {
+        if (sock_fd == -1) {
+            return -1;
+        }
+
+        return ::accept(sock_fd, nullptr, nullptr);
     }
 
     friend class ZephyrClient;
