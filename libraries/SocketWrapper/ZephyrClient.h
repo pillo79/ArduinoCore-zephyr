@@ -4,15 +4,26 @@
 #include "zephyr/sys/printk.h"
 
 class ZephyrClient : public arduino::Client, ZephyrSocketWrapper {
+private:
+    bool _connected = false;
+
 public:
     int connect(const char* host, uint16_t port) override {
-        return ZephyrSocketWrapper::connect((char*)host, port);
+        auto ret = ZephyrSocketWrapper::connect((char*)host, port);
+        if (ret) {
+            _connected = true;
+        }
+        return ret;
     }
     int connect(IPAddress ip, uint16_t port) {
-        return ZephyrSocketWrapper::connect(ip, port);
+        auto ret = ZephyrSocketWrapper::connect(ip, port);
+        if (ret) {
+            _connected = true;
+        }
+        return ret;
     }
     uint8_t connected() override {
-        return sock_fd != -1;
+        return _connected;
     }
     int available() override {
         return ZephyrSocketWrapper::available();
@@ -46,10 +57,13 @@ public:
         // No-op
     }
     int peek() override {
-        // No-op
+        uint8_t c;
+        recv(&c, 1, MSG_PEEK);
+        return c;
     }
     void stop() override {
         ZephyrSocketWrapper::close();
+        _connected = false;
     }
     operator bool() {
         return sock_fd != -1;

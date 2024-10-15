@@ -22,7 +22,7 @@ public:
 	    hints.ai_family = AF_INET;
 	    hints.ai_socktype = SOCK_STREAM;
 
-        int resolve_attempts = 10;
+        int resolve_attempts = 100;
         int ret;
 
 	    while (resolve_attempts--) {
@@ -80,11 +80,11 @@ public:
         return count;
     }
 
-    int recv(uint8_t* buffer, size_t size) {
+    int recv(uint8_t* buffer, size_t size, int flags = MSG_DONTWAIT) {
         if (sock_fd == -1) {
             return -1;
         }
-        return ::recv(sock_fd, buffer, size, MSG_DONTWAIT);
+        return ::recv(sock_fd, buffer, size, flags);
     }
 
     int send(const uint8_t* buffer, size_t size) {
