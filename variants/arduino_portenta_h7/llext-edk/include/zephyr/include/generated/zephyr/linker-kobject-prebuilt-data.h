@@ -3,6 +3,6 @@
 #endif
 
 #ifndef KOBJECT_DATA_SZ
-#define KOBJECT_DATA_SZ 6416
+#define KOBJECT_DATA_SZ 8496
 #endif
 
