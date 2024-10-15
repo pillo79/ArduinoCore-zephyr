@@ -1,14 +1,15 @@
 #include "SocketWrapper.h"
 #include "api/Client.h"
+#include "unistd.h"
 #include "zephyr/sys/printk.h"
 
 class ZephyrClient : public arduino::Client, ZephyrSocketWrapper {
 public:
     int connect(const char* host, uint16_t port) override {
-        return ZephyrSocketWrapper::connect(host, port);
+        return ZephyrSocketWrapper::connect((char*)host, port);
     }
     int connect(IPAddress ip, uint16_t port) {
-        return 0;
+        return ZephyrSocketWrapper::connect(ip, port);
     }
     uint8_t connected() override {
         return sock_fd != -1;
@@ -48,7 +49,7 @@ public:
         // No-op
     }
     void stop() override {
-        // No-op
+        ZephyrSocketWrapper::close();
     }
     operator bool() {
         return sock_fd != -1;

@@ -14,10 +14,51 @@ public:
     }
 
     bool connect(const char* host, uint16_t port) {
+
+        // Resolve address
+        struct addrinfo hints;
+	    struct addrinfo *res;
+
+	    hints.ai_family = AF_INET;
+	    hints.ai_socktype = SOCK_STREAM;
+
+        int resolve_attempts = 10;
+        int ret;
+
+	    while (resolve_attempts--) {
+            ret = getaddrinfo(host, String(port).c_str(), &hints, &res);
+
+            if (ret == 0) {
+                break;
+            }
+        }
+
+	    if (ret != 0) {
+            return false;
+        }
+
+        sock_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (sock_fd < 0) {
+            return false;
+        }
+
+        if (::connect(sock_fd, res->ai_addr, res->ai_addrlen) < 0) {
+            ::close(sock_fd);
+            sock_fd = -1;
+            return false;
+        }
+
+        return true;
+    }
+
+    bool connect(IPAddress host, uint16_t port) {
+
+        const char* _host = host.toString().c_str();
+
         struct sockaddr_in addr;
         addr.sin_family = AF_INET;
         addr.sin_port = htons(port);
-        inet_pton(AF_INET, host, &addr.sin_addr);
+        inet_pton(AF_INET, _host, &addr.sin_addr);
 
         sock_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (sock_fd < 0) {

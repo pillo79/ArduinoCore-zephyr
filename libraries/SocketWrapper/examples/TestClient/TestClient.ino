@@ -118,17 +118,22 @@ int _main(void)
 
 #define Serial Serial1
 
+
 ZephyrClient client;
+IPAddress addr(93,184,215,14);
 // the setup function runs once when you press reset or power the board
 void setup() {
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(115200);
   _main();
-  delay(20000);
+  delay(5000);
   while (!Serial);
-  client.connect("93.184.215.14", 80);
-  client.println("GET / HTTP/1.0");
+  //auto res = client.connect(addr, 80);
+  auto res = client.connect("example.com", 80);
+  Serial.println(res);
+  res = client.println("GET / HTTP/1.0");
+  Serial.println(res);
   client.println("Host: example.com");
   client.println("Connection: close");
   client.println();
