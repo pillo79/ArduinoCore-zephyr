@@ -1,4 +1,6 @@
+if [ $ZEPHYR_SDK_INSTALL_DIR == "" ]; then
 export ZEPHYR_SDK_INSTALL_DIR=/ssd/zephyr-sdk-0.16.8/
+fi
 
 set -e
 
@@ -9,6 +11,8 @@ if [[ $# -eq 0 ]]; then
 board=arduino_giga_r1//m7
 variant=arduino_giga_r1_m7
 fi
+
+source venv/bin/activate
 
 (west build loader -b $board -p && west build -t llext-edk)
 (tar xvfp build/zephyr/llext-edk.tar.xz --directory variants/$variant/)

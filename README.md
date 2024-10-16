@@ -1,55 +1,107 @@
-# GSoC 2022 Project: Arduino Core API module for Zephyr
+# Arduino Core for Zephyr BETA
 
-![](https://dhruvag2000.github.io/Blog-GSoC22/assets/images/website_header.png)
+This repository contains the official implementation of **Arduino Core** for Zephyr based board.
 
-The **Arduino Core API** module for zephyr leverages the power of Zephyr under an Arduino-C++ style abtraction layer thus helping zephyr new-comers to start using it without worrying about learning about new APIs and libraries. See the project documentation folder for detailed documentation on these topics:
+Easily install the core and its toolchains via Board Manager using this URL: https://downloads.arduino.cc/packages/package_zephyr_index.json 
 
-* [Using external Arduino Libraries](/documentation/arduino_libs.md)
-* [Adding custom boards/ variants](/documentation/variants.md)
+## Theory of operation
 
-## Adding Arduino Core API to Zephyr
+Unlike every other Arduino implementation (where the final compilation step is a standalone binary, eventually loaded by a bootloader), this one creates a freestanding elf file that can be dynamically loaded by a static (precompiled) Zephyr firmware.
 
-* **Pre requisites:** It is assumed that you have zephyrproject configured and installed on your system as per the official [Get Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html). The recommended path to install is `~/zephyrproject` as specified in the guide. If you have zephyr installed in a custom path you may need to make changes to the CMakeLists.txt file in the sample code directory when building these samples.
+The most important parts of this project are:
 
-* Add following entry to `west.yml` file in `manifest/projects` subtree of Zephyr:
+* [Zephyr based loader](/loader)
+* [LLEXT](https://docs.zephyrproject.org/latest/services/llext/index.html)
+* [Actual core](/cores/arduino) with [variants](/variants) and the usual `{platform,boards}.txt`
+* [ArduinoCore-API](https://github.com/arduino/ArduinoCore-API)
+* [post_build_tool](/extra/post_build_tool)
+
+The `loader` project should be kept generic and any modification required for a given board should be added to its dts overlay or a special `fixup` file (with the proper guards).
+The loader changes its behaviour based on the `Mode` menu.
+`Standard` means that the sketch is loaded automatically, while `Debug` requires the user to type `sketch` in Zephyr's shell (exposed over the default UART).
+
+For the end user, installing the `loader` only requires running `Burn Bootloader` while the board is in bootloader mode (double clicking the RESET button should be do the trick). Due to Arduino IDE limitiations, you must select a bogus programmer from `Programmers` menu.
+
+Loading the first sketch also requires the board to be placed forcefully in bootloader mode. From then on, the usual "autoload" method will kick in.
+
+## Setup the environment
+
+We provide some shell scripts to ease installation (Windows not supported ATM)
+On a new terminal, run
 ```
-# Arduino API repository.
-- name: Arduino-Core-Zephyr
-  path: modules/lib/Arduino-Zephyr-API
-  revision: main
-  url: https://github.com/zephyrproject-rtos/gsoc-2022-arduino-core
+mkdir my_new_zephyr_folder && cd my_new_zephyr_folder
+git clone https://github.com/arduino/ArduinoCore-zephyr
+cd ArduinoCore-zephyr
+./extra/bootstrap.sh
 ```
 
-* Then, clone the repository by running
+Then you need to download and install the Zephyr SDK for your OS from https://github.com/zephyrproject-rtos/sdk-ng/releases/tag/v0.16.8
 
-```sh
-west update
+To build a loader, run
 ```
-
-* **Note:** For ***Linux users only*** there exists an ``install.sh`` script in this project that can be run to quickly link the ArduinoCore-API to this module.
-If you are able to run that script successfully then you can skip the next steps.
-
-* To "complete" the core you need to copy or symlink the api folder from the [ArduinoCore-API](https://github.com/arduino/ArduinoCore-API.git) repo to the target's ``cores/arduino`` folder:
-```sh
-$ git clone git@github.com:arduino/ArduinoCore-API # Any location
-$ ln -s /<your>/<location>/ArduinoCore-API/api cores/arduino/.
+export ZEPHYR_SDK_INSTALL_DIR=$folder_where_you_installed_the_sdk
+./extra/build.sh $zephyr_board_name $arduino_variant_board_name
+# eg: ./extra/build.sh arduino_portenta_h7//m7 arduino_portenta_h7
 ```
-The `cores` folder can be found at `~/zephyrproject/modules/lib/Arduino-Zephyr-API/cores`.
+The firmwares will be copied to [firmwares](/firmwares) folder.
 
-**Known Bug(s):**
+If the board is fully supported by Zephyr, they can also be directly falshed with `west flash` 
 
-__NOTE:__ You can skip this step as well if you ran ``install.sh``.
+## Use the core in Arduino environment
 
-**Maintainers**:
-- [DhruvaG2000](https://github.com/DhruvaG2000)
-- [soburi](https://github.com/soburi)
-- [szczys](https://github.com/szczys)
-- [beriberikix](https://github.com/beriberikix)
-- [alvarowolfx](https://github.com/alvarowolfx)
+After runnign the `bootstrap` script, you should be able to symlink the core to `$sketchbook/hardware/arduino-git/zephyr` and it will appear in the IDE/CLI. Boards FQBN will then become `arduino-git:zephyr:name_from_boards_txt`
 
-## License
-Please note that the current license is Apache 2. Previously it was LGPL 2.1 but after careful review it was determined that no LGPL code or derivates was used and the more permissive license was chosen.
+## Toubleshooting
 
-**Additional Links**
-* [Official Project Blog](https://dhruvag2000.github.io/Blog-GSoC22/)
-* Golioth's Article: [Zephyr + Arduino: a Google Summer of Code story](https://blog.golioth.io/zephyr-arduino-a-google-summer-of-code-story/)
+**Q: My Sketch doesn't start (Serial doen't appear)**
+
+**A:** Connect a USB-to-UART adapter to the default UART (eg. TX0/RX0 on Giga, TX,RX on Nano) and read the error message
+
+**Q: I did it and I get a `<err> llext: Undefined symbol with no entry in symbol table ...`**
+
+**A:** This means you are trying to use a Zephyr function which has not yet been exported. Open `llext_exports.c`, add the function you need and recompile/upload the loader.
+
+**Q: I want to use a Zephyr subsystem which is not compiled in**
+
+**A:** Open the `.conf` file for your board, add the required `CONFIG_`, recompile/upload the loader.
+
+**Q: I get an OS crash**
+
+**A:** This is usally do to some buffer overflow/coding error in the user's own code. However, since the project is still in Beta, a [good bug report](#bug-reporting) could help identifying an issue in our code.
+
+**Q: I get an out of memory error**
+
+**A:** Since at this point in time collecting bug reports is very important, we are keeping Zephyr's shell enabled and able to load a full sketch (so its stack is very big). Tune your board's `.conf` to reduce that size if your platform down't have enough RAM
+
+## Bug Reporting
+
+To report a bug, open the [issues](/issues) and follow the instructions. Any issue opened without the needed information will be discarded.
+
+## TODO
+
+- [ ] Unify overlay in [loader](/loader/boards) with the one provided in [variant](/variant) for interoperability with GSoC project
+- [ ] Autogenerate `defines.txt`, `includes.txt`, `cflags.txt` from `llext-edk` output
+- [ ] Network: support UDP and TLS
+- [ ] USB: switch to USB_DEVICE_STACK_NEXT to support PluggableUSB
+- [ ] Relocate RODATA in flash to accomodate sketches with large assets
+- [ ] Provide better error reporting for failed llext operations
+- [ ] Replace [llext_exports.c](/loader/llext_exports.c) with proper symbols generation (via inclues)
+- [ ] Provide better usability for `Debug` builds (eg. shell over USB)
+- [ ] Fix corner cases with `std::` includes (like `<iterator>`)
+
+## ADVANCED: Add a new target board
+
+* To add a new board (already supported by mainline Zephyr), you'll first need to create its `dts overlay` and `.conf` in [loader](/loader/boards).
+  The overlay MUST contains:
+  * A flash partition called `user_sketch`, usually near the end of the flash
+  * A `zephyr,user` section containing the description for GPIOs, Analog, UART, SPI and I2C devices. Feel free to leave some fields empty in case Zephyr support is missing. This will result in some APIs not being available at runtime (eg. `analogWrite` if PWM section is empty)
+* Run `./extra.build.sh $your_board $your_board` and start debugging the errors :grin:
+* Add an entry in `boards.txt` for your board, manually filling the required fields
+* If your boards supports `1200pbs touch` method, implement `_on_1200_bps` in a file inside `variant/your_board` folder
+* Temporary: create `includes.txt` based on `llext-edk/Makefile.cflags`, taking inspiration for other variants
+* Temporary: amend `your_board.compiler.zephyr.*` with information from `llext-edk/Makefile.cflags`
+* Profit!
+
+## Acknowledgments
+
+This effort would have been very hard without the [GSoC project](/README.gsoc.md) and in general the Zephyr community.
