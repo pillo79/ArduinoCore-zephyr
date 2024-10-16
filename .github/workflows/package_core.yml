@@ -24,8 +24,8 @@ jobs:
           ./extra/build_all.sh
           ./extra/package.sh `git describe --always`
 
-      - name: Archive firmware
+      - name: Archive core
         uses: actions/upload-artifact@v3
         with:
-          name: firmware
-          path: arduino-core-zephyr-llext*
+          name: Core
+          path: ../arduino-core-zephyr-llext*

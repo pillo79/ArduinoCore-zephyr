@@ -44,4 +44,4 @@ manifest:
     - name: ArduinoCore-API
       path: modules/lib/ArduinoCore-API
       revision: master
-      url: git@github.com:arduino/ArduinoCore-API
+      url: https://github.com/arduino/ArduinoCore-API
