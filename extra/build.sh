@@ -15,7 +15,7 @@ fi
 source venv/bin/activate
 
 (west build loader -b $board -p && west build -t llext-edk)
-(tar xvfp build/zephyr/llext-edk.tar.xz --directory variants/$variant/)
+(tar xfp build/zephyr/llext-edk.tar.xz --directory variants/$variant/)
 
 (cp build/zephyr/zephyr.elf firmwares/zephyr-$variant.elf)
 if [ -f build/zephyr/zephyr.bin ]; then
