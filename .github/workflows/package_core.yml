@@ -23,9 +23,10 @@ jobs:
           ./extra/bootstrap.sh
           ./extra/build_all.sh
           ./extra/package.sh `git describe --always`
+          mv ../arduino-core-zephyr-llext* .
 
       - name: Archive core
         uses: actions/upload-artifact@v3
         with:
           name: Core
-          path: ../arduino-core-zephyr-llext*
+          path: arduino-core-zephyr-llext*
