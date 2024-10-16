@@ -1,0 +1,23 @@
+name: Package core
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: zephyrprojectrtos/ci:latest
+    env:
+      CMAKE_PREFIX_PATH: /opt/toolchains
+    steps:
+      - name: Initialize
+        working-directory: ArduinoCore-zephyr
+        run: |
+          ./extra/bootstrap.sh
+          ./extra/build_all.sh
+          ./extra/package.sh `git describe --always`
+
+      - name: Archive firmware
+        uses: actions/upload-artifact@v3
+        with:
+          name: firmware
+          path: arduino-core-zephyr-llext*
