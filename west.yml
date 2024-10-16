@@ -32,6 +32,10 @@ manifest:
           - hal_xtensa
           - hal_nordic
           - hal_renesas
+          - hal_adi
+          - hal_atmel
+          - hal_rpi_pico
+          - hal_silabs
           - littlefs
           - tinycrypt
           - mbedtls
