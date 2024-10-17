@@ -18,7 +18,7 @@ The most important parts of this project are:
 
 The `loader` project should be kept generic and any modification required for a given board should be added to its dts overlay or a special `fixup` file (with the proper guards).
 The loader changes its behaviour based on the `Mode` menu.
-`Standard` means that the sketch is loaded automatically, while `Debug` requires the user to type `sketch` in Zephyr's shell (exposed over the default UART).
+`Standard` means that the sketch is loaded automatically, while `Debug` requires the user to type `sketch` in Zephyr's shell (exposed over the default serial port).
 
 For the end user, installing the `loader` only requires running `Burn Bootloader` while the board is in bootloader mode (double clicking the RESET button should be do the trick). Due to Arduino IDE limitiations, you must select a bogus programmer from `Programmers` menu.
 
