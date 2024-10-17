@@ -1,6 +1,6 @@
 ---
 name: Miscellaneous bug report
-about: Sketch compile but doesn't upload, or similar issues
+about: Sketch compiles but doesn't upload, or similar issues
 title: ''
 labels: ''
 assignees: ''
