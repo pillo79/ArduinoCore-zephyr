@@ -17,7 +17,7 @@ Issues without the full verbose output will be discarded as invalid.
 **Output of Serial Monitor**
 1. If you have an USB-to-Serial adapter, paste the complete output of the console crash, starting from
 ```*** Booting Zephyr OS build v3.7...```
-2. If you don't, compile the sketch in `Debug` mode (see [Toubleshooting section](/troubleshooting)) and paste the output after invoking `sketch` command
+2. If you don't, compile the sketch in `Debug` mode (see *Troubleshooting section* in README) and paste the output after invoking `sketch` command
 Runtime issues without the **full output** will be discarded as invalid.
 
 **Output of readelf**
