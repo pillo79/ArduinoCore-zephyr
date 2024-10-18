@@ -5,6 +5,9 @@ if [ ! -f platform.txt ]; then
   exit 2
 fi
 
+FOLDER=`basename $PWD`
+
 VERSION=$1
 
-tar  --exclude=extras/** --exclude=.git* --exclude=build --exclude=venv --exclude=samples -cjhf ../arduino-core-zephyr-llext-${VERSION}.tar.bz2 .
+cd ..
+tar  --exclude=extras/** --exclude=.git* --exclude=build --exclude=venv --exclude=samples -cjhf arduino-core-zephyr-llext-${VERSION}.tar.bz2 $FOLDER

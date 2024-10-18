@@ -15,6 +15,7 @@ A clear and concise description of what the bug is.
 Issues without the full verbose output will be discarded as invalid.
 
 **Mandatory: attach the sketch**
+or a Minimal reproducible example
 Issues without the sketch will be discarded as invalid.
 
 **Additional context**
