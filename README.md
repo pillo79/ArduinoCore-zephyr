@@ -146,11 +146,14 @@ To add a new board that is already supported by mainline Zephyr, follow these st
 
 ## 🐛 Bug Reporting
 
-To report a bug, open the [issues](/issues) and follow the instructions. Any issue opened without the needed information will be discarded.
+To report a bug, open the [issues](/../../issues) and follow the instructions. Any issue opened without the needed information will be discarded.
 
 ## 🙌 Contributions
 
-Contributions are always welcome. The preferred way to receive code contribution is by submitting a [Pull Request](/pull).
+Contributions are always welcome. The preferred way to receive code contribution is by submitting a [Pull request](/../../pulls).
+
+> [!WARNING] 
+> At this stage of development, we only accept Pull requests for bug fixes and features. We do **not** accept support for new targets.
 
 ## 📌 Upcoming features
 
