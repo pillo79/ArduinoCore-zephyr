@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ ! -f platform.txt ]; then
-  echo Launch this script from the root core folder as ./extras/bootstrap.sh
+  echo Launch this script from the root core folder as ./extra/bootstrap.sh
   exit 2
 fi
 
