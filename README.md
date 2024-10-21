@@ -15,11 +15,11 @@ This repository contains the official implementation of **Arduino Core** for Zep
 ## ⚙️ Installation
 
 Install the core and its toolchains via Board Manager:
-* Download and install the latest [Arduino IDE](https://www.arduino.cc/en/software) (only versions `2.x.x` are supported)
-* Open the *'Settings / Preferences'* window
-* Open the *'Boards Manager'* from the side menu and search for *'Zephyr'*
-  * If it doesn’t appear, add the following URL to the *'Additional Boards Manager URLs'* field: `https://downloads.arduino.cc/packages/package_zephyr_index.json` (if you have multiple URLs, separate them with a comma)
-* Install the `Arduino Zephyr Boards` platform
+* Download and install the latest [Arduino IDE](https://www.arduino.cc/en/software) (only versions `2.x.x` are supported).
+* Open the *'Settings / Preferences'* window.
+* Open the *'Boards Manager'* from the side menu and search for *'Zephyr'*.
+  * If it doesn’t appear, add the following URL to the *'Additional Boards Manager URLs'* field: `https://downloads.arduino.cc/packages/package_zephyr_index.json` (if you have multiple URLs, separate them with a comma).
+* Install the `Arduino Zephyr Boards` platform.
 
 Alternatively, to install the core using the command line, run the following command with the Arduino CLI:
 
@@ -27,79 +27,16 @@ Alternatively, to install the core using the command line, run the following com
 arduino-cli core install arduino:zephyr --additional-urls https://downloads.arduino.cc/packages/package_zephyr_index.json
 ```
 
-## 🧢 Under the hood
+## 🏗️ First Use
 
-Unlike traditional Arduino implementations, where the final output is a standalone binary loaded by a bootloader, this core generates a freestanding `elf` file. This file can be dynamically loaded by a precompiled Zephyr firmware, referred to as the `loader`.
-
-For the end user, installing the `loader` is easy. Simply run `Burn Bootloader` option from the IDE/CLI while the board is in bootloader mode (by double-clicking the RESET button). Note that due to limitations in the Arduino IDE, you may need to select any programmer from the `Programmers` menu.
-
-To load the first sketch, the board must also be manually placed into bootloader mode. After this initial setup, the standard "autoload" method will take over for future sketches.
-
-To ensure flexibility, the `loader` project is designed to be generic. Any necessary modifications for specific boards should be made in the corresponding `DTS overlay` or a special `fixup` file, using appropriate guards to maintain stability.
-
-The behavior of the `loader` can be adjusted through the `Mode` menu:
-- `Standard`: The sketch is loaded automatically.
-- `Debug`: The user must type `sketch` in Zephyr's shell, which is accessible via the default Serial.
-
-The most important components of this project are:
-
-* [Zephyr based loader](/loader)
-* [LLEXT](https://docs.zephyrproject.org/latest/services/llext/index.html)
-* [Actual core](/cores/arduino) with [variants](/variants) and the usual `{platform,boards}.txt`
-* [ArduinoCore-API](https://github.com/arduino/ArduinoCore-API)
-* [post_build_tool](/extra/post_build_tool)
-
-## 🛠️ Setup the environment
-
-In this section, we’ll guide you through setting up your environment to work with the core, making it easy to compile and upload your sketches to compatible boards.
-
-Shell scripts are available to simplify the installation process (Windows is not supported at the moment 😔).
-
-### Clone the repository
-```bash
-mkdir my_new_zephyr_folder && cd my_new_zephyr_folder
-git clone https://github.com/arduino/ArduinoCore-zephyr
-```
-### Pre-requirements
-Before running the installation script, ensure that `python3` and `pip` are installed on your system. The script will automatically install `west` and manage the necessary dependencies.
-
-### Run the ```bootstrap``` script
-```bash
-cd ArduinoCore-zephyr
-./extra/bootstrap.sh
-```
-### Install the Zephyr SDK
-Download and install the Zephyr SDK for your OS from [here](https://github.com/zephyrproject-rtos/sdk-ng/releases/tag/v0.16.8).
+To get started with your board:
+* Put the board in bootloader mode by double-clicking the RESET button.
+* Run the `Burn Bootloader` option from the IDE/CLI.
+  * Note that due to limitations in the Arduino IDE, you may need to select any programmer from the `Programmers` menu.
+* Once the bootloader is installed, you can load your first sketch by placing the board into bootloader mode again.
 
 > [!NOTE]  
-> This core is validated for version v0.16.8. Compatibility with later versions has not been tested yet.
-
-### Build the Loader
-
-To build a loader, run the following commands:
-```bash
-export ZEPHYR_SDK_INSTALL_DIR=$folder_where_you_installed_the_sdk
-./extra/build.sh $zephyr_board_name $arduino_variant_board_name
-```
-Replace `$zephyr_board_name` and `$arduino_variant_board_name` with the appropriate names for your board.
-
-Example for Arduino Portenta H7:
-```bash
-./extra/build.sh arduino_portenta_h7//m7 arduino_portenta_h7
-```
-
-The firmwares will be copied to [firmwares](/firmwares) folder.
-
-### Flash the Loader
-
-If the board is fully supported by Zephyr, you can flash the firmware directly onto the board using the following command:
-```bash
-west flash
-```
-
-## 🖥️ Using the Core in Arduino IDE/CLI
-
-After running the `bootstrap` script, you can symlink the core to `$sketchbook/hardware/arduino-git/zephyr`. Once linked, it will appear in the IDE/CLI, and the board's Fully Qualified Board Name (FQBN) will be formatted as `arduino-git:zephyr:name_from_boards_txt`.
+> After the initial setup, future sketches will be loaded automatically without needing to reset the board.
 
 ## 🔧 Troubleshooting
 
@@ -134,6 +71,78 @@ After running the `bootstrap` script, you can symlink the core to `$sketchbook/h
 
 ### Separately supplied: ###
 - **ArduinoBLE**: This library is enabled only for the Arduino Nano 33 BLE. Please use [this branch](https://github.com/facchinm/ArduinoBLE/tree/zephyr_hci) to test it.
+
+## 🧢 Under the hood
+
+Unlike traditional Arduino implementations, where the final output is a standalone binary loaded by a bootloader, this core generates a freestanding `elf` file. This file is dynamically loaded by a precompiled Zephyr firmware, referred to as the `loader`.
+
+The `loader` is responsible for managing the interaction between your sketches and the underlying Zephyr system. After the initial bootloader installation, the `loader` takes over the sketch loading process automatically.
+
+To ensure flexibility, the `loader` project is designed to be generic. Any necessary modifications for specific boards should be made in the corresponding `DTS overlay` or a special `fixup` file, using appropriate guards to maintain stability.
+
+The behavior of the `loader` can be adjusted through the `Mode` menu:
+- `Standard`: The sketch is loaded automatically.
+- `Debug`: The user must type `sketch` in Zephyr's shell, which is accessible via the default Serial.
+
+The most important components of this project are:
+
+* [Zephyr based loader](/loader)
+* [LLEXT](https://docs.zephyrproject.org/latest/services/llext/index.html)
+* [Actual core](/cores/arduino) with [variants](/variants) and the usual `{platform,boards}.txt`
+* [ArduinoCore-API](https://github.com/arduino/ArduinoCore-API)
+* [post_build_tool](/extra/post_build_tool)
+
+## 🛠️ Setup the environment
+
+In this section, we’ll guide you through setting up your environment to work with the core.
+
+Shell scripts are available to simplify the installation process (Windows is not supported at the moment 😔).
+
+### Clone the repository
+```bash
+mkdir my_new_zephyr_folder && cd my_new_zephyr_folder
+git clone https://github.com/arduino/ArduinoCore-zephyr
+```
+### Pre-requirements
+Before running the installation script, ensure that `python3` and `pip` are installed on your system. The script will automatically install `west` and manage the necessary dependencies.
+
+### Run the ```bootstrap``` script
+```bash
+cd ArduinoCore-zephyr
+./extra/bootstrap.sh
+```
+### Install the Zephyr SDK
+Download and install the Zephyr SDK for your OS from [here](https://github.com/zephyrproject-rtos/sdk-ng/releases/tag/v0.16.8).
+
+> [!NOTE]  
+> This core is validated for version v0.16.8. Compatibility with later versions has not been tested yet.
+
+### Build the Loader
+
+To build the loader, run the following commands:
+```bash
+export ZEPHYR_SDK_INSTALL_DIR=$folder_where_you_installed_the_sdk
+./extra/build.sh $zephyr_board_name $arduino_variant_board_name
+```
+Replace `$zephyr_board_name` and `$arduino_variant_board_name` with the appropriate names for your board.
+
+Example for Arduino Portenta H7:
+```bash
+./extra/build.sh arduino_portenta_h7//m7 arduino_portenta_h7
+```
+
+The firmwares will be copied to [firmwares](/firmwares) folder.
+
+### Flash the Loader
+
+If the board is fully supported by Zephyr, you can flash the firmware directly onto the board using the following command:
+```bash
+west flash
+```
+
+### Using the Core in Arduino IDE/CLI
+
+After running the `bootstrap` script, you can symlink the core to `$sketchbook/hardware/arduino-git/zephyr`. Once linked, it will appear in the IDE/CLI, and the board's Fully Qualified Board Name (FQBN) will be formatted as `arduino-git:zephyr:name_from_boards_txt`.
 
 ## 🚀 Adding a new target
 
