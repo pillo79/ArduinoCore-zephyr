@@ -15,17 +15,23 @@ This repository contains the official implementation of **Arduino Core** for Zep
 ## ⚙️ Installation
 
 Install the core and its toolchains via Board Manager:
-* Download and install the latest [Arduino IDE](https://www.arduino.cc/en/software)
+* Download and install the latest [Arduino IDE](https://www.arduino.cc/en/software) (only versions `2.x.x` are supported)
 * Open the *'Settings / Preferences'* window
 * Open the *'Boards Manager'* from the side menu and search for *'Zephyr'*
-  * If it does not show up - enter `https://downloads.arduino.cc/packages/package_zephyr_index.json` in the *'Additional Boards Manager URLs'* field (add a comma in between if you have multiple URLs)
+  * If it doesn’t appear, add the following URL to the *'Additional Boards Manager URLs'* field: `https://downloads.arduino.cc/packages/package_zephyr_index.json` (if you have multiple URLs, separate them with a comma)
 * Install the `Arduino Zephyr Boards` platform
+
+Alternatively, to install the core using the command line, run the following command with the Arduino CLI:
+
+```bash
+arduino-cli core install arduino:zephyr --additional-urls https://downloads.arduino.cc/packages/package_zephyr_index.json
+```
 
 ## 🧢 Under the hood
 
 Unlike traditional Arduino implementations, where the final output is a standalone binary loaded by a bootloader, this core generates a freestanding `elf` file. This file can be dynamically loaded by a precompiled Zephyr firmware, referred to as the `loader`.
 
-For the end user, installing the `loader` is easy. Simply run `Burn Bootloader` option from the IDE/CLI while the board is in bootloader mode (by double-clicking the RESET button). Note that due to limitations in the Arduino IDE, you may need to select a `bogus` programmer from the `Programmers` menu.
+For the end user, installing the `loader` is easy. Simply run `Burn Bootloader` option from the IDE/CLI while the board is in bootloader mode (by double-clicking the RESET button). Note that due to limitations in the Arduino IDE, you may need to select any programmer from the `Programmers` menu.
 
 To load the first sketch, the board must also be manually placed into bootloader mode. After this initial setup, the standard "autoload" method will take over for future sketches.
 
