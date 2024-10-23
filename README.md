@@ -58,7 +58,7 @@ To get started with your board:
 ---
 
 #### **Q: I get an OS crash, like `<err> os: ***** USAGE FAULT *****`**
-**A:** This is usually due to a buffer overflow or coding error in the user's own code. However, since the project is still in beta 🧪, a [good bug report](#bug-reporting) could help identify any issues in our code.
+**A:** This is usually due to a buffer overflow or coding error in the user's own code. However, since the project is still in beta 🧪, a [good bug report](#-bug-reporting) could help identify any issues in our code.
 
 ---
 
