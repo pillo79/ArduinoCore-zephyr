@@ -9,6 +9,20 @@
 	status = "okay";
 };
 
+&usart2 {
+	status = "okay";
+	pinctrl-0 = <&usart2_tx_pd5 &usart2_rx_pd6>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+};
+
+&uart4 {
+	status = "okay";
+	pinctrl-0 = <&uart4_tx_ph13 &uart4_rx_pi9>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+};
+
 &usart6 {
 	status = "okay";
 };
@@ -407,7 +421,7 @@
 					<&gpioa 4 0>,
 					<&gpioa 5 0>;
 
-		serials = <&cdc_acm_uart0>, <&usart1>, <&usart6>;
+		serials = <&cdc_acm_uart0>, <&usart1>, <&usart2>, <&uart4>, <&usart6>;
 		cdc-acm = <&cdc_acm_uart0>;
 		i2cs = <&i2c4>;
 		spis = <&spi1>, <&spi5>;
