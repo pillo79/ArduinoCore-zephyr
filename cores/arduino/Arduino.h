@@ -107,6 +107,11 @@ void noInterrupts(void);
 
 int digitalPinToInterrupt(pin_size_t pin);
 
+#define digitalPinToPort(x) (x)
+#define digitalPinToBitMask(x) (x)
+#define portOutputRegister(x) (x)
+#define portInputRegister(x) (x)
+
 #include <variant.h>
 #ifdef __cplusplus
 #include <SerialUSB.h>
