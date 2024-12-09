@@ -66,6 +66,10 @@ void arduino::ZephyrSerial::begin(unsigned long baud, uint16_t conf)
 
 	uart_configure(uart, &config);
 	uart_irq_callback_user_data_set(uart, arduino::ZephyrSerial::IrqDispatch, this);
+	k_sem_take(&rx.sem, K_FOREVER);
+	ring_buf_reset(&rx.ringbuf);
+	k_sem_give(&rx.sem);
+
 	uart_irq_rx_enable(uart);
 }
 
@@ -126,15 +130,26 @@ int arduino::ZephyrSerial::available()
 	return ret;
 }
 
+int arduino::ZephyrSerial::availableForWrite()
+{
+	int ret;
+
+	k_sem_take(&rx.sem, K_FOREVER);
+	ret = ring_buf_space_get(&rx.ringbuf);
+	k_sem_give(&rx.sem);
+
+	return ret;
+}
+
 int arduino::ZephyrSerial::peek()
 {
 	uint8_t data;
 
 	k_sem_take(&rx.sem, K_FOREVER);
-	ring_buf_peek(&rx.ringbuf, &data, 1);
+	uint32_t cb_ret = ring_buf_peek(&rx.ringbuf, &data, 1);
 	k_sem_give(&rx.sem);
 
-	return data;
+	return cb_ret? data : -1;
 }
 
 int arduino::ZephyrSerial::read()
@@ -142,10 +157,10 @@ int arduino::ZephyrSerial::read()
 	uint8_t data;
 
 	k_sem_take(&rx.sem, K_FOREVER);
-	ring_buf_get(&rx.ringbuf, &data, 1);
+	uint32_t cb_ret = ring_buf_get(&rx.ringbuf, &data, 1);
 	k_sem_give(&rx.sem);
 
-	return data;
+	return cb_ret? data : -1;
 }
 
 size_t arduino::ZephyrSerial::write(const uint8_t *buffer, size_t size)
@@ -173,6 +188,16 @@ size_t arduino::ZephyrSerial::write(const uint8_t *buffer, size_t size)
 
 	return size;
 }
+
+void arduino::ZephyrSerial::flush() {
+	while (ring_buf_size_get(&tx.ringbuf) > 0) {
+		k_yield();
+	}
+	while (uart_irq_tx_complete(uart) == 0){
+		k_yield();
+	}
+}
+
 
 #if DT_NODE_HAS_PROP(DT_PATH(zephyr_user), serials)
 #if !DT_NODE_HAS_PROP(DT_PATH(zephyr_user), cdc_acm)

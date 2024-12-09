@@ -14,8 +14,8 @@ namespace arduino {
 class ZephyrSerialStub : public HardwareSerial
 {
 public:
-	void begin(unsigned long baudRate) { }
-	void begin(unsigned long baudrate, uint16_t config) { }
+	void begin(__attribute__((unused)) unsigned long baudRate) { }
+	void begin(__attribute__((unused)) unsigned long baudrate, __attribute__((unused)) uint16_t config) { }
 	void end() { }
 	int available() { return 0; }
 	int peek() { return 0; }
@@ -51,16 +51,13 @@ public:
 	ZephyrSerial(const struct device *dev) : uart(dev) { }
 	void begin(unsigned long baudrate, uint16_t config);
 	void begin(unsigned long baudrate) { begin(baudrate, SERIAL_8N1); }
-	void flush() {
-		while (ring_buf_size_get(&tx.ringbuf) > 0) {
-			k_yield();
-		}
-	}
+	void flush();
 	void end() { }
 	size_t write(const uint8_t *buffer, size_t size);
 	size_t write(const uint8_t data) { return write(&data, 1); }
 	using Print::write; // pull in write(str) and write(buf, size) from Print
 	int available();
+  	int availableForWrite();
 	int peek();
 	int read();
 
