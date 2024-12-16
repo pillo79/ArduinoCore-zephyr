@@ -1,0 +1,29 @@
+&zephyr_udc0 {
+	status = "okay";
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+		status = "okay";
+	};
+};
+
+&flexspi {
+	w25q512jvfiq: w25q512jvfiq@0 {
+			partitions {
+				user_sketch: partition@323000 {
+					label = "image-1";
+					reg = <0x00323000 DT_SIZE_M(3)>;
+				};
+			};
+	};
+};
+
+/ {
+	zephyr,user {
+		digital-pin-gpios = <&hsgpio0 12 GPIO_ACTIVE_LOW>;
+		builtin-led-gpios = <&hsgpio0 12 GPIO_ACTIVE_LOW>;
+		serials = <&cdc_acm_uart0>;
+		cdc-acm = <&cdc_acm_uart0>;
+		i2cs = <&arduino_i2c>;
+		spis = <&flexcomm1>;
+	};
+};
