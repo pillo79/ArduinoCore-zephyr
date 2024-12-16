@@ -80,6 +80,9 @@ public:
     int available() {
         int count = 0;
         zsock_ioctl(sock_fd, ZFD_IOCTL_FIONREAD, &count);
+        if (count == 0) {
+            delay(1);
+        }
         return count;
     }
 
