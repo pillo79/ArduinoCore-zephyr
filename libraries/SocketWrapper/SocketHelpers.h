@@ -1,6 +1,7 @@
 #pragma once
 
 #include "zephyr/net/dhcpv4.h"
+#include <cstddef>
 #include <zephyr/kernel.h>
 #include <zephyr/linker/sections.h>
 #include <errno.h>
@@ -38,18 +39,7 @@ private:
     static struct net_mgmt_event_callback mgmt_cb;
     static struct net_dhcpv4_option_callback dhcp_cb;
 
-    static void link_handler(struct net_mgmt_event_callback *cb,
-                uint32_t mgmt_event,
-                struct net_if *iface)
-    {
-        if (mgmt_event == NET_EVENT_IF_UP) {
-            //printk("Interface %p is up\n", iface);
-        } else {
-            //printk("Interface %p is down\n", iface);
-        }
-    }
-
-    static void addr_handler(struct net_mgmt_event_callback *cb,
+    static void event_handler(struct net_mgmt_event_callback *cb,
                 uint32_t mgmt_event,
                 struct net_if *iface)
     {
@@ -99,10 +89,7 @@ private:
 
     int dhcp()
     {
-        net_mgmt_init_event_callback(&mgmt_cb, addr_handler, NET_EVENT_IPV4_ADDR_ADD);
-        net_mgmt_add_event_callback(&mgmt_cb);
-
-        net_mgmt_init_event_callback(&mgmt_cb, link_handler, NET_EVENT_IF_UP | NET_EVENT_IF_DOWN);
+        net_mgmt_init_event_callback(&mgmt_cb, event_handler, NET_EVENT_IPV4_ADDR_ADD | NET_EVENT_IF_UP | NET_EVENT_IF_DOWN);
         net_mgmt_add_event_callback(&mgmt_cb);
 
         net_dhcpv4_init_option_callback(&dhcp_cb, option_handler,
@@ -117,8 +104,7 @@ private:
     }
 
 public:
-    NetworkInterface(int iface_index) : iface_index(iface_index) {
-    }
+    NetworkInterface(int iface_index) : iface_index(iface_index) {}
     ~NetworkInterface() {}
     IPAddress localIP() {
         return IPAddress(net_if_get_by_index(iface_index)->config.ip.ipv4->unicast[0].ipv4.address.in_addr.s_addr);
@@ -140,11 +126,7 @@ public:
 
     bool begin() {
         dhcp();
-        // TODO: replace me with semaphore on the callback
-        while (net_if_get_by_index(iface_index)->config.ip.ipv4->unicast[0].ipv4.address.in_addr.s_addr == 0) {
-            k_sleep(K_MSEC(100));
-        }
-        return 0;
+        net_mgmt_event_wait_on_iface(net_if_get_by_index(iface_index), NET_EVENT_IPV4_ADDR_ADD, NULL, NULL, NULL, K_FOREVER);        return 0;
     }
 
     // Manual functions
