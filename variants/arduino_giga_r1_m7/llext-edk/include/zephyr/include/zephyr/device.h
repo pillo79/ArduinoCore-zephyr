@@ -208,7 +208,7 @@ typedef int16_t device_handle_t;
 			level, prio, api,                                      \
 			&Z_DEVICE_STATE_NAME(Z_DEVICE_DT_DEV_ID(node_id)),     \
 			__VA_ARGS__)                                           \
-	IF_ENABLED(CONFIG_LLEXT_EXPORT_DEVICES, (; Z_DEVICE_EXPORT(node_id)))  \
+	IF_ENABLED(CONFIG_LLEXT_EXPORT_DEVICES, (Z_DEVICE_EXPORT(node_id);))
 
 /**
  * @brief Like DEVICE_DT_DEFINE(), but uses an instance of a `DT_DRV_COMPAT`
@@ -318,7 +318,7 @@ typedef int16_t device_handle_t;
  * @return a @ref device reference for the node identifier, which may be `NULL`.
  */
 #define DEVICE_DT_GET_OR_NULL(node_id)                                         \
-	COND_CODE_1(DT_NODE_HAS_STATUS(node_id, okay),                         \
+	COND_CODE_1(DT_NODE_HAS_STATUS_OKAY(node_id),                          \
 		    (DEVICE_DT_GET(node_id)), (NULL))
 
 /**
@@ -932,11 +932,14 @@ __syscall const struct device *device_get_by_dt_nodelabel(const char *nodelabel)
 /**
  * @brief Get the devicetree node labels associated with a device
  * @param dev device whose metadata to look up
- * @return information about the devicetree node labels
+ * @return information about the devicetree node labels or NULL if not available
  */
 static inline const struct device_dt_nodelabels *
 device_get_dt_nodelabels(const struct device *dev)
 {
+	if (dev->dt_meta == NULL) {
+		return NULL;
+	}
 	return dev->dt_meta->nl;
 }
 
@@ -1081,24 +1084,16 @@ device_get_dt_nodelabels(const struct device *dev)
 		Z_DEVICE_SECTION_NAME(level, prio), DEVICE_NAME_GET(dev_id)) =                     \
 		Z_DEVICE_INIT(name, pm, data, config, api, state, deps, node_id, dev_id)
 
-/* deprecated device initialization levels */
-#define Z_DEVICE_LEVEL_DEPRECATED_EARLY                                        \
-	__WARN("EARLY device driver level is deprecated")
-#define Z_DEVICE_LEVEL_DEPRECATED_PRE_KERNEL_1
-#define Z_DEVICE_LEVEL_DEPRECATED_PRE_KERNEL_2
-#define Z_DEVICE_LEVEL_DEPRECATED_POST_KERNEL
-#define Z_DEVICE_LEVEL_DEPRECATED_APPLICATION                                  \
-	__WARN("APPLICATION device driver level is deprecated")
-#define Z_DEVICE_LEVEL_DEPRECATED_SMP                                          \
-	__WARN("SMP device driver level is deprecated")
-
 /**
- * @brief Issue a warning if the given init level is deprecated.
+ * @brief Issue an error if the given init level is not supported.
  *
  * @param level Init level
  */
-#define Z_DEVICE_LEVEL_CHECK_DEPRECATED_LEVEL(level)                           \
-	Z_DEVICE_LEVEL_DEPRECATED_##level
+#define Z_DEVICE_CHECK_INIT_LEVEL(level)                                       \
+	COND_CODE_1(Z_INIT_PRE_KERNEL_1_##level, (),                           \
+	(COND_CODE_1(Z_INIT_PRE_KERNEL_2_##level, (),                          \
+	(COND_CODE_1(Z_INIT_POST_KERNEL_##level, (),                           \
+	(ZERO_OR_COMPILE_ERROR(0)))))))
 
 /**
  * @brief Define the init entry for a device.
@@ -1111,7 +1106,7 @@ device_get_dt_nodelabels(const struct device *dev)
  * @param prio Initialization priority.
  */
 #define Z_DEVICE_INIT_ENTRY_DEFINE(node_id, dev_id, init_fn_, level, prio)                         \
-	Z_DEVICE_LEVEL_CHECK_DEPRECATED_LEVEL(level)                                               \
+	Z_DEVICE_CHECK_INIT_LEVEL(level)                                                           \
                                                                                                    \
 	static const Z_DECL_ALIGN(struct init_entry) __used __noasan Z_INIT_ENTRY_SECTION(         \
 		level, prio, Z_DEVICE_INIT_SUB_PRIO(node_id))                                      \
@@ -1200,7 +1195,46 @@ device_get_dt_nodelabels(const struct device *dev)
 
 DT_FOREACH_STATUS_OKAY_NODE(Z_MAYBE_DEVICE_DECLARE_INTERNAL)
 
+/** @brief Expands to the full type. */
+#define Z_DEVICE_API_TYPE(_class) _CONCAT(_class, _driver_api)
+
 /** @endcond */
+
+/**
+ * @brief Wrapper macro for declaring device API structs inside iterable sections.
+ *
+ * @param _class The device API class.
+ * @param _name The API instance name.
+ */
+#define DEVICE_API(_class, _name) const STRUCT_SECTION_ITERABLE(Z_DEVICE_API_TYPE(_class), _name)
+
+/**
+ * @brief Expands to the pointer of a device's API for a given class.
+ *
+ * @param _class The device API class.
+ * @param _dev The device instance pointer.
+ *
+ * @return the pointer to the device API.
+ */
+#define DEVICE_API_GET(_class, _dev) ((const struct Z_DEVICE_API_TYPE(_class) *)_dev->api)
+
+/**
+ * @brief Macro that evaluates to a boolean that can be used to check if
+ *        a device is of a particular class.
+ *
+ * @param _class The device API class.
+ * @param _dev The device instance pointer.
+ *
+ * @retval true If the device is of the given class
+ * @retval false If the device is not of the given class
+ */
+#define DEVICE_API_IS(_class, _dev)                                                                \
+	({                                                                                         \
+		STRUCT_SECTION_START_EXTERN(Z_DEVICE_API_TYPE(_class));                            \
+		STRUCT_SECTION_END_EXTERN(Z_DEVICE_API_TYPE(_class));                              \
+		(DEVICE_API_GET(_class, _dev) < STRUCT_SECTION_END(Z_DEVICE_API_TYPE(_class)) &&   \
+		 DEVICE_API_GET(_class, _dev) >= STRUCT_SECTION_START(Z_DEVICE_API_TYPE(_class))); \
+	})
 
 #ifdef __cplusplus
 }

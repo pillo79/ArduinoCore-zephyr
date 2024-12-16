@@ -51,9 +51,13 @@ extern "C" {
 #define NRF_SAADC_LIMITS_INT_OFFSET \
     NRFX_MIN(SAADC_INTENSET_CH0LIMITH_Pos, SAADC_INTENSET_CH0LIMITL_Pos)
 
+/** @brief Symbol specifying number of LIMIT events per channel. */
+#define NRF_SAADC_LIMITS_PER_CHANNEL (2)
+
 /** @brief Symbol specifying the interrupt bitmask for limits of all channels. */
-#define NRF_SAADC_ALL_CHANNELS_LIMITS_INT_MASK \
-    ((uint32_t)(((1 << SAADC_CH_NUM) - 1) << NRF_SAADC_LIMITS_INT_OFFSET))
+#define NRF_SAADC_ALL_CHANNELS_LIMITS_INT_MASK                             \
+    ((uint32_t)(NRFX_BIT_MASK(SAADC_CH_NUM * NRF_SAADC_LIMITS_PER_CHANNEL) \
+                << NRF_SAADC_LIMITS_INT_OFFSET))
 
 #if defined(SAADC_CH_CONFIG_TACQ_3us) || defined(__NRFX_DOXYGEN__)
 /** @brief Symbol indicating whether the configuration of acquisition time using predefined values is present. */
@@ -83,25 +87,25 @@ extern "C" {
 #define NRF_SAADC_HAS_AIN_AS_PIN 0
 #endif
 
-#if defined(SAADC_DMA_PTR_PTR_Msk) || defined(__NRFX_DOXYGEN__)
-/** @brief Symbol indicating whether dedicated DMA register is present. */
-#define NRF_SAADC_HAS_DMA_REG 1
-#else
-#define NRF_SAADC_HAS_DMA_REG 0
-#endif
-
-#if defined(SAADC_EVENTS_DMA_END_END_Msk) || defined(__NRFX_DOXYGEN__)
-/** @brief Symbol indicating whether SAADC DMA events are present. */
-#define NRF_SAADC_HAS_DMA_EVENTS 1
-#else
-#define NRF_SAADC_HAS_DMA_EVENTS 0
-#endif
-
 #if defined(SAADC_CH_CONFIG_RESP_Msk) || defined(__NRFX_DOXYGEN__)
 /** @brief Symbol indicating whether SAADC channel resistor control is present. */
 #define NRF_SAADC_HAS_CH_CONFIG_RES 1
 #else
 #define NRF_SAADC_HAS_CH_CONFIG_RES 0
+#endif
+
+#if defined(SAADC_CH_PSELP_INTERNAL_Msk) || defined(__NRFX_DOXYGEN__)
+/** @brief Symbol indicating whether SAADC positive internal inputs for pin number configurations are present. */
+#define NRF_SAADC_HAS_CH_PSELP_INTERNAL 1
+#else
+#define NRF_SAADC_HAS_CH_PSELP_INTERNAL 0
+#endif
+
+#if defined(SAADC_CH_PSELN_INTERNAL_Msk) || defined(__NRFX_DOXYGEN__)
+/** @brief Symbol indicating whether SAADC negative internal inputs for pin number configurations are present. */
+#define NRF_SAADC_HAS_CH_PSELN_INTERNAL 1
+#else
+#define NRF_SAADC_HAS_CH_PSELN_INTERNAL 0
 #endif
 
 #if !NRF_SAADC_HAS_ACQTIME_ENUM
@@ -141,6 +145,21 @@ typedef enum
 #if NRF_SAADC_HAS_AIN_AS_PIN
 /** @brief Analog input type. */
 typedef uint32_t nrf_saadc_input_t;
+
+#if defined(SAADC_CH_PSELP_INTERNAL_Avdd) || defined(__NRFX_DOXYGEN__)
+/** @brief Symbol specifying internal 0.9 V analog supply rail as input. */
+#define NRF_SAADC_INPUT_AVDD ((SAADC_CH_PSELP_INTERNAL_Avdd + 1) << SAADC_CH_PSELP_INTERNAL_Pos)
+#endif
+
+#if defined(SAADC_CH_PSELP_INTERNAL_Dvdd) || defined(__NRFX_DOXYGEN__)
+/** @brief Symbol specifying internal 0.9 V digital supply rail as input. */
+#define NRF_SAADC_INPUT_DVDD ((SAADC_CH_PSELP_INTERNAL_Dvdd + 1) << SAADC_CH_PSELP_INTERNAL_Pos)
+#endif
+
+#if defined(SAADC_CH_PSELP_INTERNAL_Vdd) || defined(__NRFX_DOXYGEN__)
+/** @brief Symbol specifying VDD as input. */
+#define NRF_SAADC_INPUT_VDD ((SAADC_CH_PSELP_INTERNAL_Vdd + 1) << SAADC_CH_PSELP_INTERNAL_Pos)
+#endif
 
 /** @brief Symbol specifying disconnected analog input. */
 #define NRF_SAADC_INPUT_DISABLED ((nrf_saadc_input_t)UINT32_MAX)
@@ -310,11 +329,7 @@ typedef enum
 typedef enum
 {
     NRF_SAADC_EVENT_STARTED       = offsetof(NRF_SAADC_Type, EVENTS_STARTED),       ///< The ADC has started.
-#if NRF_SAADC_HAS_DMA_EVENTS
-    NRF_SAADC_EVENT_END           = offsetof(NRF_SAADC_Type, EVENTS_DMA.END),       ///< The ADC has filled up the result buffer.
-#else
     NRF_SAADC_EVENT_END           = offsetof(NRF_SAADC_Type, EVENTS_END),           ///< The ADC has filled up the result buffer.
-#endif
     NRF_SAADC_EVENT_DONE          = offsetof(NRF_SAADC_Type, EVENTS_DONE),          ///< A conversion task has been completed.
     NRF_SAADC_EVENT_RESULTDONE    = offsetof(NRF_SAADC_Type, EVENTS_RESULTDONE),    ///< A result is ready to get transferred to RAM.
     NRF_SAADC_EVENT_CALIBRATEDONE = offsetof(NRF_SAADC_Type, EVENTS_CALIBRATEDONE), ///< Calibration is complete.
@@ -341,11 +356,7 @@ typedef enum
 typedef enum
 {
     NRF_SAADC_INT_STARTED       = SAADC_INTENSET_STARTED_Msk,       ///< Interrupt on EVENTS_STARTED event.
-#if NRF_SAADC_HAS_DMA_EVENTS
-    NRF_SAADC_INT_END           = SAADC_INTENSET_DMAEND_Msk,        ///< Interrupt on EVENTS_END event.
-#else
     NRF_SAADC_INT_END           = SAADC_INTENSET_END_Msk,           ///< Interrupt on EVENTS_END event.
-#endif
     NRF_SAADC_INT_DONE          = SAADC_INTENSET_DONE_Msk,          ///< Interrupt on EVENTS_DONE event.
     NRF_SAADC_INT_RESULTDONE    = SAADC_INTENSET_RESULTDONE_Msk,    ///< Interrupt on EVENTS_RESULTDONE event.
     NRF_SAADC_INT_CALIBRATEDONE = SAADC_INTENSET_CALIBRATEDONE_Msk, ///< Interrupt on EVENTS_CALIBRATEDONE event.
@@ -542,6 +553,17 @@ NRF_STATIC_INLINE void nrf_saadc_channel_input_set(NRF_SAADC_Type *  p_reg,
 NRF_STATIC_INLINE void nrf_saadc_channel_pos_input_set(NRF_SAADC_Type *  p_reg,
                                                        uint8_t           channel,
                                                        nrf_saadc_input_t pselp);
+
+/**
+ * @brief Function for configuring the negative input pin for the specified SAADC channel.
+ *
+ * @param[in] p_reg   Pointer to the structure of registers of the peripheral.
+ * @param[in] channel Channel number.
+ * @param[in] pseln   Negative input.
+ */
+NRF_STATIC_INLINE void nrf_saadc_channel_neg_input_set(NRF_SAADC_Type *  p_reg,
+                                                       uint8_t           channel,
+                                                       nrf_saadc_input_t pseln);
 
 /**
  * @brief Function for setting the SAADC channel monitoring limits.
@@ -907,36 +929,66 @@ NRF_STATIC_INLINE void nrf_saadc_channel_input_set(NRF_SAADC_Type *  p_reg,
                                                    nrf_saadc_input_t pselp,
                                                    nrf_saadc_input_t pseln)
 {
-#if NRF_SAADC_HAS_AIN_AS_PIN
-    p_reg->CH[channel].PSELN = (pseln != NRF_SAADC_INPUT_DISABLED) ?
-                                ((NRF_PIN_NUMBER_TO_PIN(pseln) << SAADC_CH_PSELN_PIN_Pos)
-                               | (NRF_PIN_NUMBER_TO_PORT(pseln) << SAADC_CH_PSELN_PORT_Pos)
-                               | (SAADC_CH_PSELN_CONNECT_AnalogInput << SAADC_CH_PSELN_CONNECT_Pos)
-                                ) : 0;
-    p_reg->CH[channel].PSELP = (pselp != NRF_SAADC_INPUT_DISABLED) ?
-                                ((NRF_PIN_NUMBER_TO_PIN(pselp) << SAADC_CH_PSELP_PIN_Pos)
-                               | (NRF_PIN_NUMBER_TO_PORT(pselp) << SAADC_CH_PSELP_PORT_Pos)
-                               | (SAADC_CH_PSELP_CONNECT_AnalogInput << SAADC_CH_PSELP_CONNECT_Pos)
-                                ) : 0;
-#else
-    p_reg->CH[channel].PSELN = pseln;
-    p_reg->CH[channel].PSELP = pselp;
-#endif
+    nrf_saadc_channel_pos_input_set(p_reg, channel, pselp);
+    nrf_saadc_channel_neg_input_set(p_reg, channel, pseln);
 }
 
 NRF_STATIC_INLINE void nrf_saadc_channel_pos_input_set(NRF_SAADC_Type *  p_reg,
                                                        uint8_t           channel,
                                                        nrf_saadc_input_t pselp)
 {
+    uint32_t pselp_reg = pselp;
 #if NRF_SAADC_HAS_AIN_AS_PIN
-    p_reg->CH[channel].PSELP = (pselp != NRF_SAADC_INPUT_DISABLED) ?
-                                ((NRF_PIN_NUMBER_TO_PIN(pselp) << SAADC_CH_PSELP_PIN_Pos)
-                               | (NRF_PIN_NUMBER_TO_PORT(pselp) << SAADC_CH_PSELP_PORT_Pos)
-                               | (SAADC_CH_PSELP_CONNECT_AnalogInput << SAADC_CH_PSELP_CONNECT_Pos)
-                                ) : 0;
-#else
-    p_reg->CH[channel].PSELP = pselp;
+    if (pselp == NRF_SAADC_INPUT_DISABLED)
+    {
+        pselp_reg = 0;
+    }
+#if NRF_SAADC_HAS_CH_PSELP_INTERNAL
+    else if (pselp >> SAADC_CH_PSELP_INTERNAL_Pos)
+    {
+        /* Substract shifted '1' before setting register value,
+         * as it was artifically added before in the internal input definition */
+        pselp_reg  = (pselp - (1 << SAADC_CH_PSELP_INTERNAL_Pos)) |
+                     (SAADC_CH_PSELP_CONNECT_Internal << SAADC_CH_PSELP_CONNECT_Pos);
+    }
 #endif
+    else
+    {
+        pselp_reg  = (NRF_PIN_NUMBER_TO_PIN(pselp)  << SAADC_CH_PSELP_PIN_Pos)  |
+                     (NRF_PIN_NUMBER_TO_PORT(pselp) << SAADC_CH_PSELP_PORT_Pos) |
+                     (SAADC_CH_PSELP_CONNECT_AnalogInput << SAADC_CH_PSELP_CONNECT_Pos);
+    }
+#endif
+    p_reg->CH[channel].PSELP = pselp_reg;
+}
+
+NRF_STATIC_INLINE void nrf_saadc_channel_neg_input_set(NRF_SAADC_Type *  p_reg,
+                                                       uint8_t           channel,
+                                                       nrf_saadc_input_t pseln)
+{
+    uint32_t pseln_reg = pseln;
+#if NRF_SAADC_HAS_AIN_AS_PIN
+    if (pseln == NRF_SAADC_INPUT_DISABLED)
+    {
+        pseln_reg = 0;
+    }
+#if NRF_SAADC_HAS_CH_PSELN_INTERNAL
+    else if (pseln >> SAADC_CH_PSELN_INTERNAL_Pos)
+    {
+        /* Substract shifted '1' before setting register value,
+         * as it was artifically added before in the internal input definition */
+        pseln_reg  = (pseln - (1 << SAADC_CH_PSELN_INTERNAL_Pos)) |
+                     (SAADC_CH_PSELN_CONNECT_Internal << SAADC_CH_PSELN_CONNECT_Pos);
+    }
+#endif
+    else
+    {
+        pseln_reg  = (NRF_PIN_NUMBER_TO_PIN(pseln)  << SAADC_CH_PSELN_PIN_Pos)  |
+                     (NRF_PIN_NUMBER_TO_PORT(pseln) << SAADC_CH_PSELN_PORT_Pos) |
+                     (SAADC_CH_PSELN_CONNECT_AnalogInput << SAADC_CH_PSELN_CONNECT_Pos);
+    }
+#endif
+    p_reg->CH[channel].PSELN = pseln_reg;
 }
 
 NRF_STATIC_INLINE void nrf_saadc_channel_limits_set(NRF_SAADC_Type * p_reg,
@@ -1009,41 +1061,24 @@ NRF_STATIC_INLINE void nrf_saadc_buffer_init(NRF_SAADC_Type *    p_reg,
     }
 #endif
 
-#if NRF_SAADC_HAS_DMA_REG
-    p_reg->DMA.PTR = (uint32_t)p_buffer;
-    p_reg->DMA.MAXCNT = size;
-#else
     p_reg->RESULT.PTR = (uint32_t)p_buffer;
     p_reg->RESULT.MAXCNT = size;
-#endif
 }
 
 NRF_STATIC_INLINE void nrf_saadc_buffer_pointer_set(NRF_SAADC_Type *    p_reg,
                                                     nrf_saadc_value_t * p_buffer)
 {
-#if NRF_SAADC_HAS_DMA_REG
-    p_reg->DMA.PTR = (uint32_t)p_buffer;
-#else
     p_reg->RESULT.PTR = (uint32_t)p_buffer;
-#endif
 }
 
 NRF_STATIC_INLINE nrf_saadc_value_t * nrf_saadc_buffer_pointer_get(NRF_SAADC_Type const * p_reg)
 {
-#if NRF_SAADC_HAS_DMA_REG
-    return (nrf_saadc_value_t *)p_reg->DMA.PTR;
-#else
     return (nrf_saadc_value_t *)p_reg->RESULT.PTR;
-#endif
 }
 
 NRF_STATIC_INLINE uint16_t nrf_saadc_amount_get(NRF_SAADC_Type const * p_reg)
 {
-#if NRF_SAADC_HAS_DMA_REG
-    uint16_t result = (uint16_t)p_reg->DMA.AMOUNT;
-#else
     uint16_t result = (uint16_t)p_reg->RESULT.AMOUNT;
-#endif
 
 #if (NRF_SAADC_8BIT_SAMPLE_WIDTH == 8)
     if (nrf_saadc_resolution_get(p_reg) != NRF_SAADC_RESOLUTION_8BIT)

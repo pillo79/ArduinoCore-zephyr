@@ -46,8 +46,6 @@ POSSIBILITY OF SUCH DAMAGE.
         #elif defined(NRF_RADIOCORE)
             #define GRTC_IRQ_GROUP 4
             #define GPIOTE_IRQ_GROUP 4
-        #else
-            #error Unknown core.
         #endif
     #elif defined(NRF_PPR)
         #define GRTC_IRQ_GROUP 8
@@ -62,8 +60,6 @@ POSSIBILITY OF SUCH DAMAGE.
         #elif defined(NRF_RADIOCORE)
             #define GRTC_IRQ_GROUP 5
             #define GPIOTE_IRQ_GROUP 5
-        #else
-            #error Unknown core.
         #endif
     #endif
 
@@ -117,6 +113,7 @@ POSSIBILITY OF SUCH DAMAGE.
     #define TIMER137_CC_NUM TIMER137_CC_NUM_SIZE
 
     #define DPPIC020_CH_NUM DPPIC020_CH_NUM_SIZE
+    #define DPPIC030_CH_NUM DPPIC030_CH_NUM_SIZE
     #define DPPIC120_CH_NUM DPPIC120_CH_NUM_SIZE
     #define DPPIC130_CH_NUM DPPIC130_CH_NUM_SIZE
     #define DPPIC131_CH_NUM DPPIC131_CH_NUM_SIZE
@@ -127,6 +124,7 @@ POSSIBILITY OF SUCH DAMAGE.
     #define DPPIC136_CH_NUM DPPIC136_CH_NUM_SIZE
 
     #define DPPIC020_GROUP_NUM DPPIC020_GROUP_NUM_SIZE
+    #define DPPIC030_GROUP_NUM DPPIC030_GROUP_NUM_SIZE
     #define DPPIC120_GROUP_NUM DPPIC120_GROUP_NUM_SIZE
     #define DPPIC130_GROUP_NUM DPPIC130_GROUP_NUM_SIZE
     #define DPPIC131_GROUP_NUM DPPIC131_GROUP_NUM_SIZE
@@ -138,6 +136,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
     #define EGU020_CH_NUM EGU020_CH_NUM_SIZE
     #define EGU130_CH_NUM EGU130_CH_NUM_SIZE
+
 
 #endif
 

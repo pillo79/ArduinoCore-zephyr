@@ -66,7 +66,11 @@ extern "C" {
  */
 typedef void (* nrfx_comp_event_handler_t)(nrf_comp_event_t event);
 
-/** @brief COMP shortcut masks. */
+/**
+ * @brief COMP shortcut masks.
+ *
+ * @deprecated Use @ref nrf_comp_short_mask_t instead.
+*/
 typedef enum
 {
     NRFX_COMP_SHORT_STOP_AFTER_CROSS_EVT = NRF_COMP_SHORT_STOP_CROSS_MASK, ///< Shortcut between the CROSS event and the STOP task.
@@ -74,7 +78,11 @@ typedef enum
     NRFX_COMP_SHORT_STOP_AFTER_DOWN_EVT  = NRF_COMP_SHORT_STOP_DOWN_MASK   ///< Shortcut between the DOWN event and the STOP task.
 } nrfx_comp_short_mask_t;
 
-/** @brief COMP events masks. */
+/**
+ * @brief COMP events masks.
+ *
+ * @deprecated Use @ref nrf_comp_int_mask_t instead.
+*/
 typedef enum
 {
     NRFX_COMP_EVT_EN_CROSS_MASK = NRF_COMP_INT_CROSS_MASK, ///< CROSS event (generated after VIN+ == VIN-).
@@ -102,8 +110,8 @@ typedef struct
 /** @brief COMP threshold default configuration. */
 #define NRFX_COMP_CONFIG_TH                                  \
 {                                                            \
-    .th_down = NRFX_COMP_VOLTAGE_THRESHOLD_TO_INT(0.5, 1.8), \
-    .th_up   = NRFX_COMP_VOLTAGE_THRESHOLD_TO_INT(1.5, 1.8)  \
+    .th_down = NRFX_COMP_VOLTAGE_THRESHOLD_TO_INT(0.5, 1.2), \
+    .th_up   = NRFX_COMP_VOLTAGE_THRESHOLD_TO_INT(1.0, 1.2)  \
 }
 
 /**
@@ -111,9 +119,9 @@ typedef struct
  *
  * This configuration sets up COMP with the following options:
  * - single-ended mode
- * - reference voltage: internal 1.8 V
+ * - reference voltage: internal 1.2 V
  * - lower threshold: 0.5 V
- * - upper threshold: 1.5 V
+ * - upper threshold: 1.0 V
  * - high speed mode
  * - hysteresis disabled
  * - current source disabled
@@ -197,9 +205,9 @@ void nrfx_comp_pin_select(nrf_comp_input_t psel);
  * enables the COMP peripheral and its interrupts.
  *
  * @param[in] comp_evt_en_mask Mask of events to be enabled. This parameter is to be built as
- *                             an OR of elements from @ref nrfx_comp_evt_en_mask_t.
+ *                             an OR of elements from @ref nrf_comp_int_mask_t.
  * @param[in] comp_shorts_mask Mask of shortcuts to be enabled. This parameter is to be built as
- *                             an OR of elements from @ref nrfx_comp_short_mask_t.
+ *                             an OR of elements from @ref nrf_comp_short_mask_t.
  *
  * @sa nrfx_comp_init
  */

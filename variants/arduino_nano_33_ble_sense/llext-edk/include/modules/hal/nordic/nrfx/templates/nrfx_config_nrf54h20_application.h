@@ -290,6 +290,78 @@
 #endif
 
 /**
+ * @brief NRFX_DPPI120_ENABLED
+ *
+ * Boolean. Accepted values: 0 and 1.
+ */
+#ifndef NRFX_DPPI120_ENABLED
+#define NRFX_DPPI120_ENABLED 0
+#endif
+
+/**
+ * @brief NRFX_DPPI130_ENABLED
+ *
+ * Boolean. Accepted values: 0 and 1.
+ */
+#ifndef NRFX_DPPI130_ENABLED
+#define NRFX_DPPI130_ENABLED 0
+#endif
+
+/**
+ * @brief NRFX_DPPI131_ENABLED
+ *
+ * Boolean. Accepted values: 0 and 1.
+ */
+#ifndef NRFX_DPPI131_ENABLED
+#define NRFX_DPPI131_ENABLED 0
+#endif
+
+/**
+ * @brief NRFX_DPPI132_ENABLED
+ *
+ * Boolean. Accepted values: 0 and 1.
+ */
+#ifndef NRFX_DPPI132_ENABLED
+#define NRFX_DPPI132_ENABLED 0
+#endif
+
+/**
+ * @brief NRFX_DPPI133_ENABLED
+ *
+ * Boolean. Accepted values: 0 and 1.
+ */
+#ifndef NRFX_DPPI133_ENABLED
+#define NRFX_DPPI133_ENABLED 0
+#endif
+
+/**
+ * @brief NRFX_DPPI134_ENABLED
+ *
+ * Boolean. Accepted values: 0 and 1.
+ */
+#ifndef NRFX_DPPI134_ENABLED
+#define NRFX_DPPI134_ENABLED 0
+#endif
+
+/**
+ * @brief NRFX_DPPI135_ENABLED
+ *
+ * Boolean. Accepted values: 0 and 1.
+ */
+#ifndef NRFX_DPPI135_ENABLED
+#define NRFX_DPPI135_ENABLED 0
+#endif
+
+/**
+ * @brief NRFX_DPPI136_ENABLED
+ *
+ * Boolean. Accepted values: 0 and 1.
+ */
+#ifndef NRFX_DPPI136_ENABLED
+#define NRFX_DPPI136_ENABLED 0
+#endif
+
+/**
  * @brief NRFX_EGU_ENABLED
  *
  * Boolean. Accepted values: 0 and 1.
@@ -386,21 +458,12 @@
 #endif
 
 /**
- * @brief NRFX_GRTC_CONFIG_SLEEP_ALLOWED
- *
- * Boolean. Accepted values: 0 and 1.
- */
-#ifndef NRFX_GRTC_CONFIG_SLEEP_ALLOWED
-#define NRFX_GRTC_CONFIG_SLEEP_ALLOWED 0
-#endif
-
-/**
  * @brief NRFX_GRTC_CONFIG_AUTOEN
  *
  * Boolean. Accepted values: 0 and 1.
  */
 #ifndef NRFX_GRTC_CONFIG_AUTOEN
-#define NRFX_GRTC_CONFIG_AUTOEN 0
+#define NRFX_GRTC_CONFIG_AUTOEN 1
 #endif
 
 /**
@@ -410,6 +473,15 @@
  */
 #ifndef NRFX_GRTC_CONFIG_AUTOSTART
 #define NRFX_GRTC_CONFIG_AUTOSTART 0
+#endif
+
+/**
+ * @brief NRFX_GRTC_CONFIG_CLEAR_AT_INIT
+ *
+ * Boolean. Accepted values: 0 and 1.
+ */
+#ifndef NRFX_GRTC_CONFIG_CLEAR_AT_INIT
+#define NRFX_GRTC_CONFIG_CLEAR_AT_INIT 0
 #endif
 
 /**

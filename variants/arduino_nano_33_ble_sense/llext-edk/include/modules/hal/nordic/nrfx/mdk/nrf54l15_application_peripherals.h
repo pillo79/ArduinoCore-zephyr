@@ -133,7 +133,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define CRACENCORE_CRACENRESETVALUES 1               /*!< (unspecified)                                                        */
 #define CRACENCORE_SHA3RESETVALUES 0                 /*!< (unspecified)                                                        */
 #define CRACENCORE_PKE_DATA_MEMORY 0x51808000        /*!< (unspecified)                                                        */
-#define CRACENCORE_PKE_DATA_MEMORY_SIZE 17408        /*!< (unspecified)                                                        */
+#define CRACENCORE_PKE_DATA_MEMORY_SIZE 16384        /*!< (unspecified)                                                        */
 #define CRACENCORE_PKE_CODE_MEMORY 0x5180C000        /*!< (unspecified)                                                        */
 #define CRACENCORE_PKE_CODE_MEMORY_SIZE 5120         /*!< (unspecified)                                                        */
 
@@ -281,14 +281,18 @@ POSSIBILITY OF SUCH DAMAGE.
 #define KMU_PRESENT 1
 #define KMU_COUNT 1
 
-#define KMU_KEYSLOTNUM 256                           /*!< Number of keyslots is 256                                            */
+#define KMU_KEYSLOTNUM 250                           /*!< Number of keyslots is 250                                            */
 #define KMU_KEYSLOTBITS 128                          /*!< Number of bits per keyslot is 128                                    */
+#define KMU_PUSHBLOCK 1                              /*!< (unspecified)                                                        */
+#define KMU_BLOCK 0                                  /*!< (unspecified)                                                        */
 
 /*Accelerated Address Resolver*/
 #define AAR_PRESENT 1
 #define AAR_COUNT 1
 
 #define AAR00_DMAERROR 1                             /*!< (unspecified)                                                        */
+#define AAR00_ERRORSTATUS 1                          /*!< (unspecified)                                                        */
+#define AAR00_ERROREVENT 1                           /*!< (unspecified)                                                        */
 
 /*AES CCM Mode Encryption*/
 #define CCM_PRESENT 1
@@ -304,6 +308,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #define ECB00_AMOUNTREG 0                            /*!< (unspecified)                                                        */
 #define ECB00_DMAERROR 1                             /*!< (unspecified)                                                        */
+#define ECB00_ERRORSTATUS 1                          /*!< (unspecified)                                                        */
 
 /*CRACEN*/
 #define CRACEN_PRESENT 1
@@ -687,51 +692,42 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #define P2_CTRLSEL_MAP1 0                            /*!< (unspecified)                                                        */
 #define P2_CTRLSEL_MAP2 1                            /*!< (unspecified)                                                        */
+#define P2_CTRLSEL_MAP3 0                            /*!< (unspecified)                                                        */
 #define P2_PIN_NUM_MIN 0                             /*!< (unspecified)                                                        */
 #define P2_PIN_NUM_MAX 10                            /*!< (unspecified)                                                        */
 #define P2_PIN_NUM_SIZE 11                           /*!< (unspecified)                                                        */
-#define P2_PINS_PRESENT 2047                         /*!< (unspecified)                                                        */
+#define P2_FEATURE_PINS_PRESENT 2047                 /*!< (unspecified)                                                        */
 #define P2_DRIVECTRL 0                               /*!< (unspecified)                                                        */
 #define P2_RETAIN 0                                  /*!< (unspecified)                                                        */
 #define P2_PWRCTRL 0                                 /*!< (unspecified)                                                        */
-#define P2_PWRCTRL_SEPARATE_REG 0                    /*!< (unspecified)                                                        */
-#define P2_VSS_FLOAT_DFT 0                           /*!< (unspecified)                                                        */
 #define P2_PIN_OWNER_SEC 0                           /*!< (unspecified)                                                        */
-#define P2_WIFI_CORE_PRESENT 0                       /*!< (unspecified)                                                        */
-#define P2_RETAIN_PER_PIN 0                          /*!< (unspecified)                                                        */
-#define P2_CLOCKPIN 0                                /*!< (unspecified)                                                        */
+#define P2_BIASCTRL 0                                /*!< (unspecified)                                                        */
 
 #define P1_CTRLSEL_MAP1 0                            /*!< (unspecified)                                                        */
 #define P1_CTRLSEL_MAP2 1                            /*!< (unspecified)                                                        */
+#define P1_CTRLSEL_MAP3 0                            /*!< (unspecified)                                                        */
 #define P1_PIN_NUM_MIN 0                             /*!< (unspecified)                                                        */
 #define P1_PIN_NUM_MAX 16                            /*!< (unspecified)                                                        */
 #define P1_PIN_NUM_SIZE 17                           /*!< (unspecified)                                                        */
-#define P1_PINS_PRESENT 131071                       /*!< (unspecified)                                                        */
+#define P1_FEATURE_PINS_PRESENT 131071               /*!< (unspecified)                                                        */
 #define P1_DRIVECTRL 0                               /*!< (unspecified)                                                        */
 #define P1_RETAIN 0                                  /*!< (unspecified)                                                        */
 #define P1_PWRCTRL 0                                 /*!< (unspecified)                                                        */
-#define P1_PWRCTRL_SEPARATE_REG 0                    /*!< (unspecified)                                                        */
-#define P1_VSS_FLOAT_DFT 0                           /*!< (unspecified)                                                        */
 #define P1_PIN_OWNER_SEC 0                           /*!< (unspecified)                                                        */
-#define P1_WIFI_CORE_PRESENT 0                       /*!< (unspecified)                                                        */
-#define P1_RETAIN_PER_PIN 0                          /*!< (unspecified)                                                        */
-#define P1_CLOCKPIN 0                                /*!< (unspecified)                                                        */
+#define P1_BIASCTRL 0                                /*!< (unspecified)                                                        */
 
 #define P0_CTRLSEL_MAP1 0                            /*!< (unspecified)                                                        */
 #define P0_CTRLSEL_MAP2 1                            /*!< (unspecified)                                                        */
+#define P0_CTRLSEL_MAP3 0                            /*!< (unspecified)                                                        */
 #define P0_PIN_NUM_MIN 0                             /*!< (unspecified)                                                        */
 #define P0_PIN_NUM_MAX 6                             /*!< (unspecified)                                                        */
 #define P0_PIN_NUM_SIZE 7                            /*!< (unspecified)                                                        */
-#define P0_PINS_PRESENT 127                          /*!< (unspecified)                                                        */
+#define P0_FEATURE_PINS_PRESENT 127                  /*!< (unspecified)                                                        */
 #define P0_DRIVECTRL 0                               /*!< (unspecified)                                                        */
 #define P0_RETAIN 0                                  /*!< (unspecified)                                                        */
 #define P0_PWRCTRL 0                                 /*!< (unspecified)                                                        */
-#define P0_PWRCTRL_SEPARATE_REG 0                    /*!< (unspecified)                                                        */
-#define P0_VSS_FLOAT_DFT 0                           /*!< (unspecified)                                                        */
 #define P0_PIN_OWNER_SEC 0                           /*!< (unspecified)                                                        */
-#define P0_WIFI_CORE_PRESENT 0                       /*!< (unspecified)                                                        */
-#define P0_RETAIN_PER_PIN 0                          /*!< (unspecified)                                                        */
-#define P0_CLOCKPIN 0                                /*!< (unspecified)                                                        */
+#define P0_BIASCTRL 0                                /*!< (unspecified)                                                        */
 
 /*Control access port*/
 #define CTRLAPPERI_PRESENT 1
@@ -757,6 +753,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER00_MAX_SIZE_SIZE 32                     /*!< (unspecified)                                                        */
 #define TIMER00_PCLK_MHZ 128                         /*!< Peripheral clock frequency (PCLK) is 128 MHz                         */
 #define TIMER00_PCLK_VARIABLE 1                      /*!< (unspecified)                                                        */
+#define TIMER00_SHUTDOWN_TASK 0                      /*!< (unspecified)                                                        */
 
 #define TIMER10_CC_NUM_MIN 0                         /*!< (unspecified)                                                        */
 #define TIMER10_CC_NUM_MAX 7                         /*!< (unspecified)                                                        */
@@ -766,6 +763,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER10_MAX_SIZE_SIZE 32                     /*!< (unspecified)                                                        */
 #define TIMER10_PCLK_MHZ 32                          /*!< Peripheral clock frequency (PCLK) is 32 MHz                          */
 #define TIMER10_PCLK_VARIABLE 0                      /*!< (unspecified)                                                        */
+#define TIMER10_SHUTDOWN_TASK 0                      /*!< (unspecified)                                                        */
 
 #define TIMER20_CC_NUM_MIN 0                         /*!< (unspecified)                                                        */
 #define TIMER20_CC_NUM_MAX 5                         /*!< (unspecified)                                                        */
@@ -775,6 +773,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER20_MAX_SIZE_SIZE 32                     /*!< (unspecified)                                                        */
 #define TIMER20_PCLK_MHZ 16                          /*!< Peripheral clock frequency (PCLK) is 16 MHz                          */
 #define TIMER20_PCLK_VARIABLE 0                      /*!< (unspecified)                                                        */
+#define TIMER20_SHUTDOWN_TASK 0                      /*!< (unspecified)                                                        */
 
 #define TIMER21_CC_NUM_MIN 0                         /*!< (unspecified)                                                        */
 #define TIMER21_CC_NUM_MAX 5                         /*!< (unspecified)                                                        */
@@ -784,6 +783,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER21_MAX_SIZE_SIZE 32                     /*!< (unspecified)                                                        */
 #define TIMER21_PCLK_MHZ 16                          /*!< Peripheral clock frequency (PCLK) is 16 MHz                          */
 #define TIMER21_PCLK_VARIABLE 0                      /*!< (unspecified)                                                        */
+#define TIMER21_SHUTDOWN_TASK 0                      /*!< (unspecified)                                                        */
 
 #define TIMER22_CC_NUM_MIN 0                         /*!< (unspecified)                                                        */
 #define TIMER22_CC_NUM_MAX 5                         /*!< (unspecified)                                                        */
@@ -793,6 +793,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER22_MAX_SIZE_SIZE 32                     /*!< (unspecified)                                                        */
 #define TIMER22_PCLK_MHZ 16                          /*!< Peripheral clock frequency (PCLK) is 16 MHz                          */
 #define TIMER22_PCLK_VARIABLE 0                      /*!< (unspecified)                                                        */
+#define TIMER22_SHUTDOWN_TASK 0                      /*!< (unspecified)                                                        */
 
 #define TIMER23_CC_NUM_MIN 0                         /*!< (unspecified)                                                        */
 #define TIMER23_CC_NUM_MAX 5                         /*!< (unspecified)                                                        */
@@ -802,6 +803,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER23_MAX_SIZE_SIZE 32                     /*!< (unspecified)                                                        */
 #define TIMER23_PCLK_MHZ 16                          /*!< Peripheral clock frequency (PCLK) is 16 MHz                          */
 #define TIMER23_PCLK_VARIABLE 0                      /*!< (unspecified)                                                        */
+#define TIMER23_SHUTDOWN_TASK 0                      /*!< (unspecified)                                                        */
 
 #define TIMER24_CC_NUM_MIN 0                         /*!< (unspecified)                                                        */
 #define TIMER24_CC_NUM_MAX 5                         /*!< (unspecified)                                                        */
@@ -811,6 +813,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER24_MAX_SIZE_SIZE 32                     /*!< (unspecified)                                                        */
 #define TIMER24_PCLK_MHZ 16                          /*!< Peripheral clock frequency (PCLK) is 16 MHz                          */
 #define TIMER24_PCLK_VARIABLE 0                      /*!< (unspecified)                                                        */
+#define TIMER24_SHUTDOWN_TASK 0                      /*!< (unspecified)                                                        */
 
 /*Real-time counter*/
 #define RTC_PRESENT 1
@@ -901,7 +904,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #define MEMCONF_RETTRIM 1                            /*!< (unspecified)                                                        */
 #define MEMCONF_REPAIR 0                             /*!< (unspecified)                                                        */
 #define MEMCONF_POWER 1                              /*!< (unspecified)                                                        */
-#define MEMCONF_RET2 1                               /*!< (unspecified)                                                        */
 
 /*Pulse Density Modulation (Digital Microphone) Interface*/
 #define PDM_PRESENT 1
@@ -909,13 +911,11 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #define PDM20_SAMPLE16 0                             /*!< (unspecified)                                                        */
 #define PDM20_SAMPLE48 1                             /*!< (unspecified)                                                        */
-#define PDM20_MCLKCONFIG_TEMPADDRESS 1               /*!< (unspecified)                                                        */
 #define PDM20_PRESCALER_PRESENT 1                    /*!< (unspecified)                                                        */
 #define PDM20_EASYDMA_CURRENT_AMOUNT_REGISTER_INCLUDED 1 /*!< (unspecified)                                                    */
 
 #define PDM21_SAMPLE16 0                             /*!< (unspecified)                                                        */
 #define PDM21_SAMPLE48 1                             /*!< (unspecified)                                                        */
-#define PDM21_MCLKCONFIG_TEMPADDRESS 1               /*!< (unspecified)                                                        */
 #define PDM21_PRESCALER_PRESENT 1                    /*!< (unspecified)                                                        */
 #define PDM21_EASYDMA_CURRENT_AMOUNT_REGISTER_INCLUDED 1 /*!< (unspecified)                                                    */
 
@@ -1001,7 +1001,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TAMPC_COUNT 1
 
 #define TAMPC_APSPIDEN 0                             /*!< (unspecified)                                                        */
-#define TAMPC_PROTECT_INTRESETEN_CTRL_VALUE_RESET 0  /*!< Reset value of field VALUE in register PROTECT.INTRESETEN.CTRL: 0    */
+#define TAMPC_PROTECT_INTRESETEN_CTRL_VALUE_RESET 1  /*!< Reset value of field VALUE in register PROTECT.INTRESETEN.CTRL: 1    */
 #define TAMPC_TAMPERSWITCH 0                         /*!< (unspecified)                                                        */
 
 /*Inter-IC Sound*/
@@ -1034,9 +1034,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #define GRTC_NTIMEOUT_MIN 0                          /*!< Width of the TIMEOUT register : 0..15                                */
 #define GRTC_NTIMEOUT_MAX 15                         /*!< Width of the TIMEOUT register : 0..15                                */
 #define GRTC_NTIMEOUT_SIZE 16                        /*!< Width of the TIMEOUT register : 0..15                                */
-#define GRTC_NDOMAIN_MIN 0                           /*!< Number of domains at the KEEPRUNNING register: 0..15                 */
-#define GRTC_NDOMAIN_MAX 15                          /*!< Number of domains at the KEEPRUNNING register: 0..15                 */
-#define GRTC_NDOMAIN_SIZE 16                         /*!< Number of domains at the KEEPRUNNING register: 0..15                 */
 #define GRTC_GRTC_NINTERRUPTS_MIN 0                  /*!< Number of GRTC interrupts : 0..3                                     */
 #define GRTC_GRTC_NINTERRUPTS_MAX 3                  /*!< Number of GRTC interrupts : 0..3                                     */
 #define GRTC_GRTC_NINTERRUPTS_SIZE 4                 /*!< Number of GRTC interrupts : 0..3                                     */
@@ -1045,6 +1042,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #define GRTC_CLKSELREG 1                             /*!< (unspecified)                                                        */
 #define GRTC_CLKSELLFLPRC 1                          /*!< (unspecified)                                                        */
 #define GRTC_CCADD_WRITE_ONLY 0                      /*!< (unspecified)                                                        */
+#define GRTC_READY_STATUS_AND_EVENTS 0               /*!< (unspecified)                                                        */
+#define GRTC_SYSCOUNTER_LOADED_STATUS 0              /*!< (unspecified)                                                        */
+#define GRTC_CC_PAST_STATUS 0                        /*!< (unspecified)                                                        */
+#define GRTC_SYSCOUNTER_WRITEABLE 0                  /*!< (unspecified)                                                        */
 
 /*Comparator*/
 #define COMP_PRESENT 1
@@ -1069,6 +1070,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define CLOCK_COUNT 1
 
 #define CLOCK_XOTUNE 1                               /*!< (unspecified)                                                        */
+#define CLOCK_PLL24M 0                               /*!< (unspecified)                                                        */
 
 /*Power control*/
 #define POWER_PRESENT 1

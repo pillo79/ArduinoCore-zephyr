@@ -100,13 +100,13 @@ POSSIBILITY OF SUCH DAMAGE.
 #define I3CCORE_PRESENT 1
 #define I3CCORE_COUNT 2
 
-/*DMU*/
-#define DMU_PRESENT 1
-#define DMU_COUNT 1
-
 /*MCAN*/
 #define MCAN_PRESENT 1
 #define MCAN_COUNT 1
+
+/*DMU*/
+#define DMU_PRESENT 1
+#define DMU_COUNT 1
 
 /*System Trace Macrocell data buffer*/
 #define STMDATA_PRESENT 1
@@ -127,6 +127,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TPIU_PRESENT 1
 #define TPIU_COUNT 1
 
+/*Embedded Trace Buffer*/
+#define ETB_PRESENT 1
+#define ETB_COUNT 1
+
 /*Cross-Trigger Interface control*/
 #define CTI_PRESENT 1
 #define CTI_COUNT 2
@@ -138,6 +142,12 @@ POSSIBILITY OF SUCH DAMAGE.
 /*ATB funnel module*/
 #define ATBFUNNEL_PRESENT 1
 #define ATBFUNNEL_COUNT 4
+
+/*Granular Power Requester*/
+#define GPR_PRESENT 1
+#define GPR_COUNT 1
+
+#define GPR_NUM_CPWRUPM 9                            /*!< Number of power-control interfaces: 9                                */
 
 /*GPIO Tasks and Events*/
 #define GPIOTE_PRESENT 1
@@ -172,9 +182,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #define GRTC_NTIMEOUT_MIN 0                          /*!< Width of the TIMEOUT register : 0..15                                */
 #define GRTC_NTIMEOUT_MAX 15                         /*!< Width of the TIMEOUT register : 0..15                                */
 #define GRTC_NTIMEOUT_SIZE 16                        /*!< Width of the TIMEOUT register : 0..15                                */
-#define GRTC_NDOMAIN_MIN 0                           /*!< Number of domains at the KEEPRUNNING register: 0..15                 */
-#define GRTC_NDOMAIN_MAX 15                          /*!< Number of domains at the KEEPRUNNING register: 0..15                 */
-#define GRTC_NDOMAIN_SIZE 16                         /*!< Number of domains at the KEEPRUNNING register: 0..15                 */
 #define GRTC_GRTC_NINTERRUPTS_MIN 0                  /*!< Number of GRTC interrupts : 0..2                                     */
 #define GRTC_GRTC_NINTERRUPTS_MAX 2                  /*!< Number of GRTC interrupts : 0..2                                     */
 #define GRTC_GRTC_NINTERRUPTS_SIZE 3                 /*!< Number of GRTC interrupts : 0..2                                     */
@@ -184,6 +191,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #define GRTC_CLKSELLFLPRC 1                          /*!< (unspecified)                                                        */
 #define GRTC_CCADD_WRITE_ONLY 1                      /*!< (unspecified)                                                        */
 #define GRTC_READY_STATUS_AND_EVENTS 0               /*!< (unspecified)                                                        */
+#define GRTC_SYSCOUNTER_LOADED_STATUS 0              /*!< (unspecified)                                                        */
+#define GRTC_CC_PAST_STATUS 0                        /*!< (unspecified)                                                        */
+#define GRTC_SYSCOUNTER_WRITEABLE 0                  /*!< (unspecified)                                                        */
 
 /*Trace buffer monitor*/
 #define TBM_PRESENT 1
@@ -193,6 +203,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #define USBHS_PRESENT 1
 #define USBHS_COUNT 1
 
+#define USBHS_HAS_CORE_EVENT 1                       /*!< (unspecified)                                                        */
+#define USBHS_HAS_SOF_EVENT 0                        /*!< (unspecified)                                                        */
+#define USBHS_RTUNE_AVAILABLE 0                      /*!< (unspecified)                                                        */
+
 /*External Memory Interface*/
 #define EXMIF_PRESENT 1
 #define EXMIF_COUNT 1
@@ -200,6 +214,10 @@ POSSIBILITY OF SUCH DAMAGE.
 /*BELLBOARD public registers*/
 #define BELLBOARDPUBLIC_PRESENT 1
 #define BELLBOARDPUBLIC_COUNT 1
+
+/*AUXPLL*/
+#define AUXPLL_PRESENT 1
+#define AUXPLL_COUNT 1
 
 /*VPR peripheral registers*/
 #define VPRPUBLIC_PRESENT 1
@@ -374,6 +392,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER120_MAX_SIZE_SIZE 32                    /*!< (unspecified)                                                        */
 #define TIMER120_PCLK_MHZ 320                        /*!< Peripheral clock frequency (PCLK) is 320 MHz                         */
 #define TIMER120_PCLK_VARIABLE 0                     /*!< (unspecified)                                                        */
+#define TIMER120_SHUTDOWN_TASK 0                     /*!< (unspecified)                                                        */
 
 #define TIMER121_CC_NUM_MIN 0                        /*!< (unspecified)                                                        */
 #define TIMER121_CC_NUM_MAX 5                        /*!< (unspecified)                                                        */
@@ -383,6 +402,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER121_MAX_SIZE_SIZE 32                    /*!< (unspecified)                                                        */
 #define TIMER121_PCLK_MHZ 320                        /*!< Peripheral clock frequency (PCLK) is 320 MHz                         */
 #define TIMER121_PCLK_VARIABLE 0                     /*!< (unspecified)                                                        */
+#define TIMER121_SHUTDOWN_TASK 0                     /*!< (unspecified)                                                        */
 
 #define TIMER130_CC_NUM_MIN 0                        /*!< (unspecified)                                                        */
 #define TIMER130_CC_NUM_MAX 5                        /*!< (unspecified)                                                        */
@@ -392,6 +412,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER130_MAX_SIZE_SIZE 32                    /*!< (unspecified)                                                        */
 #define TIMER130_PCLK_MHZ 16                         /*!< Peripheral clock frequency (PCLK) is 16 MHz                          */
 #define TIMER130_PCLK_VARIABLE 0                     /*!< (unspecified)                                                        */
+#define TIMER130_SHUTDOWN_TASK 0                     /*!< (unspecified)                                                        */
 
 #define TIMER131_CC_NUM_MIN 0                        /*!< (unspecified)                                                        */
 #define TIMER131_CC_NUM_MAX 5                        /*!< (unspecified)                                                        */
@@ -401,6 +422,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER131_MAX_SIZE_SIZE 32                    /*!< (unspecified)                                                        */
 #define TIMER131_PCLK_MHZ 16                         /*!< Peripheral clock frequency (PCLK) is 16 MHz                          */
 #define TIMER131_PCLK_VARIABLE 0                     /*!< (unspecified)                                                        */
+#define TIMER131_SHUTDOWN_TASK 0                     /*!< (unspecified)                                                        */
 
 #define TIMER132_CC_NUM_MIN 0                        /*!< (unspecified)                                                        */
 #define TIMER132_CC_NUM_MAX 5                        /*!< (unspecified)                                                        */
@@ -410,6 +432,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER132_MAX_SIZE_SIZE 32                    /*!< (unspecified)                                                        */
 #define TIMER132_PCLK_MHZ 16                         /*!< Peripheral clock frequency (PCLK) is 16 MHz                          */
 #define TIMER132_PCLK_VARIABLE 0                     /*!< (unspecified)                                                        */
+#define TIMER132_SHUTDOWN_TASK 0                     /*!< (unspecified)                                                        */
 
 #define TIMER133_CC_NUM_MIN 0                        /*!< (unspecified)                                                        */
 #define TIMER133_CC_NUM_MAX 5                        /*!< (unspecified)                                                        */
@@ -419,6 +442,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER133_MAX_SIZE_SIZE 32                    /*!< (unspecified)                                                        */
 #define TIMER133_PCLK_MHZ 16                         /*!< Peripheral clock frequency (PCLK) is 16 MHz                          */
 #define TIMER133_PCLK_VARIABLE 0                     /*!< (unspecified)                                                        */
+#define TIMER133_SHUTDOWN_TASK 0                     /*!< (unspecified)                                                        */
 
 #define TIMER134_CC_NUM_MIN 0                        /*!< (unspecified)                                                        */
 #define TIMER134_CC_NUM_MAX 5                        /*!< (unspecified)                                                        */
@@ -428,6 +452,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER134_MAX_SIZE_SIZE 32                    /*!< (unspecified)                                                        */
 #define TIMER134_PCLK_MHZ 16                         /*!< Peripheral clock frequency (PCLK) is 16 MHz                          */
 #define TIMER134_PCLK_VARIABLE 0                     /*!< (unspecified)                                                        */
+#define TIMER134_SHUTDOWN_TASK 0                     /*!< (unspecified)                                                        */
 
 #define TIMER135_CC_NUM_MIN 0                        /*!< (unspecified)                                                        */
 #define TIMER135_CC_NUM_MAX 5                        /*!< (unspecified)                                                        */
@@ -437,6 +462,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER135_MAX_SIZE_SIZE 32                    /*!< (unspecified)                                                        */
 #define TIMER135_PCLK_MHZ 16                         /*!< Peripheral clock frequency (PCLK) is 16 MHz                          */
 #define TIMER135_PCLK_VARIABLE 0                     /*!< (unspecified)                                                        */
+#define TIMER135_SHUTDOWN_TASK 0                     /*!< (unspecified)                                                        */
 
 #define TIMER136_CC_NUM_MIN 0                        /*!< (unspecified)                                                        */
 #define TIMER136_CC_NUM_MAX 5                        /*!< (unspecified)                                                        */
@@ -446,6 +472,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER136_MAX_SIZE_SIZE 32                    /*!< (unspecified)                                                        */
 #define TIMER136_PCLK_MHZ 16                         /*!< Peripheral clock frequency (PCLK) is 16 MHz                          */
 #define TIMER136_PCLK_VARIABLE 0                     /*!< (unspecified)                                                        */
+#define TIMER136_SHUTDOWN_TASK 0                     /*!< (unspecified)                                                        */
 
 #define TIMER137_CC_NUM_MIN 0                        /*!< (unspecified)                                                        */
 #define TIMER137_CC_NUM_MAX 5                        /*!< (unspecified)                                                        */
@@ -455,6 +482,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMER137_MAX_SIZE_SIZE 32                    /*!< (unspecified)                                                        */
 #define TIMER137_PCLK_MHZ 16                         /*!< Peripheral clock frequency (PCLK) is 16 MHz                          */
 #define TIMER137_PCLK_VARIABLE 0                     /*!< (unspecified)                                                        */
+#define TIMER137_SHUTDOWN_TASK 0                     /*!< (unspecified)                                                        */
 
 /*Pulse width modulation unit*/
 #define PWM_PRESENT 1
@@ -552,7 +580,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define SPIM120_FEATURE_HARDWARE_DCX_PRESENT 1       /*!< (unspecified)                                                        */
 #define SPIM120_FEATURE_RXDELAY_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM120_STALL_STATUS_PRESENT 0               /*!< (unspecified)                                                        */
-#define SPIM120_STALL_STATUS_TX_PRESENT 0            /*!< (unspecified)                                                        */
+#define SPIM120_STALL_STATUS_TX_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM120_NUM_CHIPSELECT_MIN 0                 /*!< (unspecified)                                                        */
 #define SPIM120_NUM_CHIPSELECT_MAX 0                 /*!< (unspecified)                                                        */
 #define SPIM120_NUM_CHIPSELECT_SIZE 1                /*!< (unspecified)                                                        */
@@ -578,7 +606,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define SPIM121_FEATURE_HARDWARE_DCX_PRESENT 1       /*!< (unspecified)                                                        */
 #define SPIM121_FEATURE_RXDELAY_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM121_STALL_STATUS_PRESENT 0               /*!< (unspecified)                                                        */
-#define SPIM121_STALL_STATUS_TX_PRESENT 0            /*!< (unspecified)                                                        */
+#define SPIM121_STALL_STATUS_TX_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM121_NUM_CHIPSELECT_MIN 0                 /*!< (unspecified)                                                        */
 #define SPIM121_NUM_CHIPSELECT_MAX 0                 /*!< (unspecified)                                                        */
 #define SPIM121_NUM_CHIPSELECT_SIZE 1                /*!< (unspecified)                                                        */
@@ -604,7 +632,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define SPIM130_FEATURE_HARDWARE_DCX_PRESENT 1       /*!< (unspecified)                                                        */
 #define SPIM130_FEATURE_RXDELAY_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM130_STALL_STATUS_PRESENT 0               /*!< (unspecified)                                                        */
-#define SPIM130_STALL_STATUS_TX_PRESENT 0            /*!< (unspecified)                                                        */
+#define SPIM130_STALL_STATUS_TX_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM130_NUM_CHIPSELECT_MIN 0                 /*!< (unspecified)                                                        */
 #define SPIM130_NUM_CHIPSELECT_MAX 0                 /*!< (unspecified)                                                        */
 #define SPIM130_NUM_CHIPSELECT_SIZE 1                /*!< (unspecified)                                                        */
@@ -630,7 +658,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define SPIM131_FEATURE_HARDWARE_DCX_PRESENT 1       /*!< (unspecified)                                                        */
 #define SPIM131_FEATURE_RXDELAY_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM131_STALL_STATUS_PRESENT 0               /*!< (unspecified)                                                        */
-#define SPIM131_STALL_STATUS_TX_PRESENT 0            /*!< (unspecified)                                                        */
+#define SPIM131_STALL_STATUS_TX_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM131_NUM_CHIPSELECT_MIN 0                 /*!< (unspecified)                                                        */
 #define SPIM131_NUM_CHIPSELECT_MAX 0                 /*!< (unspecified)                                                        */
 #define SPIM131_NUM_CHIPSELECT_SIZE 1                /*!< (unspecified)                                                        */
@@ -656,7 +684,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define SPIM132_FEATURE_HARDWARE_DCX_PRESENT 1       /*!< (unspecified)                                                        */
 #define SPIM132_FEATURE_RXDELAY_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM132_STALL_STATUS_PRESENT 0               /*!< (unspecified)                                                        */
-#define SPIM132_STALL_STATUS_TX_PRESENT 0            /*!< (unspecified)                                                        */
+#define SPIM132_STALL_STATUS_TX_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM132_NUM_CHIPSELECT_MIN 0                 /*!< (unspecified)                                                        */
 #define SPIM132_NUM_CHIPSELECT_MAX 0                 /*!< (unspecified)                                                        */
 #define SPIM132_NUM_CHIPSELECT_SIZE 1                /*!< (unspecified)                                                        */
@@ -682,7 +710,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define SPIM133_FEATURE_HARDWARE_DCX_PRESENT 1       /*!< (unspecified)                                                        */
 #define SPIM133_FEATURE_RXDELAY_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM133_STALL_STATUS_PRESENT 0               /*!< (unspecified)                                                        */
-#define SPIM133_STALL_STATUS_TX_PRESENT 0            /*!< (unspecified)                                                        */
+#define SPIM133_STALL_STATUS_TX_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM133_NUM_CHIPSELECT_MIN 0                 /*!< (unspecified)                                                        */
 #define SPIM133_NUM_CHIPSELECT_MAX 0                 /*!< (unspecified)                                                        */
 #define SPIM133_NUM_CHIPSELECT_SIZE 1                /*!< (unspecified)                                                        */
@@ -708,7 +736,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define SPIM134_FEATURE_HARDWARE_DCX_PRESENT 1       /*!< (unspecified)                                                        */
 #define SPIM134_FEATURE_RXDELAY_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM134_STALL_STATUS_PRESENT 0               /*!< (unspecified)                                                        */
-#define SPIM134_STALL_STATUS_TX_PRESENT 0            /*!< (unspecified)                                                        */
+#define SPIM134_STALL_STATUS_TX_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM134_NUM_CHIPSELECT_MIN 0                 /*!< (unspecified)                                                        */
 #define SPIM134_NUM_CHIPSELECT_MAX 0                 /*!< (unspecified)                                                        */
 #define SPIM134_NUM_CHIPSELECT_SIZE 1                /*!< (unspecified)                                                        */
@@ -734,7 +762,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define SPIM135_FEATURE_HARDWARE_DCX_PRESENT 1       /*!< (unspecified)                                                        */
 #define SPIM135_FEATURE_RXDELAY_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM135_STALL_STATUS_PRESENT 0               /*!< (unspecified)                                                        */
-#define SPIM135_STALL_STATUS_TX_PRESENT 0            /*!< (unspecified)                                                        */
+#define SPIM135_STALL_STATUS_TX_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM135_NUM_CHIPSELECT_MIN 0                 /*!< (unspecified)                                                        */
 #define SPIM135_NUM_CHIPSELECT_MAX 0                 /*!< (unspecified)                                                        */
 #define SPIM135_NUM_CHIPSELECT_SIZE 1                /*!< (unspecified)                                                        */
@@ -760,7 +788,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define SPIM136_FEATURE_HARDWARE_DCX_PRESENT 1       /*!< (unspecified)                                                        */
 #define SPIM136_FEATURE_RXDELAY_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM136_STALL_STATUS_PRESENT 0               /*!< (unspecified)                                                        */
-#define SPIM136_STALL_STATUS_TX_PRESENT 0            /*!< (unspecified)                                                        */
+#define SPIM136_STALL_STATUS_TX_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM136_NUM_CHIPSELECT_MIN 0                 /*!< (unspecified)                                                        */
 #define SPIM136_NUM_CHIPSELECT_MAX 0                 /*!< (unspecified)                                                        */
 #define SPIM136_NUM_CHIPSELECT_SIZE 1                /*!< (unspecified)                                                        */
@@ -786,7 +814,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define SPIM137_FEATURE_HARDWARE_DCX_PRESENT 1       /*!< (unspecified)                                                        */
 #define SPIM137_FEATURE_RXDELAY_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM137_STALL_STATUS_PRESENT 0               /*!< (unspecified)                                                        */
-#define SPIM137_STALL_STATUS_TX_PRESENT 0            /*!< (unspecified)                                                        */
+#define SPIM137_STALL_STATUS_TX_PRESENT 1            /*!< (unspecified)                                                        */
 #define SPIM137_NUM_CHIPSELECT_MIN 0                 /*!< (unspecified)                                                        */
 #define SPIM137_NUM_CHIPSELECT_MAX 0                 /*!< (unspecified)                                                        */
 #define SPIM137_NUM_CHIPSELECT_SIZE 1                /*!< (unspecified)                                                        */
@@ -1078,12 +1106,6 @@ POSSIBILITY OF SUCH DAMAGE.
 /*Quadrature Decoder*/
 #define QDEC_PRESENT 1
 #define QDEC_COUNT 2
-
-/*SIM card interface*/
-#define SIMIF_PRESENT 1
-#define SIMIF_COUNT 1
-
-#define SIMIF130_SWOVERRIDE_REGS 0                   /*!< (unspecified)                                                        */
 
 /*I2C compatible Two-Wire Master Interface with EasyDMA*/
 #define TWIM_PRESENT 1

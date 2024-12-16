@@ -76,14 +76,15 @@ POSSIBILITY OF SUCH DAMAGE.
 #define NRF_USBHSCORE0_S_BASE             0x2F700000UL
 #define NRF_I3CCORE120_NS_BASE            0x2FBE0000UL
 #define NRF_I3CCORE121_NS_BASE            0x2FBE1000UL
-#define NRF_DMU120_NS_BASE                0x2FBEF800UL
 #define NRF_MCAN120_NS_BASE               0x2FBEF800UL
+#define NRF_DMU120_NS_BASE                0x2FBEFBC0UL
 #define NRF_STMDATA_NS_BASE               0xA0000000UL
 #define NRF_STMDATA_S_BASE                0xA0000000UL
 #define NRF_TDDCONF_NS_BASE               0xBF001000UL
 #define NRF_TDDCONF_S_BASE                0xBF001000UL
 #define NRF_STM_NS_BASE                   0xBF042000UL
 #define NRF_TPIU_NS_BASE                  0xBF043000UL
+#define NRF_ETB_NS_BASE                   0xBF044000UL
 #define NRF_CTI210_NS_BASE                0xBF046000UL
 #define NRF_CTI211_NS_BASE                0xBF047000UL
 #define NRF_ATBREPLICATOR210_NS_BASE      0xBF048000UL
@@ -94,6 +95,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define NRF_ATBFUNNEL211_NS_BASE          0xBF04D000UL
 #define NRF_ATBFUNNEL212_NS_BASE          0xBF04E000UL
 #define NRF_ATBFUNNEL213_NS_BASE          0xBF04F000UL
+#define NRF_GPR_NS_BASE                   0xBF050000UL
 #define NRF_GPIOTE130_NS_BASE             0x4F934000UL
 #define NRF_GPIOTE130_S_BASE              0x5F934000UL
 #define NRF_GRTC_NS_BASE                  0x4F99C000UL
@@ -192,8 +194,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #define NRF_QDEC130_S_BASE                0x5F994000UL
 #define NRF_QDEC131_NS_BASE               0x4F995000UL
 #define NRF_QDEC131_S_BASE                0x5F995000UL
-#define NRF_SIMIF130_NS_BASE              0x4F996000UL
-#define NRF_SIMIF130_S_BASE               0x5F996000UL
 #define NRF_TDM131_NS_BASE                0x4F997000UL
 #define NRF_TDM131_S_BASE                 0x5F997000UL
 #define NRF_DPPIC133_NS_BASE              0x4F9A1000UL
@@ -318,14 +318,15 @@ POSSIBILITY OF SUCH DAMAGE.
 #define NRF_USBHSCORE0_S                  ((NRF_USBHSCORE_Type*)                NRF_USBHSCORE0_S_BASE)
 #define NRF_I3CCORE120_NS                 ((NRF_I3CCORE_Type*)                  NRF_I3CCORE120_NS_BASE)
 #define NRF_I3CCORE121_NS                 ((NRF_I3CCORE_Type*)                  NRF_I3CCORE121_NS_BASE)
-#define NRF_DMU120_NS                     ((NRF_DMU_Type*)                      NRF_DMU120_NS_BASE)
 #define NRF_MCAN120_NS                    ((NRF_MCAN_Type*)                     NRF_MCAN120_NS_BASE)
+#define NRF_DMU120_NS                     ((NRF_DMU_Type*)                      NRF_DMU120_NS_BASE)
 #define NRF_STMDATA_NS                    ((NRF_STMDATA_Type*)                  NRF_STMDATA_NS_BASE)
 #define NRF_STMDATA_S                     ((NRF_STMDATA_Type*)                  NRF_STMDATA_S_BASE)
 #define NRF_TDDCONF_NS                    ((NRF_TDDCONF_Type*)                  NRF_TDDCONF_NS_BASE)
 #define NRF_TDDCONF_S                     ((NRF_TDDCONF_Type*)                  NRF_TDDCONF_S_BASE)
 #define NRF_STM_NS                        ((NRF_STM_Type*)                      NRF_STM_NS_BASE)
 #define NRF_TPIU_NS                       ((NRF_TPIU_Type*)                     NRF_TPIU_NS_BASE)
+#define NRF_ETB_NS                        ((NRF_ETB_Type*)                      NRF_ETB_NS_BASE)
 #define NRF_CTI210_NS                     ((NRF_CTI_Type*)                      NRF_CTI210_NS_BASE)
 #define NRF_CTI211_NS                     ((NRF_CTI_Type*)                      NRF_CTI211_NS_BASE)
 #define NRF_ATBREPLICATOR210_NS           ((NRF_ATBREPLICATOR_Type*)            NRF_ATBREPLICATOR210_NS_BASE)
@@ -336,6 +337,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define NRF_ATBFUNNEL211_NS               ((NRF_ATBFUNNEL_Type*)                NRF_ATBFUNNEL211_NS_BASE)
 #define NRF_ATBFUNNEL212_NS               ((NRF_ATBFUNNEL_Type*)                NRF_ATBFUNNEL212_NS_BASE)
 #define NRF_ATBFUNNEL213_NS               ((NRF_ATBFUNNEL_Type*)                NRF_ATBFUNNEL213_NS_BASE)
+#define NRF_GPR_NS                        ((NRF_GPR_Type*)                      NRF_GPR_NS_BASE)
 #define NRF_GPIOTE130_NS                  ((NRF_GPIOTE_Type*)                   NRF_GPIOTE130_NS_BASE)
 #define NRF_GPIOTE130_S                   ((NRF_GPIOTE_Type*)                   NRF_GPIOTE130_S_BASE)
 #define NRF_GRTC_NS                       ((NRF_GRTC_Type*)                     NRF_GRTC_NS_BASE)
@@ -434,8 +436,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #define NRF_QDEC130_S                     ((NRF_QDEC_Type*)                     NRF_QDEC130_S_BASE)
 #define NRF_QDEC131_NS                    ((NRF_QDEC_Type*)                     NRF_QDEC131_NS_BASE)
 #define NRF_QDEC131_S                     ((NRF_QDEC_Type*)                     NRF_QDEC131_S_BASE)
-#define NRF_SIMIF130_NS                   ((NRF_SIMIF_Type*)                    NRF_SIMIF130_NS_BASE)
-#define NRF_SIMIF130_S                    ((NRF_SIMIF_Type*)                    NRF_SIMIF130_S_BASE)
 #define NRF_TDM131_NS                     ((NRF_TDM_Type*)                      NRF_TDM131_NS_BASE)
 #define NRF_TDM131_S                      ((NRF_TDM_Type*)                      NRF_TDM131_S_BASE)
 #define NRF_DPPIC133_NS                   ((NRF_DPPIC_Type*)                    NRF_DPPIC133_NS_BASE)
@@ -560,12 +560,13 @@ POSSIBILITY OF SUCH DAMAGE.
   #define NRF_USBHSCORE0                          NRF_USBHSCORE0_NS
   #define NRF_I3CCORE120                          NRF_I3CCORE120_NS
   #define NRF_I3CCORE121                          NRF_I3CCORE121_NS
-  #define NRF_DMU120                              NRF_DMU120_NS
   #define NRF_MCAN120                             NRF_MCAN120_NS
+  #define NRF_DMU120                              NRF_DMU120_NS
   #define NRF_STMDATA                             NRF_STMDATA_NS
   #define NRF_TDDCONF                             NRF_TDDCONF_NS
   #define NRF_STM                                 NRF_STM_NS
   #define NRF_TPIU                                NRF_TPIU_NS
+  #define NRF_ETB                                 NRF_ETB_NS
   #define NRF_CTI210                              NRF_CTI210_NS
   #define NRF_CTI211                              NRF_CTI211_NS
   #define NRF_ATBREPLICATOR210                    NRF_ATBREPLICATOR210_NS
@@ -576,6 +577,7 @@ POSSIBILITY OF SUCH DAMAGE.
   #define NRF_ATBFUNNEL211                        NRF_ATBFUNNEL211_NS
   #define NRF_ATBFUNNEL212                        NRF_ATBFUNNEL212_NS
   #define NRF_ATBFUNNEL213                        NRF_ATBFUNNEL213_NS
+  #define NRF_GPR                                 NRF_GPR_NS
   #define NRF_GPIOTE130                           NRF_GPIOTE130_NS
   #define NRF_GRTC                                NRF_GRTC_NS
   #define NRF_TBM                                 NRF_TBM_NS
@@ -626,7 +628,6 @@ POSSIBILITY OF SUCH DAMAGE.
   #define NRF_PDM                                 NRF_PDM_NS
   #define NRF_QDEC130                             NRF_QDEC130_NS
   #define NRF_QDEC131                             NRF_QDEC131_NS
-  #define NRF_SIMIF130                            NRF_SIMIF130_NS
   #define NRF_TDM131                              NRF_TDM131_NS
   #define NRF_DPPIC133                            NRF_DPPIC133_NS
   #define NRF_TIMER130                            NRF_TIMER130_NS
@@ -689,12 +690,13 @@ POSSIBILITY OF SUCH DAMAGE.
   #define NRF_USBHSCORE0                          NRF_USBHSCORE0_S
   #define NRF_I3CCORE120                          NRF_I3CCORE120_NS
   #define NRF_I3CCORE121                          NRF_I3CCORE121_NS
-  #define NRF_DMU120                              NRF_DMU120_NS
   #define NRF_MCAN120                             NRF_MCAN120_NS
+  #define NRF_DMU120                              NRF_DMU120_NS
   #define NRF_STMDATA                             NRF_STMDATA_S
   #define NRF_TDDCONF                             NRF_TDDCONF_S
   #define NRF_STM                                 NRF_STM_NS
   #define NRF_TPIU                                NRF_TPIU_NS
+  #define NRF_ETB                                 NRF_ETB_NS
   #define NRF_CTI210                              NRF_CTI210_NS
   #define NRF_CTI211                              NRF_CTI211_NS
   #define NRF_ATBREPLICATOR210                    NRF_ATBREPLICATOR210_NS
@@ -705,6 +707,7 @@ POSSIBILITY OF SUCH DAMAGE.
   #define NRF_ATBFUNNEL211                        NRF_ATBFUNNEL211_NS
   #define NRF_ATBFUNNEL212                        NRF_ATBFUNNEL212_NS
   #define NRF_ATBFUNNEL213                        NRF_ATBFUNNEL213_NS
+  #define NRF_GPR                                 NRF_GPR_NS
   #define NRF_GPIOTE130                           NRF_GPIOTE130_S
   #define NRF_GRTC                                NRF_GRTC_S
   #define NRF_TBM                                 NRF_TBM_S
@@ -755,7 +758,6 @@ POSSIBILITY OF SUCH DAMAGE.
   #define NRF_PDM                                 NRF_PDM_S
   #define NRF_QDEC130                             NRF_QDEC130_S
   #define NRF_QDEC131                             NRF_QDEC131_S
-  #define NRF_SIMIF130                            NRF_SIMIF130_S
   #define NRF_TDM131                              NRF_TDM131_S
   #define NRF_DPPIC133                            NRF_DPPIC133_S
   #define NRF_TIMER130                            NRF_TIMER130_S
