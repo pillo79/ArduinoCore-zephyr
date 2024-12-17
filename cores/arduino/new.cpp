@@ -6,8 +6,6 @@
 
 #include "new.h"
 
-extern "C" void __cxa_pure_virtual() {}
-
 // The C++ spec dictates that allocation failure should cause the
 // (non-nothrow version of the) operator new to throw an exception.
 // Since we expect to have exceptions disabled, it would be more
