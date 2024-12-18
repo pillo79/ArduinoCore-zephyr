@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <zephyr/kernel.h>
 
 #define FORCE_EXPORT_SYM(name) \
        extern void name(void); \
@@ -35,6 +36,13 @@ EXPORT_SYMBOL(isspace);
 EXPORT_SYMBOL(isalnum);
 EXPORT_SYMBOL(tolower);
 EXPORT_SYMBOL(toupper);
+EXPORT_SYMBOL(isalpha);
+EXPORT_SYMBOL(iscntrl);
+EXPORT_SYMBOL(isdigit);
+EXPORT_SYMBOL(isgraph);
+EXPORT_SYMBOL(isprint);
+EXPORT_SYMBOL(isupper);
+EXPORT_SYMBOL(isxdigit);
 
 #if defined(CONFIG_USB_DEVICE_STACK)
 EXPORT_SYMBOL(usb_enable);
@@ -96,8 +104,8 @@ FORCE_EXPORT_SYM(inet_pton);
 FORCE_EXPORT_SYM(cdc_acm_dte_rate_callback_set);
 #endif
 
-FORCE_EXPORT_SYM(k_timer_init);
-FORCE_EXPORT_SYM(k_fatal_halt);
+EXPORT_SYMBOL(k_timer_init);
+EXPORT_SYMBOL(k_fatal_halt);
 //FORCE_EXPORT_SYM(k_timer_user_data_set);
 //FORCE_EXPORT_SYM(k_timer_start);
 
