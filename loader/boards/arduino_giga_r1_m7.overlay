@@ -382,29 +382,37 @@
 						<&gpiob 12 0>,
 						<&gpiod 3 0>,
 
-						<&gpiob 6 0>,		/* SDA1 */
-						<&gpioh 12 0>,
-
-						<&gpioc 4 0>,
+						<&gpioc 4 0>,			/* A0 */
 						<&gpioc 5 0>,
 						<&gpiob 0 0>,
 						<&gpiob 1 0>,
 						<&gpioc 3 0>,
 						<&gpioc 2 0>,
-						<&gpioc 0 0>,			/* A6 */
-						<&gpioa 0 0>,
-						<&gpioz 0 0>,			/* analog only */
-						<&gpioz 1 0>,			/* analog only */
-						<&gpioz 2 0>,			/* analog only */
-						<&gpioz 3 0>,			/* analog only */
-						<&gpioa 4 0>,
-						<&gpioa 5 0>,
-						<&gpiob 5 0>,			/* CAN RX */
-						<&gpiob 13 0>,			/* CAN TX */
+						<&gpioc 0 0>,
+						<&gpioa 0 0>,			/* A7 */
+						<&gpioa 4 0>,			/* A12 */
+						<&gpioa 5 0>,			/* A13 */
 
 						<&gpioi 12 GPIO_ACTIVE_LOW>,
 						<&gpioj 13 GPIO_ACTIVE_LOW>,
-						<&gpioe 3 GPIO_ACTIVE_LOW>;
+						<&gpioe 3 GPIO_ACTIVE_LOW>,
+
+						<&gpiog 9 0>,			/* SPI1 MISO */
+						<&gpiod 7 0>,			/* SPI1 MOSI */
+						<&gpiob 3 0>,			/* SPI1 SCK */
+
+						<&gpioa 15 0>,			/* USB HOST ENABLE */
+
+						<&gpiob 5 0>,			/* CAN RX */
+						<&gpiob 13 0>,			/* CAN TX */
+
+						<&gpiob 6 0>,			/* SDA1 */
+						<&gpioh 12 0>,
+
+						<&gpioz 0 0>,			/* analog only A8 */
+						<&gpioz 1 0>,			/* analog only A9 */
+						<&gpioz 2 0>,			/* analog only A10 */
+						<&gpioz 3 0>;			/* analog only A11 */
 
 		builtin-led-gpios = <&gpioi 12 GPIO_ACTIVE_LOW>,
                         <&gpioj 13 GPIO_ACTIVE_LOW>,
