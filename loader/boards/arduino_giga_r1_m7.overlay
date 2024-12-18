@@ -114,13 +114,16 @@
 
 &spi1 {
 	status = "okay";
-	pinctrl-0 = <&spi1_nss_pa4 &spi1_sck_pb3
+	pinctrl-0 = <&spi1_sck_pb3
 		     &spi1_miso_pg9 &spi1_mosi_pd7>;
 	pinctrl-names = "default";
 };
 
 &spi5 {
 	status = "okay";
+	pinctrl-0 = <&spi5_sck_ph6
+		     &spi5_miso_pj11 &spi5_mosi_pj10>;
+	pinctrl-names = "default";
 };
 
 &adc1 {
