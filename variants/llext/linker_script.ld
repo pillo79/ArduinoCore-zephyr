@@ -48,6 +48,7 @@ SECTIONS {
 
     .bss : {
         *(.bss .bss.* COMMON)
+        *(.noinit .noinit.*)
     }
 
     .exported_sym : {
