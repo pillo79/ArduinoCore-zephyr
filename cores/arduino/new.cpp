@@ -6,8 +6,6 @@
 
 #include "new.h"
 
-extern "C" void __cxa_pure_virtual() {}
-
 // The C++ spec dictates that allocation failure should cause the
 // (non-nothrow version of the) operator new to throw an exception.
 // Since we expect to have exceptions disabled, it would be more
@@ -45,6 +43,36 @@ void * operator new(std::size_t size) {
 void * operator new[](std::size_t size) {
   return operator new(size);
 }
+
+#if __cplusplus >= 201703L
+void* operator new(std::size_t count, std::align_val_t al) {
+  return operator new(count);
+}
+
+void* operator new[](std::size_t count, std::align_val_t al) {
+  return operator new(count);
+}
+
+void * operator new(std::size_t size, std::align_val_t al, const std::nothrow_t tag) noexcept {
+#if defined(NEW_TERMINATES_ON_FAILURE)
+  // Cannot call throwing operator new as standard suggests, so call
+  // new_helper directly then
+  return new_helper(size);
+#else
+  return operator new(size);
+#endif
+}
+
+void * operator new[](std::size_t size, std::align_val_t al, const std::nothrow_t& tag) noexcept {
+#if defined(NEW_TERMINATES_ON_FAILURE)
+  // Cannot call throwing operator new[] as standard suggests, so call
+  // malloc directly then
+  return new_helper(size);
+#else
+  return operator new[](size);
+#endif
+}
+#endif
 
 void * operator new(std::size_t size, const std::nothrow_t tag) noexcept {
 #if defined(NEW_TERMINATES_ON_FAILURE)

@@ -1,4 +1,4 @@
-FORCE_COMMON_ALLOCATION
+FORCE_GROUP_ALLOCATION
 
 SECTIONS {
 
@@ -15,6 +15,12 @@ SECTIONS {
         *(.comment.*)
         *(.llvmbc)
         *(.llvmcmd)
+        *(.eh_frame)
+        *stdexcept.o
+        *eh_*.o
+        *cow-stdexcept.o
+        *functexcept.o
+        *cow-string-inst.o
     }
 
     .text 0x00000000 : ALIGN(4) {
@@ -42,6 +48,7 @@ SECTIONS {
 
     .bss : {
         *(.bss .bss.* COMMON)
+        *(.noinit .noinit.*)
     }
 
     .exported_sym : {
