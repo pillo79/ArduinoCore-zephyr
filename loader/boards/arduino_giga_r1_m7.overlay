@@ -29,14 +29,14 @@
 
 &i2c4 {
 	status = "okay";
-	ov7670: ov7670@21 {
-		compatible = "ovti,ov7670";
-		reg = <0x21>;
+	gc2145: gc2145@3c {
+		compatible = "galaxycore,gc2145";
+		reg = <0x3c>;
 		reset-gpios = <&gpiod 4 GPIO_ACTIVE_LOW>;
 		pwdn-gpios = <&gpioa 1 GPIO_ACTIVE_LOW>;
 
 		port {
-			ov7670_ep_out: endpoint {
+			gc2145_ep_out: endpoint {
 				remote-endpoint = <&dcmi_ep_in>;
 			};
 		};
@@ -144,7 +144,7 @@
 
 &dcmi {
 	status = "okay";
-	sensor = <&ov7670>;
+	sensor = <&gc2145>;
 	/* ext-sdram = <&sdram1>; */
 	pinctrl-0 = <&dcmi_hsync_ph8 &dcmi_pixclk_pa6 &dcmi_vsync_pi5
 				&dcmi_d0_ph9 &dcmi_d1_ph10 &dcmi_d2_ph11 &dcmi_d3_pg11
@@ -156,12 +156,12 @@
 	pixelclk-active = <0>;
 	capture-rate = <1>;
 	dmas = <&dma1 0 75 (STM32_DMA_PERIPH_TO_MEMORY | STM32_DMA_PERIPH_NO_INC |
-			STM32_DMA_MEM_INC | STM32_DMA_PERIPH_8BITS | STM32_DMA_MEM_32BITS |
+			STM32_DMA_MEM_INC | STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS |
 			STM32_DMA_PRIORITY_HIGH) STM32_DMA_FIFO_1_4>;
 
 	port {
 		dcmi_ep_in: endpoint {
-			remote-endpoint = <&ov7670_ep_out>;
+			remote-endpoint = <&gc2145_ep_out>;
 		};
 	};
 };
@@ -318,6 +318,7 @@
 /{
 	chosen {
 		zephyr,camera = &dcmi;
+		/* zephyr,console = &cdc_acm_uart0; */
 	};
 
 	/* used to overcome problems with _C analog pins */
