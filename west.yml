@@ -41,6 +41,7 @@ manifest:
           - mbedtls
           - segger
           - thrift
+          - mcuboot
     - name: ArduinoCore-API
       path: modules/lib/ArduinoCore-API
       revision: master
