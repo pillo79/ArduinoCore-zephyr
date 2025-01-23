@@ -57,26 +57,80 @@
 	clock-frequency = <I2C_BITRATE_FAST>;
 };
 
-// XCLK as PWM from PJ9
 &timers1 {
 	status = "okay";
-	st,prescaler = <0>;
+	st,prescaler = <4>;
 
-	cam_clock_pwm: pwm {
+	pwm1: pwm {
 		status = "okay";
-		pinctrl-0 = <&tim1_ch3_pj9>;
+		pinctrl-0 = <&tim1_ch3_pj9 &tim1_ch1_pk1 &tim1_ch2_pj11>;
 		pinctrl-names = "default";
 	};
 };
 
-&cam_clock_pwm {
-	/* ...then use the pwmclock node to start the clock generation */
+&timers2 {
+	status = "okay";
+	st,prescaler = <100>;
+
+	pwm2: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim2_ch4_pa3  &tim2_ch3_pa2>;
+		pinctrl-names = "default";
+	};
+};
+
+&timers3 {
+	status = "okay";
+	st,prescaler = <100>;
+
+	pwm3: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim3_ch2_pa7 &tim3_ch1_pb4>;
+		pinctrl-names = "default";
+	};
+};
+
+&timers4 {
+	status = "okay";
+	st,prescaler = <100>;
+
+	pwm4: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim4_ch2_pd13 &tim4_ch3_pb8 &tim4_ch4_pb9>;
+		pinctrl-names = "default";
+	};
+};
+
+&timers8 {
+	status = "okay";
+	st,prescaler = <100>;
+
+	pwm8: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim8_ch1_pj8 &tim8_ch2_pj10>;
+		pinctrl-names = "default";
+	};
+};
+
+&timers12 {
+	status = "okay";
+	st,prescaler = <100>;
+
+	pwm12: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim12_ch1_ph6>;
+		pinctrl-names = "default";
+	};
+};
+
+&pwm1 {
+	/* Use the pwmclock node to start the clock generation */
 	pwmclock: pwmclock {
 		status = "okay";
 		compatible = "pwm-clock";
 		clock-frequency = <0>;
 		#clock-cells = <1>;
-		pwms = <&cam_clock_pwm 3 PWM_HZ(6000000) PWM_POLARITY_NORMAL>;
+		pwms = <&pwm1 3 PWM_HZ(12000000) PWM_POLARITY_NORMAL>;
 	};
 };
 
@@ -422,14 +476,18 @@
                         <&gpioe 3 GPIO_ACTIVE_LOW>;
 
 		pwm-pin-gpios =	    <&gpioj 9 0>,
-					<&arduino_header 6 0>,
-				    <&arduino_header 5 0>,
-				    <&arduino_header 17 0>,
-				    <&arduino_header 12 0>,
-				    <&arduino_header 2 0>,
-				    <&arduino_header 3 0>,
+					<&arduino_header 8 0>,
 				    <&arduino_header 9 0>,
-				    <&arduino_header 10 0>;
+				    <&arduino_header 10 0>,
+				    <&arduino_header 11 0>,
+				    <&arduino_header 12 0>,
+				    <&arduino_header 13 0>,
+				    <&arduino_header 14 0>,
+				    <&arduino_header 15 0>,
+				    <&arduino_header 16 0>,
+				    <&arduino_header 17 0>,
+				    <&arduino_header 18 0>,
+				    <&arduino_header 19 0>;
 
 		adc-pin-gpios =	<&gpioc 4 0>,
 					<&gpioc 5 0>,
@@ -450,7 +508,19 @@
 		cdc-acm = <&cdc_acm_uart0>;
 		i2cs = <&i2c2>, <&i2c4>, <&i2c1>;
 		spis = <&spi1>, <&spi5>;
-		pwms = <&cam_clock_pwm 3 PWM_HZ(6000000) PWM_POLARITY_NORMAL>;
+		pwms = <&pwm1 3 PWM_HZ(6000000) PWM_POLARITY_NORMAL>,
+			   <&pwm2 4 PWM_HZ(500) PWM_POLARITY_NORMAL>,
+			   <&pwm2 3 PWM_HZ(500) PWM_POLARITY_NORMAL>,
+			   <&pwm8 1 PWM_HZ(500) PWM_POLARITY_NORMAL>,
+			   <&pwm3 2 PWM_HZ(500) PWM_POLARITY_NORMAL>,
+			   <&pwm4 2 PWM_HZ(500) PWM_POLARITY_NORMAL>,
+			   <&pwm3 1 PWM_HZ(500) PWM_POLARITY_NORMAL>,
+			   <&pwm4 3 PWM_HZ(500) PWM_POLARITY_NORMAL>,
+			   <&pwm4 4 PWM_HZ(500) PWM_POLARITY_NORMAL>,
+			   <&pwm1 1 PWM_HZ(5000) PWM_POLARITY_NORMAL>,
+			   <&pwm8 2 PWM_HZ(500) PWM_POLARITY_NORMAL>,
+			   <&pwm1 2 PWM_HZ(5000) PWM_POLARITY_NORMAL>,
+			   <&pwm12 1 PWM_HZ(500) PWM_POLARITY_NORMAL>;
 
 		io-channels =	<&adc1 4>,
 				<&adc1 8>,
@@ -466,5 +536,9 @@
 				<&adc1 0>,
 				<&adc1 18>,
 				<&adc1 19>;
+
+		dac = <&dac1>;
+		dac-channels = <1>, <2>;
+		dac-resolution = <12>;
 	};
 };
