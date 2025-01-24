@@ -38,4 +38,4 @@ jobs:
       - name: Build adc
         working-directory: ArduinoCore-zephyr/build
         run: |
-          west build -p -b arduino_giga_r1//m7 ../samples/analog_input
+          west build -p -b arduino_nano_33_ble//sense ../samples/analog_input
