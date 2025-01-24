@@ -15,8 +15,9 @@ jobs:
           path: ArduinoCore-zephyr
 
       - name: Initialize
-        working-directory: ArduinoCore-zephyr/build
+        working-directory: ArduinoCore-zephyr
         run: |
+          mkdir build && cd build
           west init -m https://github.com/arduino/ArduinoCore-zephyr.git
           west update
           rm -rf modules/lib/ArduinoCore-zephyr/*
@@ -25,16 +26,16 @@ jobs:
           cp -r modules/lib/ArduinoCore-API/api modules/lib/ArduinoCore-zephyr/cores/arduino/api
 
       - name: Build fade
-        working-directory: Arduino-Zephyr-API
+        working-directory: ArduinoCore-zephyr/build
         run: |
           west build -p -b arduino_nano_33_ble//sense ../samples/fade
 
       - name: Build i2cdemo
-        working-directory: Arduino-Zephyr-API
+        working-directory: ArduinoCore-zephyr/build
         run: |
           west build -p -b ek_ra8d1 ../samples/i2cdemo
 
       - name: Build adc
-        working-directory: Arduino-Zephyr-API
+        working-directory: ArduinoCore-zephyr/build
         run: |
           west build -p -b arduino_giga_r1//m7 ../samples/analog_input
