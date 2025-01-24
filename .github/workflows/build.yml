@@ -12,33 +12,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          path: Arduino-Zephyr-API
+          path: ArduinoCore-zephyr
 
       - name: Initialize
-        working-directory: Arduino-Zephyr-API
+        working-directory: ArduinoCore-zephyr/build
         run: |
           west init -m https://github.com/arduino/ArduinoCore-zephyr.git
           west update
-          git clone https://github.com/arduino/ArduinoCore-API.git ArduinoCore-API
-          cp -r ArduinoCore-API/api modules/lib/Arduino-Zephyr-API/cores/arduino/.
+          rm -rf modules/lib/ArduinoCore-zephyr/*
+          cp -r ../* modules/lib/ArduinoCore-zephyr || true
+          rm modules/lib/ArduinoCore-zephyr/cores/arduino/api
+          cp -r modules/lib/ArduinoCore-API/api modules/lib/ArduinoCore-zephyr/cores/arduino/api
 
       - name: Build fade
         working-directory: Arduino-Zephyr-API
         run: |
-          west build -p -b arduino_nano_33_ble//sense samples/fade
+          west build -p -b arduino_nano_33_ble//sense ../samples/fade
 
       - name: Build i2cdemo
         working-directory: Arduino-Zephyr-API
         run: |
-          west build -p -b arduino_nano_33_ble//sense samples/i2cdemo
+          west build -p -b ek_ra8d1 ../samples/i2cdemo
 
       - name: Build adc
         working-directory: Arduino-Zephyr-API
         run: |
-          west build -p -b beagleconnect_freedom samples/analog_input
-
-      - name: Archive firmware
-        uses: actions/upload-artifact@v3
-        with:
-          name: firmware
-          path: Arduino-Zephyr-API/build/zephyr/zephyr.*
+          west build -p -b arduino_giga_r1//m7 ../samples/analog_input
