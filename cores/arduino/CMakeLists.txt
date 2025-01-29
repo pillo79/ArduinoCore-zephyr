@@ -19,6 +19,7 @@ zephyr_sources(api/String.cpp)
 
 if(DEFINED CONFIG_ARDUINO_ENTRY)
 zephyr_sources(main.cpp)
+zephyr_sources(threads.cpp)
 endif()
 
 endif()
