@@ -34,6 +34,10 @@ SECTIONS {
         KEEP (*(.ctors))
         KEEP (*(.dtors))
         KEEP (*(.fini))
+
+        __static_thread_data_list_start = .;
+        KEEP(*(SORT_BY_NAME(.__static_thread_data.static.*)));
+        __static_thread_data_list_end = .;
     }
 
     .rodata : {
