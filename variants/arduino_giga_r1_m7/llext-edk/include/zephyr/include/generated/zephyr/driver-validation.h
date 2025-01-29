@@ -6,7 +6,11 @@
                 
 #define K_SYSCALL_DRIVER_ADC(ptr, op) K_SYSCALL_DRIVER_GEN(ptr, op, adc, ADC)
 
+#define K_SYSCALL_DRIVER_DAC(ptr, op) K_SYSCALL_DRIVER_GEN(ptr, op, dac, DAC)
+
 #define K_SYSCALL_DRIVER_DMA(ptr, op) K_SYSCALL_DRIVER_GEN(ptr, op, dma, DMA)
+
+#define K_SYSCALL_DRIVER_ENTROPY(ptr, op) K_SYSCALL_DRIVER_GEN(ptr, op, entropy, ENTROPY)
 
 #define K_SYSCALL_DRIVER_FLASH(ptr, op) K_SYSCALL_DRIVER_GEN(ptr, op, flash, FLASH)
 
@@ -46,8 +50,6 @@
 
 #define K_SYSCALL_DRIVER_COUNTER(ptr, op) K_SYSCALL_DRIVER_GEN(ptr, op, counter, COUNTER)
 
-#define K_SYSCALL_DRIVER_DAC(ptr, op) K_SYSCALL_DRIVER_GEN(ptr, op, dac, DAC)
-
 #define K_SYSCALL_DRIVER_DAI(ptr, op) K_SYSCALL_DRIVER_GEN(ptr, op, dai, DAI)
 
 #define K_SYSCALL_DRIVER_DISPLAY(ptr, op) K_SYSCALL_DRIVER_GEN(ptr, op, display, DISPLAY)
@@ -61,8 +63,6 @@
 #define K_SYSCALL_DRIVER_FUEL_GAUGE_EMUL(ptr, op) K_SYSCALL_DRIVER_GEN(ptr, op, fuel_gauge_emul, FUEL_GAUGE_EMUL)
 
 #define K_SYSCALL_DRIVER_EMUL_SENSOR(ptr, op) K_SYSCALL_DRIVER_GEN(ptr, op, emul_sensor, EMUL_SENSOR)
-
-#define K_SYSCALL_DRIVER_ENTROPY(ptr, op) K_SYSCALL_DRIVER_GEN(ptr, op, entropy, ENTROPY)
 
 #define K_SYSCALL_DRIVER_ESPI(ptr, op) K_SYSCALL_DRIVER_GEN(ptr, op, espi, ESPI)
 
