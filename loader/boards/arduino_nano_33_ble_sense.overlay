@@ -66,7 +66,19 @@
 				    <&arduino_nano_header 18 0>, /* D18 / A4 / I2C-SDA */
 				    <&arduino_nano_header 19 0>, /* D19 / A5 / I2C-SCL */
 				    <&arduino_nano_header 20 0>,
-				    <&arduino_nano_header 21 0>;
+				    <&arduino_nano_header 21 0>,
+				    <&gpio0 24 0>,	/* D22 LED R */
+				    <&gpio0 16 0>,	/* D23 LED G */
+				    <&gpio0 6 0>,	/* D24 LED B */
+				    <&gpio1 9 0>,	/* D25 LED PWR */
+				    <&gpio0 19 0>,	/* D26 INT APDS */
+				    <&gpio0 17 0>,	/* D27 PDM PWR */
+				    <&gpio0 26 0>,	/* D28 PDM CLK */
+				    <&gpio0 25 0>,	/* D29 PDM DIN */
+				    <&gpio0 14 0>,	/* D30 SDA2 */
+				    <&gpio0 15 0>,	/* D31 SCL2 */
+				    <&gpio1 0 0>,	/* D32 I2C_PULL */
+				    <&gpio0 22 0>;	/* D33 VDD_ENV_ENABLE */
 
 		pwm-pin-gpios =	    <&arduino_nano_header 3 0>,
 				    <&arduino_nano_header 5 0>,
@@ -106,7 +118,7 @@
 
 		serials = <&cdc_acm_uart0>, <&uart0>;
 		cdc-acm = <&cdc_acm_uart0>;
-		i2cs = <&arduino_nano_i2c>;
+		i2cs = <&arduino_nano_i2c>, <&i2c1>;
 	};
 };
 
@@ -120,7 +132,7 @@
 		zephyr,reference = "ADC_REF_INTERNAL";
 		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
 		zephyr,input-positive = <NRF_SAADC_AIN0>; /* P0.02 */
-		zephyr,resolution = <10>;
+		zephyr,resolution = <12>;
 	};
 
 	channel@1 {
@@ -129,7 +141,7 @@
 		zephyr,reference = "ADC_REF_INTERNAL";
 		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
 		zephyr,input-positive = <NRF_SAADC_AIN1>; /* P0.03 */
-		zephyr,resolution = <10>;
+		zephyr,resolution = <12>;
 	};
 
 	channel@2 {
@@ -138,7 +150,7 @@
 		zephyr,reference = "ADC_REF_INTERNAL";
 		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
 		zephyr,input-positive = <NRF_SAADC_AIN2>; /* P0.04 */
-		zephyr,resolution = <10>;
+		zephyr,resolution = <12>;
 	};
 
 	channel@3 {
@@ -147,7 +159,7 @@
 		zephyr,reference = "ADC_REF_INTERNAL";
 		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
 		zephyr,input-positive = <NRF_SAADC_AIN3>; /* P0.05 */
-		zephyr,resolution = <10>;
+		zephyr,resolution = <12>;
 	};
 
 	channel@4 {
@@ -156,7 +168,7 @@
 		zephyr,reference = "ADC_REF_INTERNAL";
 		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
 		zephyr,input-positive = <NRF_SAADC_AIN4>; /* P0.28 */
-		zephyr,resolution = <10>;
+		zephyr,resolution = <12>;
 	};
 
 	channel@5 {
@@ -165,7 +177,7 @@
 		zephyr,reference = "ADC_REF_INTERNAL";
 		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
 		zephyr,input-positive = <NRF_SAADC_AIN5>; /* P0.29 */
-		zephyr,resolution = <10>;
+		zephyr,resolution = <12>;
 	};
 
 	channel@6 {
@@ -174,7 +186,7 @@
 		zephyr,reference = "ADC_REF_INTERNAL";
 		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
 		zephyr,input-positive = <NRF_SAADC_AIN6>; /* P0.30 */
-		zephyr,resolution = <10>;
+		zephyr,resolution = <12>;
 	};
 
 	channel@7 {
@@ -183,7 +195,7 @@
 		zephyr,reference = "ADC_REF_INTERNAL";
 		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
 		zephyr,input-positive = <NRF_SAADC_AIN7>; /* P0.31 */
-		zephyr,resolution = <10>;
+		zephyr,resolution = <12>;
 	};
 };
 
@@ -242,3 +254,20 @@
 	pinctrl-1 = <&pwm2_sleep>;
 	pinctrl-names = "default", "sleep";
 };
+
+&i2c0 {
+	status = "okay";
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-1 = <&i2c0_sleep>;
+	pinctrl-names = "default", "sleep";
+	clock-frequency = <I2C_BITRATE_FAST>;
+};
+
+&i2c1 {
+	status = "okay";
+	pinctrl-0 = <&i2c1_default>;
+	pinctrl-1 = <&i2c1_sleep>;
+	pinctrl-names = "default", "sleep";
+	clock-frequency = <I2C_BITRATE_FAST>;
+};
+
