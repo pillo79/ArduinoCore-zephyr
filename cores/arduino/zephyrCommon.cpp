@@ -293,8 +293,12 @@ void delay(unsigned long ms) { k_sleep(K_MSEC(ms)); }
 void delayMicroseconds(unsigned int us) { k_sleep(K_USEC(us)); }
 
 unsigned long micros(void) {
+#ifdef CONFIG_TIMER_HAS_64BIT_CYCLE_COUNTER
   return k_cyc_to_us_floor32(k_cycle_get_64());
-}
+#else
+  return k_cyc_to_us_floor32(k_cycle_get_32());
+#endif
+ }
 
 unsigned long millis(void) { return k_uptime_get_32(); }
 
