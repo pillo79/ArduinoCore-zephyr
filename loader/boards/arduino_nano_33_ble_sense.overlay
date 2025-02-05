@@ -45,6 +45,8 @@
 
 / {
 	zephyr,user {
+		pin-enable-gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>;
+
 		digital-pin-gpios = <&arduino_nano_header 0 0>,
 				    <&arduino_nano_header 1 0>,
 				    <&arduino_nano_header 2 0>,
