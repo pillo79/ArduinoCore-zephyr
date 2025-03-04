@@ -1,8 +1,16 @@
-if [ x$ZEPHYR_SDK_INSTALL_DIR == x"" ]; then
-export ZEPHYR_SDK_INSTALL_DIR=/ssd/zephyr-sdk-0.16.8/
-fi
+#!/bin/bash
 
 set -e
+
+if [ x$ZEPHYR_SDK_INSTALL_DIR == x"" ]; then
+	SDK_PATH=$(west sdk list | grep path | tail -n 1 | cut -d ':' -f 2 | tr -d ' ')
+	if [ x$SDK_PATH == x ]; then
+		echo "ZEPHYR_SDK_INSTALL_DIR not set and no SDK found"
+		exit 1
+	fi
+	echo "ZEPHYR_SDK_INSTALL_DIR not set, using $SDK_PATH"
+	export ZEPHYR_SDK_INSTALL_DIR=${SDK_PATH}
+fi
 
 board=$1
 variant=$2
@@ -21,7 +29,7 @@ if [ "$third_arg" != "" ]; then
 fi
 
 (west build loader -b $board -p $extra_args && west build -t llext-edk)
-(tar xfp build/zephyr/llext-edk.tar.xz --directory variants/$variant/)
+(rm -rf variants/$variant/* && tar xfp build/zephyr/llext-edk.tar.xz --directory variants/$variant/)
 
 (cp build/zephyr/zephyr.elf firmwares/zephyr-$variant.elf)
 if [ -f build/zephyr/zephyr.bin ]; then
@@ -47,3 +55,5 @@ sed -i 's/PROVIDE(free =/PROVIDE(__wrap_free =/g' variants/$variant/provides.ld
 sed -i 's/PROVIDE(realloc =/PROVIDE(__wrap_realloc =/g' variants/$variant/provides.ld
 sed -i 's/PROVIDE(calloc =/PROVIDE(__wrap_calloc =/g' variants/$variant/provides.ld
 sed -i 's/PROVIDE(random =/PROVIDE(__wrap_random =/g' variants/$variant/provides.ld
+
+cmake -P extra/gen_arduino_files.cmake $variant

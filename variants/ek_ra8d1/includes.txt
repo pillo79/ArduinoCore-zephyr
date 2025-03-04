@@ -1,12 +1,14 @@
 -iwithprefixbefore/llext-edk/include/zephyr/include/generated/zephyr
 -iwithprefixbefore/llext-edk/include/zephyr/include
 -iwithprefixbefore/llext-edk/include/zephyr/include/generated
+-iwithprefixbefore/llext-edk/include/zephyr/soc/renesas/ra
 -iwithprefixbefore/llext-edk/include/zephyr/lib/libc/common/include
 -iwithprefixbefore/llext-edk/include/zephyr/lib/posix/options/getopt/
--iwithprefixbefore/llext-edk/include/zephyr/soc/renesas/ra/common
+-iwithprefixbefore/llext-edk/include/zephyr/lib/cpp/minimal/include
 -iwithprefixbefore/llext-edk/include/zephyr/soc/renesas/ra/common_fsp
 -iwithprefixbefore/llext-edk/include/zephyr/soc/renesas/ra/ra8d1/.
--iwithprefixbefore/llext-edk/include/zephyr-arduino-core/include
+-iwithprefixbefore/llext-edk/include/zephyr/boards/renesas/ek_ra8d1/.
+-iwithprefixbefore/llext-edk/include/zephyr/subsys/shell/modules/kernel_service/thread/../
 -iwithprefixbefore/llext-edk/include/modules/hal/cmsis/CMSIS/Core/Include
 -iwithprefixbefore/llext-edk/include/zephyr/modules/cmsis/.
 -iwithprefixbefore/llext-edk/include/modules/hal/renesas/zephyr/ra/ra_cfg/fsp_cfg

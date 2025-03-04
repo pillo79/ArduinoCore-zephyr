@@ -5,6 +5,7 @@
 -iwithprefixbefore/llext-edk/include/zephyr/lib/libc/common/include
 -iwithprefixbefore/llext-edk/include/zephyr/include/zephyr/posix
 -iwithprefixbefore/llext-edk/include/zephyr/lib/posix/options/getopt/
+-iwithprefixbefore/llext-edk/include/zephyr/lib/cpp/minimal/include
 -iwithprefixbefore/llext-edk/include/zephyr/soc/nxp/rw/.
 -iwithprefixbefore/llext-edk/include/zephyr/subsys/usb/device
 -iwithprefixbefore/llext-edk/include/zephyr/subsys/net/l2
