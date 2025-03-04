@@ -25,14 +25,8 @@ giga.build.extra_flags=
 giga.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 giga.build.architecture=cortex-m7
 giga.build.board=GIGA
-giga.build.extra_ldflags=
 giga.compiler.zephyr.defines=-DLL_EXTENSION_BUILD -DCONFIG_ARDUINO_API_SERIAL_BUFFER_SIZE=256 -DHSE_VALUE=16000000 -DKERNEL -DK_HEAP_MEM_POOL_SIZE=16384 -DPICOLIBC_LONG_LONG_PRINTF_SCANF -DSTM32H747xx -DUSE_FULL_LL_DRIVER -DUSE_HAL_DRIVER -D__LINUX_ERRNO_EXTENSIONS__ -D__PROGRAM_START -D__ZEPHYR__=1  -imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h -imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h
-giga.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit
-#giga.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -msingle-pic-base -mpic-register=r9 -mno-pic-data-is-text-relative -fPIC -mlong-calls
 giga.compiler.zephyr.cflags=-fno-strict-aliasing -fno-printf-return-value -fno-common -mcpu=cortex-m7 -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wno-pointer-sign -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -Werror=implicit-int -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-giga.compiler.zephyr.cxxflags={compiler.zephyr.ldflags} -fdata-sections -ffunction-sections -fno-unwind-tables -fno-strict-aliasing -fno-printf-return-value -fno-common -mcpu=cortex-m7 -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-giga.compiler.zephyr.includes={build.variant.path}/includes.txt
-giga.compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lnosys -nostdlib
 giga.compiler.zephyr=
 giga.vid.0=0x2341
 giga.pid.0=0x0066
@@ -98,13 +92,8 @@ nano33ble.build.extra_flags=
 nano33ble.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 nano33ble.build.architecture=cortex-m4
 nano33ble.build.board=ARDUINO_NANO33BLE
-nano33ble.build.extra_ldflags=
 nano33ble.compiler.zephyr.defines=-DLL_EXTENSION_BUILD -DCONFIG_ARDUINO_API_SERIAL_BUFFER_SIZE=256 -DNRF52840_XXAA -DKERNEL -DK_HEAP_MEM_POOL_SIZE=32768 -DPICOLIBC_LONG_LONG_PRINTF_SCANF -D__LINUX_ERRNO_EXTENSIONS__ -D__PROGRAM_START -D__ZEPHYR__=1  -imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h -imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h
-nano33ble.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit
 nano33ble.compiler.zephyr.cflags=-fno-strict-aliasing -fno-printf-return-value -fno-common -mcpu=cortex-m4 -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wno-pointer-sign -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -Werror=implicit-int -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-nano33ble.compiler.zephyr.cxxflags={compiler.zephyr.ldflags} -fdata-sections -ffunction-sections -fno-unwind-tables -fno-strict-aliasing -fno-printf-return-value -fno-common -mcpu=cortex-m4 -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-nano33ble.compiler.zephyr.includes={build.variant.path}/includes.txt
-nano33ble.compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lnosys -nostdlib
 nano33ble.compiler.zephyr=
 nano33ble.vid.0=0x2341
 nano33ble.pid.0=0x035a
@@ -168,15 +157,9 @@ ek_ra8d1.build.extra_flags=
 ek_ra8d1.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 ek_ra8d1.build.architecture=cortex-m85+nomve
 ek_ra8d1.build.board=ek_ra8d1
-ek_ra8d1.build.extra_ldflags=
 ek_ra8d1.compiler.zephyr.arch.define=
 ek_ra8d1.compiler.zephyr.defines=-DLL_EXTENSION_BUILD -DCONFIG_ARDUINO_API_SERIAL_BUFFER_SIZE=256 -DHSE_VALUE=16000000 -DKERNEL -DK_HEAP_MEM_POOL_SIZE=16384 -DPICOLIBC_LONG_LONG_PRINTF_SCANF -DSTM32H747xx -DUSE_FULL_LL_DRIVER -DUSE_HAL_DRIVER -D__LINUX_ERRNO_EXTENSIONS__ -D__PROGRAM_START -D__ZEPHYR__=1  -imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h -imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h
-ek_ra8d1.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit
-#ek_ra8d1.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -msingle-pic-base -mpic-register=r9 -mno-pic-data-is-text-relative -fPIC -mlong-calls
 ek_ra8d1.compiler.zephyr.cflags=-fno-strict-aliasing -fno-printf-return-value -fno-common -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wno-pointer-sign -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -Werror=implicit-int -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-ek_ra8d1.compiler.zephyr.cxxflags={compiler.zephyr.ldflags} -fdata-sections -ffunction-sections -fno-unwind-tables -fno-strict-aliasing -fno-printf-return-value -fno-common -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-ek_ra8d1.compiler.zephyr.includes={build.variant.path}/includes.txt
-ek_ra8d1.compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lnosys -nostdlib
 
 #ek_ra8d1.recipe.hooks.objcopy.postobjcopy.4.pattern=cp {build.variant.path}/flasher.jlink "{build.path}/flasher.jlink"
 #ek_ra8d1.recipe.hooks.objcopy.postobjcopy.5.pattern=sed -i 's|SKETCH|"{build.path}/{build.project_name}.llext.dfu.bin"|g' "{build.path}/flasher.jlink"
@@ -233,14 +216,9 @@ frdm_mcxn947.build.float-abi=-mfloat-abi=hard
 frdm_mcxn947.build.extra_flags=
 frdm_mcxn947.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 frdm_mcxn947.build.board=frdm_mcxn947
-frdm_mcxn947.build.extra_ldflags=
 frdm_mcxn947.compiler.zephyr.arch.define=
 frdm_mcxn947.compiler.zephyr.defines=-DLL_EXTENSION_BUILD -DCONFIG_ARDUINO_API_SERIAL_BUFFER_SIZE=256 -DCPU_MCXN947VDF_cm33_core0 -DKERNEL -DK_HEAP_MEM_POOL_SIZE=16384 -DLPFLEXCOMM_INIT_NOT_USED_IN_DRIVER=1 -DNDEBUG -DPICOLIBC_DOUBLE_PRINTF_SCANF -D__LINUX_ERRNO_EXTENSIONS__ -D__PROGRAM_START -D__ZEPHYR__=1 -imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h -imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h
-frdm_mcxn947.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit
 frdm_mcxn947.compiler.zephyr.cflags=-fno-strict-aliasing -fno-printf-return-value -fno-common -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wno-pointer-sign -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -Werror=implicit-int -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-frdm_mcxn947.compiler.zephyr.cxxflags={compiler.zephyr.ldflags} -fdata-sections -ffunction-sections -fno-unwind-tables -fno-strict-aliasing -fno-printf-return-value -fno-common -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-frdm_mcxn947.compiler.zephyr.includes={build.variant.path}/includes.txt
-frdm_mcxn947.compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lnosys -nostdlib
 frdm_mcxn947.compiler.zephyr=
 frdm_mcxn947.vid.0=0x1fc9
 frdm_mcxn947.pid.0=0x0143
@@ -294,13 +272,8 @@ portentah7.build.extra_flags=
 portentah7.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 portentah7.build.architecture=cortex-m7
 portentah7.build.board=PORTENTA_H7
-portentah7.build.extra_ldflags=
 portentah7.compiler.zephyr.defines=-DLL_EXTENSION_BUILD -DCONFIG_ARDUINO_API_SERIAL_BUFFER_SIZE=256 -DHSE_VALUE=25000000 -DKERNEL -DK_HEAP_MEM_POOL_SIZE=16384 -DPICOLIBC_LONG_LONG_PRINTF_SCANF -DSTM32H747xx -DUSE_FULL_LL_DRIVER -DUSE_HAL_DRIVER -D__LINUX_ERRNO_EXTENSIONS__ -D__PROGRAM_START -D__ZEPHYR__=1  -imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h -imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h
-portentah7.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit
 portentah7.compiler.zephyr.cflags=-fno-strict-aliasing -fno-printf-return-value -fno-common -mcpu=cortex-m7 -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wno-pointer-sign -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -Werror=implicit-int -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-portentah7.compiler.zephyr.cxxflags={compiler.zephyr.ldflags} -fdata-sections -ffunction-sections -fno-unwind-tables -fno-strict-aliasing -fno-printf-return-value -fno-common -mcpu=cortex-m7 -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-portentah7.compiler.zephyr.includes={build.variant.path}/includes.txt
-portentah7.compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lnosys -nostdlib
 portentah7.compiler.zephyr=
 portentah7.vid.0=0x2341
 portentah7.pid.0=0x005b
@@ -365,14 +338,9 @@ frdm_rw612.build.float-abi=-mfloat-abi=hard
 frdm_rw612.build.extra_flags=
 frdm_rw612.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 frdm_rw612.build.board=frdm_rw612
-frdm_rw612.build.extra_ldflags=
 frdm_rw612.compiler.zephyr.arch.define=
 frdm_rw612.compiler.zephyr.defines=-DLL_EXTENSION_BUILD -DCONFIG_ARDUINO_API_SERIAL_BUFFER_SIZE=256 -DCPU_RW612ETA2I -DRW610 -DKERNEL -DK_HEAP_MEM_POOL_SIZE=122880 -DLPFLEXCOMM_INIT_NOT_USED_IN_DRIVER=1 -DNDEBUG -DPICOLIBC_DOUBLE_PRINTF_SCANF -D__LINUX_ERRNO_EXTENSIONS__ -D__PROGRAM_START -D__ZEPHYR__=1 -imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h -imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h
-frdm_rw612.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit
 frdm_rw612.compiler.zephyr.cflags=-fno-strict-aliasing -fno-printf-return-value -fno-common -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wno-pointer-sign -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -Werror=implicit-int -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-frdm_rw612.compiler.zephyr.cxxflags={compiler.zephyr.ldflags} -fdata-sections -ffunction-sections -fno-unwind-tables -fno-strict-aliasing -fno-printf-return-value -fno-common -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-frdm_rw612.compiler.zephyr.includes={build.variant.path}/includes.txt
-frdm_rw612.compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lnosys -nostdlib
 frdm_rw612.compiler.zephyr=
 frdm_rw612.vid.0=0x1fc9
 frdm_rw612.pid.0=0x0143
@@ -425,13 +393,8 @@ niclasense.build.extra_flags=
 niclasense.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 niclasense.build.architecture=cortex-m4
 niclasense.build.board=ARDUINO_NICLA_SENSE_ME
-niclasense.build.extra_ldflags=
 niclasense.compiler.zephyr.defines=-DLL_EXTENSION_BUILD -DCONFIG_ARDUINO_API_SERIAL_BUFFER_SIZE=256 -DNRF52832_XXAA -DK_HEAP_MEM_POOL_SIZE=1024 -DKERNEL -DPICOLIBC_LONG_LONG_PRINTF_SCANF -D__LINUX_ERRNO_EXTENSIONS__ -D__PROGRAM_START -D__ZEPHYR__=1  -imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h -imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h
-niclasense.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit
 niclasense.compiler.zephyr.cflags=-fno-strict-aliasing -fno-printf-return-value -fno-common -mcpu=cortex-m4 -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wno-pointer-sign -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -Werror=implicit-int -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-niclasense.compiler.zephyr.cxxflags={compiler.zephyr.ldflags} -fdata-sections -ffunction-sections -fno-unwind-tables -fno-strict-aliasing -fno-printf-return-value -fno-common -mcpu=cortex-m4 -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-niclasense.compiler.zephyr.includes={build.variant.path}/includes.txt
-niclasense.compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lnosys -nostdlib
 niclasense.compiler.zephyr=
 niclasense.vid.0=0x2341
 niclasense.pid.0=0x0360
@@ -491,7 +454,7 @@ portentac33.menu.debug.true.postbuild_debug=-debug
 portentac33.menu.mode.llext=llext
 portentac33.menu.mode.linked=linked
 
-portentac33.menu.mode.linked.build.extra_extra_ldflags=-lc -lm -lgcc -L{build.variant.path} -Wl,--wrap=random -Wl,--wrap=calloc -Wl,--wrap=free -Wl,--wrap=malloc -Wl,--wrap=realloc 
+portentac33.menu.mode.linked.build.extra_ldflags=-lc -lm -lgcc -L{build.variant.path} -Wl,--wrap=random -Wl,--wrap=calloc -Wl,--wrap=free -Wl,--wrap=malloc -Wl,--wrap=realloc 
 portentac33.menu.mode.linked.build.llext_link_flags=
 portentac33.menu.mode.linked.build.suffix=_linked
 portentac33.menu.mode.linked.build.ldscript={runtime.platform.path}/variants/linked/linker_script.ld
@@ -510,14 +473,9 @@ portentac33.build.float-abi=-mfloat-abi=hard
 portentac33.build.extra_flags=
 portentac33.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 portentac33.build.board=arduino_portenta_c33
-portentac33.build.extra_ldflags=
 portentac33.compiler.zephyr.arch.define=
 portentac33.compiler.zephyr.defines=-DLL_EXTENSION_BUILD -DCONFIG_ARDUINO_API_SERIAL_BUFFER_SIZE=256 -DKERNEL -DK_HEAP_MEM_POOL_SIZE=122880 -DNDEBUG -DPICOLIBC_DOUBLE_PRINTF_SCANF -D__LINUX_ERRNO_EXTENSIONS__ -D__PROGRAM_START -D__ZEPHYR__=1 -imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h -imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h
-portentac33.compiler.zephyr.ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit
 portentac33.compiler.zephyr.cflags=-fno-strict-aliasing -fno-printf-return-value -fno-common -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wno-pointer-sign -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -Werror=implicit-int -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-portentac33.compiler.zephyr.cxxflags={compiler.zephyr.ldflags} -fdata-sections -ffunction-sections -fno-unwind-tables -fno-strict-aliasing -fno-printf-return-value -fno-common -mthumb -mabi=aapcs -mfp16-format=ieee -mtp=soft -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wdouble-promotion -Wpointer-arith -Wexpansion-to-defined -Wno-unused-but-set-variable -fno-asynchronous-unwind-tables -ftls-model=local-exec -fno-reorder-functions --param=min-pagesize=0 -fno-defer-pop --specs=picolibc.specs -D_POSIX_THREADS -mlong-calls -nodefaultlibs
-portentac33.compiler.zephyr.includes={build.variant.path}/includes.txt
-portentac33.compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lnosys -nostdlib {build.extra_extra_ldflags}
 portentac33.compiler.zephyr=
 portentac33.vid.0=0x2341
 portentac33.pid.0=0x0068
