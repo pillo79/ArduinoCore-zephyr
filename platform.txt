@@ -45,7 +45,7 @@ build.ldscript={runtime.platform.path}/variants/llext/linker_script.ld
 build.llext_link_flags=-r -e main
 build.extra_extra_ldflags=
 build.suffix=
-upload.extension=llext.dfu
+upload.extension=elf-zsk.bin
 postbuild_debug=
 postbuild_mode=
 
@@ -89,7 +89,8 @@ recipe.S.o.pattern="{compiler.path}{compiler.S.cmd}" {compiler.S.flags} -DARDUIN
 recipe.ar.pattern="{compiler.path}{compiler.ar.cmd}" {compiler.ar.flags} {compiler.ar.extra_flags} "{archive_file_path}" "{object_file}"
 
 ## Combine gc-sections, archives, and objects
-recipe.c.combine.pattern="{compiler.path}{compiler.c.elf.cmd}"  "-L{build.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {build.extra_flags} {build.extra_ldflags} {compiler.zephyr.ldflags} "-T{build.ldscript}" "-Wl,-Map,{build.path}/{build.project_name}.map" --specs=picolibc.specs --specs=nosys.specs {compiler.ldflags} -o "{build.path}/{build.project_name}.elf" {object_files} "{build.path}/{archive_file}" {compiler.zephyr} {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags}
+recipe.c.combine.pattern="{compiler.path}{compiler.c.elf.cmd}"  "-L{build.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {build.extra_flags} {build.extra_ldflags} {compiler.zephyr.ldflags} "-T{build.ldscript}" "-Wl,-Map,{build.path}/{build.project_name}.map" --specs=picolibc.specs --specs=nosys.specs {compiler.ldflags} -o "{build.path}/{build.project_name}_debug.elf" {object_files} "{build.path}/{archive_file}" {compiler.zephyr} {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags}
+recipe.hooks.linking.postlink.1.pattern="{compiler.path}{build.crossprefix}strip" --strip-debug {build.path}/{build.project_name}_debug.elf -o{build.path}/{build.project_name}.elf
 
 ## Create eeprom
 recipe.objcopy.eep.pattern=
@@ -101,18 +102,17 @@ recipe.objcopy.bin.pattern="{compiler.path}{compiler.elf2hex.cmd}" {compiler.elf
 recipe.objcopy.hex.pattern="{compiler.path}{compiler.elf2hex.cmd}" {compiler.elf2hex.hex.flags} {compiler.elf2hex.extra_flags} "{build.path}/{build.project_name}.elf" "{build.path}/{build.project_name}.hex"
 
 ## Mangle the file
-recipe.hooks.objcopy.postobjcopy.1.pattern="{compiler.path}{build.crossprefix}strip" --strip-debug {build.path}/{build.project_name}.elf -o{build.path}/{build.project_name}.llext
-recipe.hooks.objcopy.postobjcopy.2.pattern={runtime.tools.zephyr-post-build-tool.path}/post_build {postbuild_debug} {postbuild_mode} {build.path}/{build.project_name}.llext
-recipe.hooks.objcopy.postobjcopy.3.pattern={runtime.tools.zephyr-post-build-tool.path}/post_build {postbuild_debug} {postbuild_mode} {build.path}/{build.project_name}.bin
+recipe.hooks.objcopy.postobjcopy.1.pattern={runtime.tools.zephyr-post-build-tool.path}/post_build {postbuild_debug} {postbuild_mode} {build.path}/{build.project_name}.elf
+recipe.hooks.objcopy.postobjcopy.2.pattern={runtime.tools.zephyr-post-build-tool.path}/post_build {postbuild_debug} {postbuild_mode} {build.path}/{build.project_name}.bin
 
 ## Compute size
 recipe.size.pattern="{compiler.path}{compiler.size.cmd}" -A "{build.path}/{build.project_name}.elf"
 recipe.size.regex.data=^(?:\.data|\.bss)\s+([0-9]+).*
 recipe.size.regex=^(?:\.data|\.text|\.rodata)\S*?\s+([0-9]+).*
 
-## Save hex
-recipe.output.tmp_file={build.project_name}.llext
-recipe.output.save_file={build.project_name}.{build.variant}.llext
+## Save output file
+recipe.output.tmp_file={build.project_name}.{upload.extension}
+recipe.output.save_file={build.project_name}.{build.variant}.{upload.extension}
 
 
 # Required discoveries and monitors
@@ -242,7 +242,7 @@ tools.pyocd.path=
 tools.pyocd.cmd=pyocd
 tools.pyocd.upload.params.verbose=
 tools.pyocd.upload.params.quiet=
-tools.pyocd.upload.pattern="{cmd}" load --target {upload.target} {build.path}/{build.project_name}.dfu.bin@{upload.address}
+tools.pyocd.upload.pattern="{cmd}" load --target {upload.target} {build.path}/{build.project_name}.${upload.extension}@{upload.address}
 
 tools.pyocd.bootloader.params.verbose=
 tools.pyocd.bootloader.params.quiet=

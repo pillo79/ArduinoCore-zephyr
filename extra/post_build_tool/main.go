@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	var output = flag.String("output", "", "Output to a specific file (default: add .dfu suffix)")
+	var output = flag.String("output", "", "Output to a specific file (default: add -zsk.bin suffix)")
 	var debug = flag.Bool("debug", false, "Enable debugging mode")
 	var linked = flag.Bool("prelinked", false, "Provided file has already been linked to Zephyr")
 	var force = flag.Bool("force", false, "Ignore safety checks and overwrite the header")
@@ -85,7 +85,7 @@ func main() {
 	// Create a new filename for the copy
 	newFilename := *output
 	if newFilename == "" {
-		newFilename = filename + ".dfu"
+		newFilename = filename + "-zsk.bin"
 	}
 
 	// Write the new content to the new file

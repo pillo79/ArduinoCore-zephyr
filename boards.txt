@@ -495,7 +495,7 @@ portentac33.menu.mode.linked.build.extra_extra_ldflags=-lc -lm -lgcc -L{build.va
 portentac33.menu.mode.linked.build.llext_link_flags=
 portentac33.menu.mode.linked.build.suffix=_linked
 portentac33.menu.mode.linked.build.ldscript={runtime.platform.path}/variants/linked/linker_script.ld
-portentac33.menu.mode.linked.upload.extension=bin.dfu
+portentac33.menu.mode.linked.upload.extension=bin-zsk.bin
 portentac33.menu.mode.linked.postbuild_mode=-linked
 
 portentac33.build.variant=arduino_portenta_c33
