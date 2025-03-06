@@ -63,7 +63,9 @@
 
 	pwm1: pwm {
 		status = "okay";
-		pinctrl-0 = <&tim1_ch3_pj9 &tim1_ch1_pk1 &tim1_ch2_pj11>;
+		/* Temporarily removed SPI1 pins */
+		/* pinctrl-0 = <&tim1_ch3_pj9 &tim1_ch1_pk1 &tim1_ch2_pj11>; */
+		pinctrl-0 = <&tim1_ch3_pj9 &tim1_ch1_pk1>;
 		pinctrl-names = "default";
 	};
 };
@@ -107,21 +109,23 @@
 
 	pwm8: pwm {
 		status = "okay";
-		pinctrl-0 = <&tim8_ch1_pj8 &tim8_ch2_pj10>;
+		/* Temporarily removed SPI1 pins */
+		/* pinctrl-0 = <&tim8_ch1_pj8 &tim8_ch2_pj10>; */
+		pinctrl-0 = <&tim8_ch1_pj8>;
 		pinctrl-names = "default";
 	};
 };
 
-&timers12 {
-	status = "okay";
-	st,prescaler = <100>;
-
-	pwm12: pwm {
-		status = "okay";
-		pinctrl-0 = <&tim12_ch1_ph6>;
-		pinctrl-names = "default";
-	};
-};
+/* Temporarily removed SPI1 pins */
+/* &timers12 { */
+/*	status = "okay"; */
+/* 	st,prescaler = <100>; */
+/*	pwm12: pwm { */
+/* 		status = "okay"; */
+/* 		pinctrl-0 = <&tim12_ch1_ph6>; */
+/* 		pinctrl-names = "default"; */
+/* 	}; */
+/*}; */
 
 &pwm1 {
 	/* Use the pwmclock node to start the clock generation */
@@ -518,10 +522,12 @@
 			   <&pwm3 1 PWM_HZ(500) PWM_POLARITY_NORMAL>,
 			   <&pwm4 3 PWM_HZ(500) PWM_POLARITY_NORMAL>,
 			   <&pwm4 4 PWM_HZ(500) PWM_POLARITY_NORMAL>,
-			   <&pwm1 1 PWM_HZ(5000) PWM_POLARITY_NORMAL>,
-			   <&pwm8 2 PWM_HZ(500) PWM_POLARITY_NORMAL>,
-			   <&pwm1 2 PWM_HZ(5000) PWM_POLARITY_NORMAL>,
-			   <&pwm12 1 PWM_HZ(500) PWM_POLARITY_NORMAL>;
+				/* Temporarily removed SPI1 pins */
+			   /* <&pwm1 1 PWM_HZ(5000) PWM_POLARITY_NORMAL>, */
+			   /* <&pwm8 2 PWM_HZ(500) PWM_POLARITY_NORMAL>, */
+			   /* <&pwm1 2 PWM_HZ(5000) PWM_POLARITY_NORMAL>, */
+			   /* <&pwm12 1 PWM_HZ(500) PWM_POLARITY_NORMAL>; */
+   			   <&pwm1 1 PWM_HZ(5000) PWM_POLARITY_NORMAL>;
 
 		io-channels =	<&adc1 4>,
 				<&adc1 8>,
