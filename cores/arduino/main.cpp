@@ -13,10 +13,19 @@
 void start_static_threads();
 #endif
 
+
+// This function will be overwriten by most variants.
+void __attribute__((weak))initVariant(void) {
+
+}
+
+
 int main(void) {
 #if (DT_NODE_HAS_PROP(DT_PATH(zephyr_user), cdc_acm) && CONFIG_USB_CDC_ACM)
   Serial.begin(115200);
 #endif
+
+  initVariant();
 
 #ifdef CONFIG_MULTITHREADING
   start_static_threads();
