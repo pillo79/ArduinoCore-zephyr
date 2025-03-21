@@ -77,45 +77,71 @@ SYS_INIT(camera_ext_clock_enable, POST_KERNEL, CONFIG_CLOCK_CONTROL_PWM_INIT_PRI
 #include <zephyr/devicetree.h>
 #include <zephyr/multi_heap/shared_multi_heap.h>
 
-struct memory_region_t {
-	uintptr_t dt_addr;
-	size_t dt_size;
-	const char *dt_name;
-};
+__stm32_sdram1_section static uint8_t __aligned(32) smh_pool[4*1024*1024];
 
-#define _BUILD_MEM_REGION(node_id)      \
-	{ .dt_addr = DT_REG_ADDR(node_id),  \
-      .dt_size = DT_REG_SIZE(node_id),  \
-      .dt_name = DT_PROP(node_id, zephyr_memory_region) \
-    },
-
-int smh_init(void)
-{
+int smh_init(void) {
     int ret = 0;
     ret = shared_multi_heap_pool_init();
     if (ret != 0) {
         return ret;
     }
 
-    const struct memory_region_t regions[] = {
-        DT_FOREACH_STATUS_OKAY(zephyr_memory_region, _BUILD_MEM_REGION)
+    struct shared_multi_heap_region smh_sdram = {
+        .addr = (uintptr_t) smh_pool,
+        .size = sizeof(smh_pool),
+        .attr = SMH_REG_ATTR_EXTERNAL,
     };
 
-    for (size_t i=0; i<ARRAY_SIZE(regions); i++) {
-        if (!strncmp("SDRAM", regions[i].dt_name, 5)) {
-            struct shared_multi_heap_region smh_sdram = {
-                .addr = regions[i].dt_addr,
-                .size = regions[i].dt_size,
-                .attr = SMH_REG_ATTR_EXTERNAL,
-            };
-            ret = shared_multi_heap_add(&smh_sdram, NULL);
-            if (ret != 0) {
-                return ret;
-            }
-        }
+    ret = shared_multi_heap_add(&smh_sdram, NULL);
+    if (ret != 0) {
+        return ret;
     }
 	return 0;
 }
 
 SYS_INIT(smh_init, POST_KERNEL, CONFIG_CLOCK_CONTROL_PWM_INIT_PRIORITY);
+#endif
+
+#if defined(CONFIG_BOARD_ARDUINO_PORTENTA_C33) && defined(CONFIG_LLEXT)
+#include <zephyr/kernel.h>
+#include <zephyr/storage/flash_map.h>
+
+int maybe_flash_bootloader(void)
+{
+	// memcmp the first 256bytes of "embedded bootloader" and address 0x0
+	// if they are different, flash the bootloader
+	const uint8_t embedded_bootloader[] = {
+		#include "c33_bl_patch/c33_bl.bin.inc"
+	};
+
+	const struct flash_area *fa;
+	int rc;
+
+	rc = flash_area_open(FIXED_PARTITION_ID(mcuboot), &fa);
+	if (rc) {
+		printk("Failed to open flash area, rc %d\n", rc);
+		return rc;
+	}
+
+	uint8_t flash_bootloader[256];
+	flash_area_read(fa, 0, flash_bootloader, 256);
+
+	if (memcmp(embedded_bootloader, flash_bootloader, 256) != 0) {
+		// flash the bootloader
+		rc = flash_area_erase(fa, 0, fa->fa_size);
+		if (rc) {
+			printk("Failed to erase flash area, rc %d\n", rc);
+			return rc;
+		}
+		flash_area_write(fa, 0, embedded_bootloader, sizeof(embedded_bootloader));
+		if (rc) {
+			printk("Failed to write flash area, rc %d\n", rc);
+			return rc;
+		}
+	}
+	return 0;
+}
+
+SYS_INIT(maybe_flash_bootloader, POST_KERNEL, CONFIG_FILE_SYSTEM_INIT_PRIORITY);
+
 #endif

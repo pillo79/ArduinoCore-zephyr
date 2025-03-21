@@ -13,11 +13,13 @@ manifest:
       url-base: https://github.com/zephyrproject-rtos
     - name: arduino
       url-base: https://github.com/arduino
+    - name: facchinm
+      url-base: https://github.com/facchinm
 
   projects:
     - name: zephyr
       remote: arduino
-      revision: arduino_core_merge_4.0.99
+      revision: arduino_core_merge_4.1.0-rc2
       import:
         name-allowlist:
           - cmsis
@@ -42,6 +44,7 @@ manifest:
           - segger
           - thrift
           - mcuboot
+          - lvgl
     - name: ArduinoCore-API
       path: modules/lib/ArduinoCore-API
       revision: master

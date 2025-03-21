@@ -20,6 +20,18 @@ LOG_MODULE_REGISTER(app);
 #include <zephyr/drivers/uart.h>
 #include <zephyr/usb/usb_device.h>
 
+#define HEADER_LEN 16
+
+struct sketch_header_v1 {
+	uint8_t ver;    // @ 0x07
+	uint32_t len;   // @ 0x08
+	uint16_t magic; // @ 0x0c
+	uint8_t flags;  // @ 0x0e
+} __attribute__ ((packed));
+
+#define SKETCH_FLAG_DEBUG       0x01
+#define SKETCH_FLAG_LINKED      0x02
+
 #if DT_NODE_HAS_PROP(DT_PATH(zephyr_user), cdc_acm)
 const struct device *const usb_dev = DEVICE_DT_GET(DT_PHANDLE_BY_IDX(DT_PATH(zephyr_user), cdc_acm, 0));
 #endif
@@ -49,7 +61,10 @@ static int loader(const struct shell *sh)
 		return rc;
 	}
 
-	char header[16];
+	uintptr_t base_addr = DT_REG_ADDR(DT_GPARENT(DT_NODELABEL(user_sketch))) +
+			      DT_REG_ADDR(DT_NODELABEL(user_sketch));
+
+	char header[HEADER_LEN];
 	rc = flash_area_read(fa, 0, header, sizeof(header));
 	if (rc) {
 		printk("Failed to read header, rc %d\n", rc);
@@ -61,17 +76,17 @@ static int loader(const struct shell *sh)
 		return -ENOENT;
 	}
 
-	char *endptr;
-	size_t sketch_buf_len = strtoul(header, &endptr, 10);
-	// make sure number got parsed correctly"
-	if (header == endptr) {
-		printk("Failed to parse sketch size\n");
+	struct sketch_header_v1 *sketch_hdr = (struct sketch_header_v1 *)(header + 7);
+	if (sketch_hdr->ver != 0x1 || sketch_hdr->magic != 0x2341) {
+		printk("Invalid sketch header\n");
 		return -EINVAL;
 	}
 
-#if DT_NODE_HAS_PROP(DT_PATH(zephyr_user), cdc_acm) && CONFIG_SHELL
-	uint8_t debug = endptr[1];
-	if (debug != 0 && strcmp(k_thread_name_get(k_current_get()), "main") == 0) {
+	size_t sketch_buf_len = sketch_hdr->len;
+
+#if DT_NODE_HAS_PROP(DT_PATH(zephyr_user), cdc_acm) && CONFIG_SHELL && CONFIG_USB_DEVICE_STACK
+	int debug = sketch_hdr->flags & SKETCH_FLAG_DEBUG;
+	if (debug && strcmp(k_thread_name_get(k_current_get()), "main") == 0) {
 		// disables default shell on UART
 		shell_uninit(shell_backend_uart_get_ptr(), NULL);
 		// enables USB and starts the shell
@@ -87,7 +102,28 @@ static int loader(const struct shell *sh)
 	}
 #endif
 
-	int header_len = 16;
+	if (sketch_hdr->flags & SKETCH_FLAG_LINKED) {
+		#ifdef CONFIG_BOARD_ARDUINO_PORTENTA_C33
+		#if CONFIG_MPU
+		barrier_dmem_fence_full();
+		#endif
+		#if CONFIG_DCACHE
+		barrier_dsync_fence_full();
+		#endif
+		#if CONFIG_ICACHE
+		barrier_isync_fence_full();
+		#endif
+		#endif
+
+		extern struct k_heap llext_heap;
+		typedef void (*entry_point_t)(struct k_heap *heap, size_t heap_size);
+		entry_point_t entry_point = (entry_point_t)(base_addr + HEADER_LEN + 1);
+		entry_point(&llext_heap, llext_heap.heap.init_bytes);
+		// should never reach here
+		for (;;) {
+			k_sleep(K_FOREVER);
+		}
+	}
 
 #if defined(CONFIG_LLEXT_STORAGE_WRITABLE)
 	uint8_t* sketch_buf = k_aligned_alloc(4096, sketch_buf_len);
@@ -96,18 +132,17 @@ static int loader(const struct shell *sh)
 		printk("Unable to allocate %d bytes\n", sketch_buf_len);
 	}
 
-	rc = flash_area_read(fa, header_len, sketch_buf, sketch_buf_len);
+	rc = flash_area_read(fa, HEADER_LEN, sketch_buf, sketch_buf_len);
 	if (rc) {
 		printk("Failed to read sketch area, rc %d\n", rc);
 		return rc;
 	}
 #else
 	// Assuming the sketch is stored in the same flash device as the loader
-	// uint32_t offset =  DT_REG_ADDR(DT_CHOSEN(zephyr_flash)) + DT_REG_ADDR(DT_NODELABEL(user_sketch));
-	uint32_t offset =  DT_REG_ADDR(DT_GPARENT(DT_NODELABEL(user_sketch))) + DT_REG_ADDR(DT_NODELABEL(user_sketch));
-	uint8_t* sketch_buf = (uint8_t*)(offset+header_len);
+	uint8_t* sketch_buf = (uint8_t*)base_addr;
 #endif
 
+#ifdef CONFIG_LLEXT
 	struct llext_buf_loader buf_loader = LLEXT_BUF_LOADER(sketch_buf, sketch_buf_len);
 	struct llext_loader *ldr = &buf_loader.loader;
 
@@ -128,6 +163,7 @@ static int loader(const struct shell *sh)
 		printk("Failed to find main function\n");
 		return -ENOENT;
 	}
+#endif
 
 #ifdef CONFIG_USERSPACE
 	/*
@@ -164,7 +200,9 @@ static int loader(const struct shell *sh)
 	k_thread_join(&llext_thread, K_FOREVER);
 #else
 
+#ifdef CONFIG_LLEXT
 	llext_bootstrap(ext, main_fn, NULL);
+#endif
 
 #endif
 

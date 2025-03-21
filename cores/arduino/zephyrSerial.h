@@ -7,6 +7,7 @@
 #pragma once
 
 #include <zephyr/sys/ring_buffer.h>
+#include <zephyr/kernel.h>
 #include <api/HardwareSerial.h>
 
 namespace arduino {
@@ -81,7 +82,7 @@ protected:
 }   // namespace arduino
 
 #if DT_NODE_HAS_PROP(DT_PATH(zephyr_user), serials)
-#if !(DT_NODE_HAS_PROP(DT_PATH(zephyr_user), cdc_acm) && CONFIG_USB_CDC_ACM)
+#if !(DT_NODE_HAS_PROP(DT_PATH(zephyr_user), cdc_acm) && (CONFIG_USB_CDC_ACM || CONFIG_USBD_CDC_ACM_CLASS))
 // If CDC USB, use that object as Serial (and SerialUSB)
 extern arduino::ZephyrSerial Serial;
 #endif
