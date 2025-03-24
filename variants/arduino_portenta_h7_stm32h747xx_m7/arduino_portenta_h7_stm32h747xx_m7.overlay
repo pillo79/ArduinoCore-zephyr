@@ -1,8 +1,5 @@
-&zephyr_udc0 {
-	cdc_acm_uart0: cdc_acm_uart0 {
-		compatible = "zephyr,cdc-acm-uart";
-		status = "okay";
-	};
+&board_cdc_acm_uart {
+	status = "okay";
 };
 
 &usart1 {
@@ -14,10 +11,6 @@
 };
 
 &usart6 {
-	status = "okay";
-};
-
-&cdc_acm_uart0 {
 	status = "okay";
 };
 
@@ -87,8 +80,8 @@
                         <&gpiok 6 GPIO_ACTIVE_LOW>,
                         <&gpiok 7 GPIO_ACTIVE_LOW>;
 
-		serials = <&cdc_acm_uart0>,<&usart6>, <&usart1>, <&uart4>;
-		cdc-acm = <&cdc_acm_uart0>;
+		serials = <&board_cdc_acm_uart>,<&usart6>, <&usart1>, <&uart4>;
+		cdc-acm = <&board_cdc_acm_uart>;
 		i2cs = <&i2c4>;
 	};
 };

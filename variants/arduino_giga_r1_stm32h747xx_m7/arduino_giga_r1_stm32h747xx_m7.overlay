@@ -1,7 +1,7 @@
 &zephyr_udc0 {
-	cdc_acm_uart0: cdc_acm_uart0 {
+	board_cdc_acm_uart: board_cdc_acm_uart {
 		compatible = "zephyr,cdc-acm-uart";
-		status = "okay";
+	status = "okay";
 	};
 };
 
@@ -322,7 +322,7 @@
 /{
 	chosen {
 		zephyr,camera = &dcmi;
-		/* zephyr,console = &cdc_acm_uart0; */
+		/* zephyr,console = &board_cdc_acm_uart; */
 	};
 
 	/* used to overcome problems with _C analog pins */
@@ -491,8 +491,8 @@
 					<&gpioa 4 0>,
 					<&gpioa 5 0>;
 
-		serials = <&cdc_acm_uart0>, <&usart1>, <&usart2>, <&uart4>, <&usart6>;
-		cdc-acm = <&cdc_acm_uart0>;
+		serials = <&board_cdc_acm_uart>, <&usart1>, <&usart2>, <&uart4>, <&usart6>;
+		cdc-acm = <&board_cdc_acm_uart>;
 		i2cs = <&i2c2>, <&i2c4>, <&i2c1>;
 		spis = <&spi1>, <&spi5>;
 		pwms = <&pwm1 3 PWM_HZ(12000000) PWM_POLARITY_NORMAL>,
