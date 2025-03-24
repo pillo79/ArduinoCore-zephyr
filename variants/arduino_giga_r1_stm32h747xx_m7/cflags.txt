@@ -8,11 +8,10 @@
 -DUSE_FULL_LL_DRIVER
 -DCORE_CM7
 -DHSE_VALUE=16000000
--DK_HEAP_MEM_POOL_SIZE=65536
+-DK_HEAP_MEM_POOL_SIZE=2048
 -DLL_EXTENSION_BUILD
 -fno-strict-aliasing
 -fno-common
--fdiagnostics-color=always
 -mcpu=cortex-m7
 -mthumb
 -mabi=aapcs
