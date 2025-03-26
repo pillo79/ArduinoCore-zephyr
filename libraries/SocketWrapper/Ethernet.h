@@ -2,6 +2,8 @@
 
 #include <zephyr/net/ethernet.h>
 
+#if DT_HAS_COMPAT_STATUS_OKAY(ethernet_phy)
+
 enum EthernetLinkStatus {
   Unknown,
   LinkON,
@@ -58,3 +60,5 @@ public:
     }
 };
 extern EthernetClass Ethernet;
+
+#endif
