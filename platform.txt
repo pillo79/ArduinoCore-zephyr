@@ -252,7 +252,7 @@ tools.pyocd.path=
 tools.pyocd.cmd=pyocd
 tools.pyocd.upload.params.verbose=
 tools.pyocd.upload.params.quiet=
-tools.pyocd.upload.pattern="{cmd}" load --target {upload.target} {build.path}/{build.project_name}.${upload.extension}@{upload.address}
+tools.pyocd.upload.pattern="{cmd}" load --target {upload.target} {build.path}/{build.project_name}.{upload.extension}@{upload.address}
 
 tools.pyocd.bootloader.params.verbose=
 tools.pyocd.bootloader.params.quiet=
