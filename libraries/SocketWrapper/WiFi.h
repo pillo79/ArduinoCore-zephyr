@@ -68,7 +68,7 @@ public:
         enable_dhcpv4_server(ap_iface);
 
         if (blocking) {
-            net_mgmt_event_wait_on_iface(sta_iface, NET_EVENT_WIFI_AP_ENABLE_RESULT, NULL, NULL, NULL, K_FOREVER);
+            net_mgmt_event_wait_on_iface(ap_iface, NET_EVENT_WIFI_AP_ENABLE_RESULT, NULL, NULL, NULL, K_FOREVER);
         }
 
         return true;
