@@ -1,3 +1,9 @@
-build/
-distrib/
-venv/
+/build/
+/distrib/
+/firmwares/*
+/venv/
+llext-edk/
+cflags.txt
+cxxflags.txt
+includes.txt
+provides.ld
