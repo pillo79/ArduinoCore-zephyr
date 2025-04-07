@@ -60,7 +60,7 @@ jobs:
           path: ${{ env.CORE_ARTIFACT }}.tar.bz2
 
   test-core:
-    name: Test arduino:zephyr:${{ matrix.board }}
+    name: Test ${{ matrix.board }} board
     runs-on: ubuntu-latest
     needs: package-core
     strategy:
@@ -69,6 +69,7 @@ jobs:
       fail-fast: false
     env:
       FQBN: arduino:zephyr:${{ matrix.board }}
+      REPORT_FILE: arduino-zephyr-${{ matrix.board }}.json
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -83,8 +84,8 @@ jobs:
           mkdir Blink/
           wget -nv https://raw.githubusercontent.com/arduino/arduino-examples/refs/heads/main/examples/01.Basics/Blink/Blink.ino -P Blink/
 
-      - name: Compile Blink for ${{ env.FQBN }}
-        uses: arduino/compile-sketches@main
+      - name: Compile Blink for ${{ matrix.board }}
+        uses: pillo79/compile-sketches@main
         with:
           fqbn: ${{ env.FQBN }}
           platforms: |
@@ -96,3 +97,80 @@ jobs:
           sketch-paths: Blink
           verbose: 'false'
           enable-deltas-report: 'false'
+          enable-warnings-report: 'true'
+          enable-warnings-log: 'true'
+
+      - name: Get job ID
+        id: job_id
+        uses: actions/github-script@main
+        with:
+          script: |
+            const { data: workflow_run } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId
+            });
+            const job_name = `Test ${{ matrix.board }} board`
+            return workflow_run.jobs.find((job) => job.name === job_name).id;
+
+      - name: Prepare log
+        run: |
+          sed -i -e 's!/home/runner/.arduino15/packages/arduino/hardware/zephyr/[^/]*/!!g' sketches-reports/${REPORT_FILE}
+          cat sketches-reports/${REPORT_FILE} | jq -cr ".boards[0].sketches[0] += { job_id: ${{ steps.job_id.outputs.result }} }" > ${REPORT_FILE} && mv ${REPORT_FILE} sketches-reports/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ needs.package-core.outputs.CORE_TAG }}-${{ matrix.board }}
+          path: sketches-reports/*
+
+  collect-logs:
+    name: Collect logs
+    runs-on: ubuntu-latest
+    needs:
+      - package-core
+      - test-core
+    if: ${{ !cancelled() && needs.package-core.result == 'success' }}
+    env:
+      BOARD_NAMES: ${{ needs.package-core.outputs.BOARD_NAMES }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: .
+          pattern: test-report-*
+          merge-multiple: true
+
+      - run: |
+          echo "### Core test results:" >> "$GITHUB_STEP_SUMMARY"
+          for BOARD in $(echo $BOARD_NAMES | jq -cr '.[]'); do
+            FQBN="arduino:zephyr:$BOARD"
+            REPORT_FILE="arduino-zephyr-$BOARD.json"
+            if [ ! -f $REPORT_FILE ]; then
+              echo ":x: $BOARD - No report found?" >> "$GITHUB_STEP_SUMMARY"
+            else
+              REPORT=$(jq -cr '.boards[0].sketches[0]' $REPORT_FILE)
+              JOB_ID=$(echo $REPORT | jq -cr '.job_id')
+              JOB_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${JOB_ID}#step:5:2"
+              if ! $(echo $REPORT | jq -cr '.compilation_success') ; then
+                echo ":x: [$BOARD]($JOB_URL) - **Build failed**" >> "$GITHUB_STEP_SUMMARY"
+              else
+                WARNINGS=$(echo $REPORT | jq -cr '.warnings.current.absolute // 0')
+                if [ $WARNINGS -eq 0 ]; then
+                  echo ":white_check_mark: [$BOARD]($JOB_URL) - Build successful" >> "$GITHUB_STEP_SUMMARY"
+                else
+                  echo "<details><summary>:warning: <a href=\"$JOB_URL\">$BOARD</a> - $WARNINGS warnings:</summary>" >> "$GITHUB_STEP_SUMMARY"
+                  echo >> "$GITHUB_STEP_SUMMARY"
+                  echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+                  echo $REPORT | jq -cr '.warnings_log[]' >> "$GITHUB_STEP_SUMMARY"
+                  echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+                  echo >> "$GITHUB_STEP_SUMMARY"
+                  echo "</details>" >> "$GITHUB_STEP_SUMMARY"
+                fi
+              fi
+            fi
+          done
+
+        - name: Clean up intermediate artifacts
+          uses: geekyeggo/delete-artifact@v5.1.0
+          with:
+            name: test-report-*
+            failOnError: false
