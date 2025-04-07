@@ -169,8 +169,36 @@ jobs:
             fi
           done
 
-        - name: Clean up intermediate artifacts
-          uses: geekyeggo/delete-artifact@v5.1.0
-          with:
-            name: test-report-*
-            failOnError: false
+      - name: Clean up intermediate artifacts
+        uses: geekyeggo/delete-artifact@v5.1.0
+        with:
+          name: test-report-*
+          failOnError: false
+
+  publish-core:
+    name: Publish core
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && github.repository == 'arduino/ArduinoCore-zephyr' }}
+    needs:
+      - package-core
+      - test-core
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      CORE_ARTIFACT: ${{ needs.package-core.outputs.CORE_ARTIFACT }}
+      ARTIFACT_FILE: ${{ needs.package-core.outputs.CORE_ARTIFACT }}.tar.bz2
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CORE_ARTIFACT }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload artifact
+        run: aws s3 cp ${{ env.ARTIFACT_FILE }} s3://${{ secrets.S3_BUCKET }}/
