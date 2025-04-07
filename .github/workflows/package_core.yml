@@ -151,3 +151,24 @@ jobs:
               fi
             fi
           done
+
+  publish-artifacts:
+    name: Publish artifacts
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && github.repository == 'arduino/ArduinoCore-zephyr' }}
+    needs:
+      - package-core
+      - test-core
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.package-core.outputs.CORE_ARTIFACT }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload artifact
+        run: aws s3 sync ${{ needs.package-core.outputs.CORE_ARTIFACT }}.tar.bz2 s3://${{ secrets.S3_BUCKET }}
