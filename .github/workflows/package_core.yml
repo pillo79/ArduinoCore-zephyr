@@ -84,7 +84,7 @@ jobs:
           wget -nv https://raw.githubusercontent.com/arduino/arduino-examples/refs/heads/main/examples/01.Basics/Blink/Blink.ino -P Blink/
 
       - name: Compile Blink for ${{ env.FQBN }}
-        uses: arduino/compile-sketches@main
+        uses: pillo79/compile-sketches@main
         with:
           fqbn: ${{ env.FQBN }}
           platforms: |
@@ -96,3 +96,58 @@ jobs:
           sketch-paths: Blink
           verbose: 'false'
           enable-deltas-report: 'false'
+          enable-warnings-report: 'true'
+          enable-warnings-log: 'true'
+
+      - name: Clean up log
+        run: |
+            sed -i -e 's!/home/runner/.arduino15/packages/arduino/hardware/zephyr/[^/]*/!!g' sketches-reports/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ needs.package-core.outputs.CORE_TAG }}-${{ matrix.board }}
+          path: sketches-reports/*
+
+  collect-logs:
+    name: Test summary
+    runs-on: ubuntu-latest
+    needs:
+      - package-core
+      - test-core
+    if: ${{ !cancelled() && needs.package-core.result == 'success' }}
+    env:
+      BOARD_NAMES: ${{ needs.package-core.outputs.BOARD_NAMES }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: .
+          pattern: test-report-*
+          merge-multiple: true
+
+      - run: |
+          echo "### Core test results" >> "$GITHUB_STEP_SUMMARY"
+          for BOARD in $(echo $BOARD_NAMES | jq -cr '.[]'); do
+            FQBN="arduino:zephyr:$BOARD"
+            REPORT_FILE="arduino-zephyr-$BOARD.json"
+            if [ ! -f $REPORT_FILE ]; then
+              echo ":x: $BOARD - No report found?" >> "$GITHUB_STEP_SUMMARY"
+            else
+              REPORT=$(jq -cr '.boards[0].sketches[0]' $REPORT_FILE)
+              if ! $(echo $REPORT | jq -cr '.compilation_success') ; then
+                echo ":x: $BOARD - **Build failed**" >> "$GITHUB_STEP_SUMMARY"
+              else
+                WARNINGS=$(echo $REPORT | jq -cr '.warnings.current.absolute // 0')
+                if [ $WARNINGS -eq 0 ]; then
+                  echo ":white_check_mark: $BOARD - Build successful" >> "$GITHUB_STEP_SUMMARY"
+                else
+                  echo "<details><summary>:warning: $BOARD - $WARNINGS Warnings:</summary>" >> "$GITHUB_STEP_SUMMARY"
+                  echo >> "$GITHUB_STEP_SUMMARY"
+                  echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+                  echo $REPORT | jq -cr '.warnings_log[]' >> "$GITHUB_STEP_SUMMARY"
+                  echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+                  echo >> "$GITHUB_STEP_SUMMARY"
+                  echo "</details>" >> "$GITHUB_STEP_SUMMARY"
+                fi
+              fi
+            fi
+          done
