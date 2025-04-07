@@ -14,6 +14,10 @@ jobs:
     env:
       ZEPHYR_SDK_INSTALL_DIR: /opt/zephyr-sdk-0.16.8
       CCACHE_IGNOREOPTIONS: -specs=*
+    outputs:
+      CORE_TAG: ${{ env.CORE_TAG }}
+      CORE_ARTIFACT: ${{ env.CORE_ARTIFACT }}
+      BOARD_NAMES: ${{ env.BOARD_NAMES }}
     steps:
       - name: Install toolchain
         working-directory: /opt
@@ -55,23 +59,40 @@ jobs:
           name: ${{ env.CORE_ARTIFACT }}
           path: ${{ env.CORE_ARTIFACT }}.tar.bz2
 
+  test-core:
+    name: Test arduino:zephyr:${{ matrix.board }}
+    runs-on: ubuntu-latest
+    needs: package-core
+    strategy:
+      matrix:
+        board: ${{ fromJSON( needs.package-core.outputs.BOARD_NAMES ) }}
+      fail-fast: false
+    env:
+      FQBN: arduino:zephyr:${{ matrix.board }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.package-core.outputs.CORE_ARTIFACT }}
+
+      - name: Set up core
+        run: |
+          tar xf ${{ needs.package-core.outputs.CORE_ARTIFACT }}.tar.bz2
+
       - name: Create Blink sketch
         run: |
-          mkdir extra/Blink/
-          wget https://raw.githubusercontent.com/arduino/arduino-examples/refs/heads/main/examples/01.Basics/Blink/Blink.ino
-          mv Blink.ino extra/Blink/
+          mkdir Blink/
+          wget -nv https://raw.githubusercontent.com/arduino/arduino-examples/refs/heads/main/examples/01.Basics/Blink/Blink.ino -P Blink/
 
-      - name: Compile Blink
+      - name: Compile Blink for ${{ env.FQBN }}
         uses: arduino/compile-sketches@main
         with:
-          fqbn: arduino:zephyr:giga
+          fqbn: ${{ env.FQBN }}
           platforms: |
             # Use Board Manager to install the latest release of Arduino Zephyr Boards to get the toolchain
             - name: "arduino:zephyr"
               source-url: "https://downloads.arduino.cc/packages/package_zephyr_index.json"
-            - source-path: "./"
-              name: "arduino:zephyr"
-          sketch-paths: |
-            extra/Blink
+            - name: "arduino:zephyr"
+              source-path: "ArduinoCore-zephyr"
+          sketch-paths: Blink
           verbose: 'false'
           enable-deltas-report: 'false'
