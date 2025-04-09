@@ -1,10 +1,8 @@
 name: Package, test and upload core
 
 on:
-  push:
-    branches:
-      - arduino
-  pull_request:
+  - push
+  - pull_request
 
 jobs:
 
