@@ -93,6 +93,11 @@ jobs:
             - name: "arduino:zephyr"
               source-path: "ArduinoCore-zephyr"
           sketch-paths: Blink
+          cli-compile-flags: |
+            - '--build-property'
+            - 'compiler.c.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
+            - '--build-property'
+            - 'compiler.cpp.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
           verbose: 'false'
           enable-deltas-report: 'false'
           enable-warnings-report: 'true'
@@ -100,6 +105,7 @@ jobs:
 
       - name: Get job ID
         id: job_id
+        if: ${{ success() || failure() }}
         uses: actions/github-script@main
         with:
           script: |
@@ -112,11 +118,13 @@ jobs:
             return workflow_run.jobs.find((job) => job.name === job_name).id;
 
       - name: Prepare log
+        if: ${{ success() || failure() }}
         run: |
           sed -i -e 's!/home/runner/.arduino15/packages/arduino/hardware/zephyr/[^/]*/!!g' sketches-reports/${REPORT_FILE}
           cat sketches-reports/${REPORT_FILE} | jq -cr ".boards[0].sketches[0] += { job_id: ${{ steps.job_id.outputs.result }} }" > ${REPORT_FILE} && mv ${REPORT_FILE} sketches-reports/
 
       - uses: actions/upload-artifact@v4
+        if: ${{ success() || failure() }}
         with:
           name: test-report-${{ needs.package-core.outputs.CORE_TAG }}-${{ matrix.board }}
           path: sketches-reports/*
