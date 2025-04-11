@@ -48,7 +48,7 @@ jq -cr '.[]' < ./extra/targets.json | while read -r item; do
 		if [ $result -eq 0 ] ; then
 			echo "- :white_check_mark: \`${variant}\`" >> "$GITHUB_STEP_SUMMARY"
 		else
-			echo "^^^$(echo ${variant} | sed -e 's/./^/g')^^  FAILED with $result!"
+			echo "^^^^$(echo ${variant} | sed -e 's/./^/g')^^^^^  FAILED with $result!"
 			echo "- :x: \`${variant}\`" >> "$GITHUB_STEP_SUMMARY"
 		fi
 	fi

@@ -1,8 +1,10 @@
 > [!IMPORTANT]  
 > This core is in **BETA**. 🧪  
 > Features may change, and bugs may be present. Use for testing only and provide feedback to help us improve.
+>
+> [![Default branch status](https://github.com/arduino/ArduinoCore-zephyr/actions/workflows/package_core.yml/badge.svg?branch=arduino&event=push)](https://github.com/arduino/ArduinoCore-zephyr/actions/workflows/package_core.yml)
 
-# 🚧 Arduino Core for Zephyr 
+# 🚧 Arduino Core for Zephyr
 
 This repository contains the official implementation of **Arduino Core** for Zephyr RTOS based board.
 
