@@ -50,7 +50,6 @@ jobs:
       - name: Package
         run: |
           ./extra/package.sh ${{ env.CORE_TAG }}
-          mv ../${{ env.CORE_ARTIFACT }}.tar.bz2 .
 
       - name: Archive core
         uses: actions/upload-artifact@v4
