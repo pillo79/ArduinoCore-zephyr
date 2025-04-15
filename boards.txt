@@ -443,7 +443,7 @@ portentac33.menu.mode.linked=linked
 portentac33.menu.mode.linked.build.extra_ldflags=-lc -lm -lgcc -L{build.variant.path} -Wl,--wrap=random -Wl,--wrap=calloc -Wl,--wrap=free -Wl,--wrap=malloc -Wl,--wrap=realloc 
 portentac33.menu.mode.linked.build.llext_link_flags=
 portentac33.menu.mode.linked.build.suffix=_linked
-portentac33.menu.mode.linked.build.ldscript={runtime.platform.path}/variants/linked/linker_script.ld
+portentac33.menu.mode.linked.build.ldscript={runtime.platform.path}/variants/_linked/linker_script.ld
 portentac33.menu.mode.linked.upload.extension=bin-zsk.bin
 portentac33.menu.mode.linked.postbuild_mode=-prelinked
 
