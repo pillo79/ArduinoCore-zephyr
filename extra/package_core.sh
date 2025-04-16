@@ -8,7 +8,7 @@ if [ -z "$1" ]; then
 fi
 
 if [ ! -f platform.txt ]; then
-	echo "Launch this script from the root core folder as ./extra/package.sh VERSION"
+	echo "Launch this script from the root core folder as ./extra/package_core.sh VERSION"
 	exit 2
 fi
 
@@ -18,7 +18,7 @@ VERSION=$1
 TEMP_LIST=$(mktemp)
 
 # import a basic list of files and directories
-cat extra/package.lst | sed -e 's/\s*#.*//' | grep -v '^\s*$' > ${TEMP_LIST}
+cat extra/package_core.inc | sed -e 's/\s*#.*//' | grep -v '^\s*$' > ${TEMP_LIST}
 
 # add the board-specific files
 extra/get_board_details.sh | jq -cr '.[]' | while read -r item; do
@@ -27,5 +27,5 @@ extra/get_board_details.sh | jq -cr '.[]' | while read -r item; do
 	ls firmwares/zephyr-${variant}.* >> ${TEMP_LIST}
 done
 cat ${TEMP_LIST}
-tar -cjhf ${PACKAGE}-${VERSION}.tar.bz2 -T ${TEMP_LIST} --transform "s,^,${PACKAGE}/,"
+tar -cjhf ${PACKAGE}-${VERSION}.tar.bz2 -X extra/package_core.exc -T ${TEMP_LIST} --transform "s,^,${PACKAGE}/,"
 rm -f ${TEMP_LIST}
