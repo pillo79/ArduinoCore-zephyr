@@ -14,6 +14,7 @@ import (
 
 	"github.com/codeclysm/extract/v4"
 	"github.com/go-git/go-git/v5"
+	cp "github.com/otiai10/copy"
 )
 
 func downloadFile(filepath string, url string) (err error) {
@@ -121,25 +122,39 @@ func main() {
 	// Use packer/tar and compress/bzip2 to extract the file
 	file, err := os.Open(filepath.Join(tmpDir, filename))
 	if err != nil {
-		fmt.Println("Error opening zip file:", err)
+		fmt.Println("Error opening archive:", err)
 		return
 	}
 	defer file.Close()
-	extract.Bz2(context.Background(), file, filepath.Join(tmpDir, "extract"), nil)
+
+	err = extract.Bz2(context.Background(), file, filepath.Join(tmpDir, "extract"), nil)
+	if err != nil {
+		fmt.Println("Error extracting archive:", err)
+		return
+	}
+
+	// Remove old firmwares and variants/*/llext-edk files
+	os.RemoveAll(filepath.Join(gitCorePath, "firmwares"))
+	filepath.WalkDir(filepath.Join(gitCorePath, "variants"), func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			fmt.Println("Error:", err)
+			return nil
+		}
+
+		if d.IsDir() && d.Name() == "llext-edk" {
+			os.RemoveAll(path)
+		}
+		return nil
+	})
+
 	// Copy the content of firmware folder to gitCorePath/firmware
-	err = os.CopyFS(filepath.Join(gitCorePath, "firmwares"), os.DirFS(filepath.Join(tmpDir, "extract", "ArduinoCore-zephyr", "firmwares")))
+	err = cp.Copy(filepath.Join(tmpDir, "extract", "ArduinoCore-zephyr", "firmwares"), filepath.Join(gitCorePath, "firmwares"))
 	if err != nil {
 		fmt.Println("Error copying firmware folder:", err)
 		return
 	}
 	// Copy the content of variants folder to gitCorePath/variants
-	// Since CopyFS does not overwrite, before doing so remove gitCorePath/variants
-	err = os.RemoveAll(filepath.Join(gitCorePath, "variants"))
-	if err != nil {
-		fmt.Println("Error renaming variants folder:", err)
-		return
-	}
-	err = os.CopyFS(filepath.Join(gitCorePath, "variants"), os.DirFS(filepath.Join(tmpDir, "extract", "ArduinoCore-zephyr", "variants")))
+	err = cp.Copy(filepath.Join(tmpDir, "extract", "ArduinoCore-zephyr", "variants"), filepath.Join(gitCorePath, "variants"))
 	if err != nil {
 		fmt.Println("Error copying variants folder:", err)
 		return
