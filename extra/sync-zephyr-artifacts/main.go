@@ -50,7 +50,7 @@ func main() {
 
 	// Create a temporary folder, download a URL based on a git tag in it
 	// and extract the zip file to the temporary folder
-	tmpDir, err := os.MkdirTemp("", "sync_zephyr_artifacts")
+	tmpDir, err := os.MkdirTemp("", "sync-zephyr-artifacts")
 	if err != nil {
 		fmt.Println("Error creating temp dir:", err)
 		return
@@ -106,7 +106,7 @@ func main() {
 	if forceHash != "" {
 		hash = forceHash
 	}
-	filename := fmt.Sprintf("arduino-core-zephyr-llext-%s.tar.bz2", hash)
+	filename := fmt.Sprintf("ArduinoCore-zephyr-%s.tar.bz2", hash)
 	url := fmt.Sprintf("http://downloads.arduino.cc/cores/zephyr/%s", filename)
 	fmt.Println("Download URL:", url)
 	// Download the zip file from the URL
@@ -134,8 +134,6 @@ func main() {
 	}
 	// Copy the content of variants folder to gitCorePath/variants
 	// Since CopyFS does not overwrite, before doing so remove gitCorePath/variants
-	// TODO: make sure there's no outstanding change in gitCorePath/variants
-	// Bail out in that case with a clear error message
 	err = os.RemoveAll(filepath.Join(gitCorePath, "variants"))
 	if err != nil {
 		fmt.Println("Error renaming variants folder:", err)

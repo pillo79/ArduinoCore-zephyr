@@ -1,4 +1,4 @@
-module github.com/arduino/sync_zephyr_artifacts
+module github.com/arduino/sync-zephyr-artifacts
 
 go 1.24.1
 
