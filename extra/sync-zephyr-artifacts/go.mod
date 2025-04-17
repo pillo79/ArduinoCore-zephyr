@@ -4,7 +4,6 @@ go 1.24.1
 
 require (
 	github.com/codeclysm/extract/v4 v4.0.0
-	github.com/go-git/go-git/v5 v5.14.0
 	github.com/otiai10/copy v1.14.1
 )
 

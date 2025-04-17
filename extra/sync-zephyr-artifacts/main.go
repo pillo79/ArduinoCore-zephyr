@@ -9,11 +9,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/codeclysm/extract/v4"
-	"github.com/go-git/go-git/v5"
 	cp "github.com/otiai10/copy"
 )
 
@@ -50,7 +50,7 @@ func downloadFile(filepath string, url string) (err error) {
 func main() {
 
 	// Create a temporary folder, download a URL based on a git tag in it
-	// and extract the zip file to the temporary folder
+	// and extract the file to the temporary folder
 	tmpDir, err := os.MkdirTemp("", "sync-zephyr-artifacts")
 	if err != nil {
 		fmt.Println("Error creating temp dir:", err)
@@ -58,55 +58,53 @@ func main() {
 	}
 	defer os.RemoveAll(tmpDir) // Clean up
 
-	// Download the zip file from http://downloads.arduino.cc/cores/zephyr/zephyr-core-llext-{git_tag}.zip
-	// and save it to zipFilePath
-	// Replace {git_tag} with the actual git tag
-
+	// Download the file from http://downloads.arduino.cc/cores/zephyr/ArduinoCore-zephyr-{git_tag}.zip
 	gitCorePath := os.Args[1]
 	// Force an hash, for debug only
 	forceHash := ""
 	if len(os.Args) > 2 {
 		forceHash = os.Args[2]
 	}
-	r, err := git.PlainOpen(gitCorePath)
+
+	cmd := exec.Command("git", "ls-files", "--exclude-standard", "-dmo", ".")
+	stdout, err := cmd.Output()
 	if err != nil {
-		fmt.Println("Error opening git repository:", err)
+		fmt.Println("Error executing command:", err)
 		return
 	}
-	ref, err := r.Head()
-	if err != nil {
-		fmt.Println("Error getting git reference:", err)
-		return
-	}
-	w, err := r.Worktree()
-	if err != nil {
-		fmt.Println("Error getting git worktree:", err)
-		return
-	}
-	// Check if the repo contains modifications in either variants or firmwares folders
-	status, err := w.StatusWithOptions(git.StatusOptions{Strategy: git.Preload})
-	if err != nil {
-		fmt.Println("Error getting git status:", err)
-		return
-	}
-	if !status.IsClean() {
-		// Check if there are untracked/modified files in the firmwares or variants folders
-		for path, s := range status {
-			if strings.HasPrefix(path, "firmwares/") || strings.HasPrefix(path, "variants/") {
-				fmt.Println("The git repository contains uncommitted changes in", path)
-				if s.Worktree != git.Untracked {
-					fmt.Println("Please stash them before running this script.")
-				}
-				return
-			}
+
+	var lines []string
+	var changes []string
+	lines = strings.Split(string(stdout), "\n")
+	for _, path := range lines {
+		if strings.HasPrefix(path, "firmwares/") || strings.HasPrefix(path, "variants/") {
+			changes = append(changes, path)
 		}
 	}
-	fmt.Println("Git tag:", ref.Hash())
-	// Replace {git_tag} with the actual git tag in the URL
-	hash := ref.Hash().String()[0:7]
+
+	if len(changes) > 0 {
+		fmt.Println("The git repository contains uncommitted files:")
+		for _, path := range changes {
+			fmt.Println("- ", path)
+		}
+		fmt.Println("Please commit or stash them before running this script.")
+		return
+	}
+
+	cmd = exec.Command("git", "describe", "--always", "--abbrev=7")
+	stdout, err = cmd.Output()
+	if err != nil {
+		fmt.Println("Error executing command:", err)
+		return
+	}
+
+	hash := strings.TrimSpace(string(stdout))
+	fmt.Println("Git SHA:", hash)
 	if forceHash != "" {
 		hash = forceHash
 	}
+
+	// Compose download URL from git hash
 	filename := fmt.Sprintf("ArduinoCore-zephyr-%s.tar.bz2", hash)
 	url := fmt.Sprintf("http://downloads.arduino.cc/cores/zephyr/%s", filename)
 	fmt.Println("Download URL:", url)
@@ -114,10 +112,10 @@ func main() {
 	zipFilePath := filepath.Join(tmpDir, filename)
 	err = downloadFile(zipFilePath, url)
 	if err != nil {
-		fmt.Println("Error downloading zip file:", err)
+		fmt.Println("Error downloading archive:", err)
 		return
 	}
-	fmt.Println("Downloaded zip file to:", zipFilePath)
+	fmt.Println("Downloaded archive to:", zipFilePath)
 	// Extract the tar.bz2 file to the temporary folder
 	// Use packer/tar and compress/bzip2 to extract the file
 	file, err := os.Open(filepath.Join(tmpDir, filename))
