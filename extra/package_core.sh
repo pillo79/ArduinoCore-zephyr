@@ -27,5 +27,6 @@ extra/get_board_details.sh | jq -cr '.[]' | while read -r item; do
 	ls firmwares/zephyr-${variant}.* >> ${TEMP_LIST}
 done
 cat ${TEMP_LIST}
-tar -cjhf ${PACKAGE}-${VERSION}.tar.bz2 -X extra/package_core.exc -T ${TEMP_LIST} --transform "s,^,${PACKAGE}/,"
+mkdir -p distrib
+tar -cjhf distrib/${PACKAGE}-${VERSION}.tar.bz2 -X extra/package_core.exc -T ${TEMP_LIST} --transform "s,^,${PACKAGE}/,"
 rm -f ${TEMP_LIST}

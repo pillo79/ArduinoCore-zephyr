@@ -55,7 +55,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CORE_ARTIFACT }}
-          path: ${{ env.CORE_ARTIFACT }}.tar.bz2
+          path: distrib/${{ env.CORE_ARTIFACT }}.tar.bz2
 
   test-core:
     name: Test ${{ matrix.board }} board

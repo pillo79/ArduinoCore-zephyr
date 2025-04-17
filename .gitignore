@@ -1,4 +1,3 @@
-extra/post_build_tool/distrib/
 build/
+distrib/
 venv/
-ArduinoCore-zephyr-*.tar.bz2
