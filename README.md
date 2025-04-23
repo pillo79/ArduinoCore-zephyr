@@ -151,6 +151,10 @@ west flash
 
 After running the `bootstrap` script, you can symlink the core to `$sketchbook/hardware/arduino-git/zephyr`. Once linked, it will appear in the IDE/CLI, and the board's Fully Qualified Board Name (FQBN) will be formatted as `arduino-git:zephyr:name_from_boards_txt`.
 
+### Using the Core in Arduino IDE/CLI (without installing Zephyr toolchain)
+
+To help core developers (who might not be interested at all in setting up a full Zephyr build system) we are providing [sync-zephyr-artifacts](/extra/sync-zephyr-artifacts) utility. After compiling it via `go build`, run as `sync-zephyr-artifacts .` to retrieve the files needed to compile sketches and flash the loader.
+
 ## 🚀 Adding a new target
 
 To add a new board that is already supported by mainline Zephyr, follow these steps:
@@ -179,14 +183,14 @@ Contributions are always welcome. The preferred way to receive code contribution
 
 ## 📌 Upcoming features
 
-- [ ] Unify overlay in [loader](/loader/boards) with the one provided in [variant](/variant) for interoperability with GSoC project
-- [ ] Autogenerate `defines.txt`, `includes.txt`, `cflags.txt` from `llext-edk` output
-- [ ] Network: support UDP and TLS
+- [x] Unify overlay in [loader](/loader/boards) with the one provided in [variant](/variant) for interoperability with GSoC project
+- [x] Autogenerate `defines.txt`, `includes.txt`, `cflags.txt` from `llext-edk` output
+- [x] Network: support UDP and TLS
 - [ ] USB: switch to USB_DEVICE_STACK_NEXT to support PluggableUSB
 - [ ] Relocate RODATA in flash to accomodate sketches with large assets
 - [ ] Provide better error reporting for failed llext operations
 - [ ] Replace [llext_exports.c](/loader/llext_exports.c) with proper symbols generation (via includes)
-- [ ] Provide better usability for `Debug` builds (eg. shell over USB)
+- [x] Provide better usability for `Debug` builds (eg. shell over USB)
 - [ ] Fix corner cases with `std::` includes (like `<iterator>`)
 - [ ] Get rid of all warnings
 
