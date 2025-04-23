@@ -502,6 +502,8 @@ opta.menu.debug.true=Debug
 opta.menu.debug.false.postbuild_debug=
 opta.menu.debug.true.postbuild_debug=-debug
 
+opta.build.zephyr_target=arduino_opta//m7
+opta.build.zephyr_args=
 opta.build.variant=arduino_opta_stm32h747xx_m7
 opta.build.mcu=cortex-m7
 opta.build.fpu=-mfpu=fpv5-d16
