@@ -1,4 +1,9 @@
-extra/post_build_tool/distrib/
-build/
-venv/
-ArduinoCore-zephyr-*.tar.bz2
+/build/
+/distrib/
+/firmwares/*
+/venv/
+llext-edk/
+cflags.txt
+cxxflags.txt
+includes.txt
+provides.ld

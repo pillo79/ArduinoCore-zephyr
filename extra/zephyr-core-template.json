@@ -55,7 +55,7 @@
             },
             {
               "packager": "arduino",
-              "name": "zephyr-post-build-tool",
+              "name": "zephyr-sketch-tool",
               "version": "0.1.0"
             }
           ]

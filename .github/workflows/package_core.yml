@@ -47,15 +47,15 @@ jobs:
         run: |
           ./extra/build_all.sh -f
 
-      - name: Package
+      - name: Package core
         run: |
-          ./extra/package.sh ${{ env.CORE_TAG }}
+          ./extra/package_core.sh ${{ env.CORE_TAG }}
 
       - name: Archive core
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CORE_ARTIFACT }}
-          path: ${{ env.CORE_ARTIFACT }}.tar.bz2
+          path: distrib/${{ env.CORE_ARTIFACT }}.tar.bz2
 
   test-core:
     name: Test ${{ matrix.board }} board
