@@ -18,9 +18,18 @@ if [[ $# -eq 0 ]]; then
 	args=$(jq -cr '.args' <<< "$first_board")
 else
 	target=$1
-	shift
-	args="$*"
+	chosen_board=$(extra/get_board_details.sh | jq -cr ".[] | select(.board == \"$target\") // empty")
+	if ! [ -z "$chosen_board" ]; then
+		target=$(jq -cr '.target' <<< "$chosen_board")
+		args=$(jq -cr '.args' <<< "$chosen_board")
+	else
+		shift
+		args="$*"
+	fi
 fi
+
+echo
+echo "Build target: $target $args"
 
 source venv/bin/activate
 
@@ -32,6 +41,8 @@ variant=$(extra/get_variant_name.sh $target)
 if [ -z "${variant}" ] ; then
 	echo "Failed to get variant name from '$target'"
 	exit 1
+else
+	echo "Build variant: $variant"
 fi
 
 # Build the loader
