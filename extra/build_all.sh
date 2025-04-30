@@ -24,7 +24,8 @@ if [ ! -z "$GITHUB_STEP_SUMMARY" ] ; then
 	echo "### Variant build results:" >> "$GITHUB_STEP_SUMMARY"
 fi
 
-extra/get_board_details.sh | jq -cr 'sort_by(.variant) | .[]' | while read -r item; do
+final_result=0
+while read -r item; do
 	board=$(jq -cr '.board' <<< "$item")
 	variant=$(jq -cr '.variant' <<< "$item")
 	target=$(jq -cr '.target' <<< "$item")
@@ -40,6 +41,7 @@ extra/get_board_details.sh | jq -cr 'sort_by(.variant) | .[]' | while read -r it
 
 	./extra/build.sh "$target" $args
 	result=$?
+	final_result=$((final_result | result))
 
 	if [ -z "$GITHUB_STEP_SUMMARY" ] ; then
 		echo
@@ -49,11 +51,11 @@ extra/get_board_details.sh | jq -cr 'sort_by(.variant) | .[]' | while read -r it
 		if [ $result -eq 0 ] ; then
 			echo "- :white_check_mark: \`${variant}\`" >> "$GITHUB_STEP_SUMMARY"
 		else
-			echo "^^^^$(echo ${variant} | sed -e 's/./^/g')^^^^^  FAILED with $result!"
+			echo "^^$(echo "=== ${board} (${variant}) ===" | sed -e 's/./^/g') FAILED with $result!"
 			echo "- :x: \`${variant}\`" >> "$GITHUB_STEP_SUMMARY"
 		fi
 	fi
 	[ $result -ne 0 ] && ! $FORCE && exit $result
-done
+done < <(extra/get_board_details.sh | jq -cr 'sort_by(.variant) | .[]')
 
-exit 0
+exit $final_result
