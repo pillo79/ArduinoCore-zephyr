@@ -12,7 +12,7 @@ west init -l .
 west update "$@"
 west zephyr-export
 pip install -r ../zephyr/scripts/requirements-base.txt
-# download slim toolchain from https://github.com/zephyrproject-rtos/sdk-ng/releases/tag/v0.16.8
+west sdk install --version 0.17.0 -t arm-zephyr-eabi
 
 # add here the required blobs based on supported platforms
 west blobs fetch hal_nxp
