@@ -118,11 +118,13 @@ sudo apt install python3-pip python3-setuptools python3-venv build-essential git
 cd ArduinoCore-zephyr
 ./extra/bootstrap.sh
 ```
-### Install the Zephyr SDK
-Download and install the Zephyr SDK for your OS from [here](https://github.com/zephyrproject-rtos/sdk-ng/releases/tag/v0.16.8).
 
-> [!NOTE]  
-> This core is validated for version v0.16.8. Compatibility with later versions has not been tested yet.
+This will take care of installing `west`, the Zephyr build tool. It will then
+download all packages required for a Zephyr build in addition to the toolchains
+in the Zephyr SDK.
+
+> [!NOTE]
+> This core is validated with version v0.17.0. Compatibility with later versions has not been tested yet.
 
 ### Build the Loader
 
