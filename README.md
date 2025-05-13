@@ -126,19 +126,25 @@ Download and install the Zephyr SDK for your OS from [here](https://github.com/z
 
 ### Build the Loader
 
-To build the loader, run the following commands:
-```bash
-export ZEPHYR_SDK_INSTALL_DIR=$folder_where_you_installed_the_sdk
-./extra/build.sh $zephyr_board_name $arduino_variant_board_name
-```
-Replace `$zephyr_board_name` and `$arduino_variant_board_name` with the appropriate names for your board.
+The loader is compiled for each board by running the `./extra/build.sh` script.
+The target can be specified either with the Arduino board name (as defined in
+boards.txt), or with the Zephyr board name and any additional arguments that
+may be required by the Zephyr build system.
 
-Example for Arduino Portenta H7:
+For example, to build for the Arduino Portenta H7, you can use either the
+Arduino name:
 ```bash
-./extra/build.sh arduino_portenta_h7//m7 arduino_portenta_h7
+./extra/build.sh portentah7
 ```
 
-The firmwares will be copied to [firmwares](/firmwares) folder.
+or the Zephyr board target:
+
+```bash
+./extra/build.sh arduino_portenta_h7//m7
+```
+
+The firmwares will be copied to [firmwares](/firmwares) folder, and the
+associated variant will be updated.
 
 ### Flash the Loader
 

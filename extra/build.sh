@@ -8,24 +8,43 @@ if [ x$ZEPHYR_SDK_INSTALL_DIR == x"" ]; then
 		echo "ZEPHYR_SDK_INSTALL_DIR not set and no SDK found"
 		exit 1
 	fi
-	echo "ZEPHYR_SDK_INSTALL_DIR not set, using $SDK_PATH"
 	export ZEPHYR_SDK_INSTALL_DIR=${SDK_PATH}
 fi
 
-if [[ $# -eq 0 ]]; then
-	first_board=$(extra/get_board_details.sh | jq -cr '.[0]')
-	target=$(jq -cr '.target' <<< "$first_board")
-	args=$(jq -cr '.args' <<< "$first_board")
+if [ $# -eq 0 ] || [ x$1 == x"-h" ] || [ x$1 == x"--help" ]; then
+	cat << EOF
+Usage:
+	$0 <arduino_board>
+	$0 <zephyr_board> [<west_args>]
+Build the loader for the given target.
+
+When given an <arduino_board> defined in 'boards.txt' (e.g. 'giga'), the actual
+Zephyr board target and arguments are taken from that definition.
+
+When given a <zephyr_board>, it is passed as the '-b' argument to 'west build'.
+Additional <west_args> are passed as-is at the end of the command line.
+
+Available targets, as defined in 'boards.txt':
+
+EOF
+	extra/get_board_details.sh |
+		jq -r 'sort_by(.variant) | .[] | "\t\(.board)\t\(.target) \(.args)"' |
+		column -ts$'\t'
+	echo
+	exit 0
+fi
+
+# try to find the board in boards.txt
+chosen_board=$(extra/get_board_details.sh | jq -cr ".[] | select(.board == \"$1\") // empty")
+if ! [ -z "$chosen_board" ]; then
+	# found, use the target and args from there
+	target=$(jq -cr '.target' <<< "$chosen_board")
+	args=$(jq -cr '.args' <<< "$chosen_board")
 else
+	# expect Zephyr-compatible target and args
 	target=$1
-	chosen_board=$(extra/get_board_details.sh | jq -cr ".[] | select(.board == \"$target\") // empty")
-	if ! [ -z "$chosen_board" ]; then
-		target=$(jq -cr '.target' <<< "$chosen_board")
-		args=$(jq -cr '.args' <<< "$chosen_board")
-	else
-		shift
-		args="$*"
-	fi
+	shift
+	args="$*"
 fi
 
 echo
