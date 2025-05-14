@@ -2,16 +2,17 @@
 
 set -e
 
-TOOL_NAME=$(basename $1)
-VERSION=$2
+TOOL_DIR=$(readlink -f ${1:-.})
+TOOL_NAME=$(basename $TOOL_DIR)
+VERSION=${2:-dev}
 
-BASE_DIR=$(readlink -f $(dirname $0)/..)
-TOOL_DIR="$BASE_DIR/extra/$TOOL_NAME"
-if ! [ -d "$TOOL_DIR" ] || [ -z "$VERSION" ] ; then
-	echo "Usage: $0 <tool_name> <version>"
+if ! [ -f "$TOOL_DIR/go.mod" ] ; then
+	echo "Not a valid tool directory: $TOOL_DIR"
+	echo "Usage: $0 [<tool_dir>] [<version>]"
 	exit 1
 fi
 
+BASE_DIR=$(readlink -f $(dirname $0)/..)
 DIR=${BASE_DIR}/distrib
 
 hash_file() {
@@ -71,5 +72,9 @@ build_for_arch "linux" "amd64" "x86_64-linux-gnu"
 build_for_arch "linux" "arm64" "aarch64-linux-gnu"
 build_for_arch "darwin" "amd64" "i386-apple-darwin11"
 build_for_arch "windows" "386" "i686-mingw32"
-build_json
-echo "Build completed for $TOOL_NAME $VERSION: $DIR/$TOOL_NAME-$VERSION.json"
+if [ "${VERSION}" == "dev" ] ; then
+	echo "Build completed for $TOOL_NAME $VERSION in $DIR"
+else
+	build_json
+	echo "Build completed for $TOOL_NAME $VERSION: $DIR/$TOOL_NAME-$VERSION.json"
+fi
