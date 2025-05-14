@@ -133,12 +133,13 @@ The target can be specified either with the Arduino board name (as defined in
 boards.txt), or with the Zephyr board name and any additional arguments that
 may be required by the Zephyr build system.
 
-For example, to build for the Arduino Portenta H7, you can run either:
+For example, to build for the Arduino Portenta H7, you can use either the
+Arduino name:
 ```bash
 ./extra/build.sh portentah7
 ```
 
-or:
+or the Zephyr board target:
 
 ```bash
 ./extra/build.sh arduino_portenta_h7//m7
