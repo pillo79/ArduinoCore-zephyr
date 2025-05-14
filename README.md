@@ -80,9 +80,9 @@ Unlike traditional Arduino implementations, where the final output is a standalo
 
 The `loader` is responsible for managing the interaction between your sketches and the underlying Zephyr system. After the initial bootloader installation, the `loader` takes over the sketch loading process automatically.
 
-To ensure flexibility, the `loader` project is designed to be generic. Any necessary modifications for specific boards should be made in the corresponding `DTS overlay` or a special `fixup` file, using appropriate guards to maintain stability.
+To ensure flexibility, the `loader` project is designed to be generic. Any necessary modifications for specific boards should be made in the corresponding "DTS overlay" or a special "fixup" file, using appropriate guards to maintain compatibility.
 
-The behavior of the `loader` can be adjusted through the `Mode` menu:
+The behavior of the `loader` can be adjusted through the `Mode` menu of the IDE:
 - `Standard`: The sketch is loaded automatically.
 - `Debug`: The user must type `sketch` in Zephyr's shell, which is accessible via the default Serial.
 
@@ -90,13 +90,30 @@ The most important components of this project are:
 
 * [Zephyr based loader](/loader)
 * [LLEXT](https://docs.zephyrproject.org/latest/services/llext/index.html)
-* [Actual core](/cores/arduino) with [variants](/variants) and the usual `{platform,boards}.txt`
+* [Actual core](/cores/arduino) with [variants](/variants) and the usual [platform](/platform.txt) and [boards](/boards) files
 * [ArduinoCore-API](https://github.com/arduino/ArduinoCore-API)
-* [post_build_tool](/extra/post_build_tool)
+* [zephyr-sketch-tool](/extra/zephyr-sketch-tool)
 
-## 🛠️ Setup the environment
+## 🏃 Shortcut: using the Core in Arduino IDE/CLI without installing Zephyr
 
-In this section, we’ll guide you through setting up your environment to work with the core.
+> [!TIP]
+>
+> If you are only interested in developing features in the [core](/cores/arduino)
+> or [libraries](/libraries), and do not want to set up a full Zephyr build
+> environment, you can use the [`sync-zephyr-artifacts`](/extra/sync-zephyr-artifacts) 
+> utility to download a pre-built version of the files needed to compile
+> sketches and flash the loader.
+>
+> To do so, after cloning this repo, compile the `sync-zephyr-artifacts`
+> utility via `go build` and run it as `sync-zephyr-artifacts .` to retrieve
+> the precompiled files for the current revision of the core. 
+>
+> Next, follow the instructions in [Using the Core in Arduino IDE/CLI](#using-the-core-in-arduino-idecli).
+> Remember to [update the loader on your board](#flash-the-loader) as well.
+
+## 🛠️ Setup a Zephyr build environment
+
+In this section, we’ll guide you through setting up your environment to work on and update the Zephyr core.
 
 Shell scripts are available to simplify the installation process (Windows is not supported at the moment 😔).
 
@@ -124,7 +141,9 @@ download all packages required for a Zephyr build in addition to the toolchains
 in the Zephyr SDK.
 
 > [!NOTE]
-> This core is validated with version v0.17.0. Compatibility with later versions has not been tested yet.
+> This core is validated with version v0.17.0 of the SDK. Compatibility with later versions has not been tested yet.
+
+## 🛠️ Regenerate the compiled core files
 
 ### Build the Loader
 
@@ -145,7 +164,7 @@ or the Zephyr board target:
 ./extra/build.sh arduino_portenta_h7//m7
 ```
 
-The firmwares will be copied to [firmwares](/firmwares) folder, and the
+The firmwares will be copied to the [firmware](/firmware) folder, and the
 associated variant will be updated.
 
 ### Flash the Loader
@@ -154,29 +173,30 @@ If the board is fully supported by Zephyr, you can flash the firmware directly o
 ```bash
 west flash
 ```
+This can also be performed via the "Burn bootloader" action in the IDE if the core is properly installed, as detailed below.
 
 ### Using the Core in Arduino IDE/CLI
 
-After running the `bootstrap` script, you can symlink the core to `$sketchbook/hardware/arduino-git/zephyr`. Once linked, it will appear in the IDE/CLI, and the board's Fully Qualified Board Name (FQBN) will be formatted as `arduino-git:zephyr:name_from_boards_txt`.
-
-### Using the Core in Arduino IDE/CLI (without installing Zephyr toolchain)
-
-To help core developers (who might not be interested at all in setting up a full Zephyr build system) we are providing [sync-zephyr-artifacts](/extra/sync-zephyr-artifacts) utility. After compiling it via `go build`, run as `sync-zephyr-artifacts .` to retrieve the files needed to compile sketches and flash the loader.
+After running the `bootstrap.sh` script, you can symlink the core to `$sketchbook/hardware/arduino-git/zephyr`. Once linked, it will appear in the IDE/CLI, and the board's Fully Qualified Board Name (FQBN) will be formatted as `arduino-git:zephyr:name_from_boards_txt`.
 
 ## 🚀 Adding a new target
 
-To add a new board that is already supported by mainline Zephyr, follow these steps:
+To add a new board that is already supported by mainline Zephyr with the target `$your_board`, follow these steps:
 
-* Create the `DTS overlay` and `.conf` files in the [loader](/loader/boards) directory.
+* Get the variant name from your board by running `extra/get_variant_name.sh $your_board`.
+* Create a folder in the [`variants/`](/variants) directory with the same name as the variant for your new board.
+* Create the DTS `<variant>.overlay` and Kconfig `<variant>.conf` files in that directory.
+
   The overlay must include:
-  * A flash partition called `user_sketch`, tipically located near the end of the flash.
+  * A flash partition called `user_sketch`, typically located near the end of the flash.
   * A `zephyr,user` section containing the description for GPIOs, Analog, UART, SPI and I2C devices. Feel free to leave some fields empty in case Zephyr support is missing. This will result in some APIs not being available at runtime (eg. `analogWrite` if PWM section is empty).
-* Build the Loader: run `./extra.build.sh $your_board $your_board` and start debugging the errors. :grin:
+
+  The Kconfig file must include any board-specific options required by this target.
+* Build the Loader: run `./extra/build.sh $your_board` (with any additional arguments as required) and start debugging the errors. :grin:
 * Update the `boards.txt`: add an entry for your board, manually filling the required fields.
-* Implement touch support: if your board supports the `1200bps touch` method, implement `_on_1200_bps` in a file located inside the `variant/your_board` folder.
-* ⏳ Temporary steps
-  * Create `includes.txt` based on `llext-edk/Makefile.cflags`, taking inspiration for other variants.
-  * Amend `your_board.compiler.zephyr.*` with information from `llext-edk/Makefile.cflags`.
+
+  In particular, set `build.zephyr_target` and `build.zephyr_args` to the arguments used in the `build.sh` call, and `build.variant` to the variant name identified above.
+* Implement touch support: if your board supports the "1200bps touch" method, implement `_on_1200_bps` in a file located inside the variant folder of your board.
 
 ## 🐛 Bug Reporting
 
@@ -191,14 +211,12 @@ Contributions are always welcome. The preferred way to receive code contribution
 
 ## 📌 Upcoming features
 
-- [x] Unify overlay in [loader](/loader/boards) with the one provided in [variant](/variant) for interoperability with GSoC project
-- [x] Autogenerate `defines.txt`, `includes.txt`, `cflags.txt` from `llext-edk` output
+- [ ] Remove binaries from this repo history (arduino/ArduinoCore-zephyr#102, :warning: will require a clean clone)
 - [x] Network: support UDP and TLS
-- [ ] USB: switch to USB_DEVICE_STACK_NEXT to support PluggableUSB
-- [ ] Relocate RODATA in flash to accomodate sketches with large assets
+- [ ] USB: switch to `USB_DEVICE_STACK_NEXT` to support PluggableUSB
+- [ ] Relocate RODATA in flash to accommodate sketches with large assets
 - [ ] Provide better error reporting for failed llext operations
-- [ ] Replace [llext_exports.c](/loader/llext_exports.c) with proper symbols generation (via includes)
-- [x] Provide better usability for `Debug` builds (eg. shell over USB)
+- [ ] Replace [`llext_exports.c`](/loader/llext_exports.c) with proper symbols generation (via includes)
 - [ ] Fix corner cases with `std::` includes (like `<iterator>`)
 - [ ] Get rid of all warnings
 
