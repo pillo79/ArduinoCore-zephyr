@@ -13,7 +13,7 @@ giga.menu.debug.false.postbuild_debug=
 giga.menu.debug.true.postbuild_debug=-debug
 
 giga.build.zephyr_target=arduino_giga_r1//m7
-giga.build.zephyr_args=--shield giga_display_shield
+giga.build.zephyr_args=--shield arduino_giga_display_shield
 giga.build.variant=arduino_giga_r1_stm32h747xx_m7
 giga.build.mcu=cortex-m7
 giga.build.fpu=-mfpu=fpv5-d16
