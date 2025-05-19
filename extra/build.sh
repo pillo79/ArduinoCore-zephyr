@@ -2,6 +2,10 @@
 
 set -e
 
+source venv/bin/activate
+
+ZEPHYR_BASE=$(west topdir)/zephyr
+
 if [ x$ZEPHYR_SDK_INSTALL_DIR == x"" ]; then
 	SDK_PATH=$(west sdk list | grep path | tail -n 1 | cut -d ':' -f 2 | tr -d ' ')
 	if [ x$SDK_PATH == x ]; then
@@ -49,10 +53,6 @@ fi
 
 echo
 echo "Build target: $target $args"
-
-source venv/bin/activate
-
-ZEPHYR_BASE=$(west topdir)/zephyr
 
 # Get the variant name (NORMALIZED_BOARD_TARGET in Zephyr)
 variant=$(extra/get_variant_name.sh $target)
