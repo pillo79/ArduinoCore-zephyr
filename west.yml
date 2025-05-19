@@ -15,14 +15,17 @@ manifest:
       url-base: https://github.com/arduino
     - name: facchinm
       url-base: https://github.com/facchinm
+    - name: pillo79
+      url-base: https://github.com/pillo79
 
   projects:
     - name: zephyr
       remote: arduino
-      revision: arduino_core_merge_post_4.1
+      revision: zephyr-arduino-20250520
       import:
         name-allowlist:
           - cmsis
+          - cmsis_6
           - hal_nordic
           - hal_ti
           - hal_ambiq
