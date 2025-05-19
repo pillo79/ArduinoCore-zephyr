@@ -10,7 +10,6 @@ jobs:
     name: Build and package core
     runs-on: ubuntu-latest
     env:
-      ZEPHYR_SDK_INSTALL_DIR: /opt/zephyr-sdk-0.16.8
       CCACHE_IGNOREOPTIONS: -specs=*
     outputs:
       CORE_TAG: ${{ env.CORE_TAG }}
