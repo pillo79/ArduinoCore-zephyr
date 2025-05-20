@@ -26,21 +26,6 @@ manifest:
         name-allowlist:
           - cmsis
           - cmsis_6
-          - hal_nordic
-          - hal_ti
-          - hal_ambiq
-          - hal_espressif
-          - hal_infineon
-          - hal_intel
-          - hal_nxp
-          - hal_stm32
-          - hal_xtensa
-          - hal_nordic
-          - hal_renesas
-          - hal_adi
-          - hal_atmel
-          - hal_rpi_pico
-          - hal_silabs
           - littlefs
           - tinycrypt
           - mbedtls
@@ -48,6 +33,14 @@ manifest:
           - thrift
           - mcuboot
           - lvgl
+        path-allowlist:
+          - modules/hal/*
+
+        # The actual list of enabled HALs is set by extra/bootstrap.sh via
+        # the 'manifest.project-filter' config. Enable all Zephyr HALs with:
+        #
+        #   west config -d manifest.project-filter
+
     - name: ArduinoCore-API
       path: modules/lib/ArduinoCore-API
       revision: master
