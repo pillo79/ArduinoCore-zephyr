@@ -181,6 +181,20 @@ After running the `bootstrap.sh` script, you can symlink the core to `$sketchboo
 
 ## 🚀 Adding a new target
 
+> [!TIP]
+>
+> While Zephyr supports a lot of different hardware targets, only the few
+> currently used by the Arduino core are installed by default. To add the
+> support for every Zephyr target to your workspace, run the following
+> commands:
+>
+> ```bash
+> . venv/bin/activate
+> west config -d manifest.project-filter
+> west sdk install --version 0.17.0
+> west update
+> ```
+
 To add a new board that is already supported by mainline Zephyr with the target `$your_board`, follow these steps:
 
 * Get the variant name from your board by running `extra/get_variant_name.sh $your_board`.
@@ -195,7 +209,10 @@ To add a new board that is already supported by mainline Zephyr with the target 
 * Build the Loader: run `./extra/build.sh $your_board` (with any additional arguments as required) and start debugging the errors. :grin:
 * Update the `boards.txt`: add an entry for your board, manually filling the required fields.
 
-  In particular, set `build.zephyr_target` and `build.zephyr_args` to the arguments used in the `build.sh` call, and `build.variant` to the variant name identified above.
+  Make sure to set:
+   * `build.zephyr_target` and `build.zephyr_args` to the arguments used in the `build.sh` call;
+   * `build.zephyr_hals` to the (space-separated list of) HAL modules required by the board;
+   * `build.variant` to the variant name identified above.
 * Implement touch support: if your board supports the "1200bps touch" method, implement `_on_1200_bps` in a file located inside the variant folder of your board.
 
 ## 🐛 Bug Reporting

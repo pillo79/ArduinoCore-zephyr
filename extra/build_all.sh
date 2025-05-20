@@ -2,7 +2,7 @@
 
 FORCE=false
 
-while getopts "hfl" opt; do
+while getopts "hf" opt; do
 	case $opt in
 		h)
 			echo "Usage: $0 [-hfl]"
