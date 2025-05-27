@@ -29,6 +29,7 @@ public:
         // Resolve address
         struct addrinfo hints;
 	    struct addrinfo *res;
+        bool rv = true;
 
 	    hints.ai_family = AF_INET;
 	    hints.ai_socktype = SOCK_STREAM;
@@ -47,21 +48,31 @@ public:
         }
 
 	    if (ret != 0) {
-            return false;
+            rv = false;
+            goto exit;
         }
 
         sock_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (sock_fd < 0) {
-            return false;
+            rv = false;
+
+            goto exit;
         }
 
         if (::connect(sock_fd, res->ai_addr, res->ai_addrlen) < 0) {
             ::close(sock_fd);
             sock_fd = -1;
-            return false;
+            rv =  false;
+            goto exit;
         }
 
-        return true;
+    exit:
+        if(res != nullptr) {
+            freeaddrinfo(res);
+            res = nullptr;
+        }
+
+        return rv;
     }
 
     bool connect(IPAddress host, uint16_t port) {
@@ -99,6 +110,13 @@ public:
 
         int resolve_attempts = 100;
         int ret;
+        bool rv = true;
+
+        sec_tag_t sec_tag_opt[] = {
+            CA_CERTIFICATE_TAG,
+        };
+
+        uint32_t timeo_optval = 100;
 
 	    while (resolve_attempts--) {
             ret = getaddrinfo(host, String(port).c_str(), &hints, &res);
@@ -111,7 +129,8 @@ public:
         }
 
 	    if (ret != 0) {
-            return false;
+            rv = false;
+            goto exit;
         }
 
         if (ca_certificate_pem != nullptr) {
@@ -121,28 +140,32 @@ public:
 
         sock_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TLS_1_2);
         if (sock_fd < 0) {
-            return false;
+            rv = false;
+            goto exit;
         }
 
-        sec_tag_t sec_tag_opt[] = {
-            CA_CERTIFICATE_TAG,
-        };
         setsockopt(sock_fd, SOL_TLS, TLS_SEC_TAG_LIST,
                 sec_tag_opt, sizeof(sec_tag_opt));
 
         setsockopt(sock_fd, SOL_TLS, TLS_HOSTNAME, host, strlen(host));
 
-        uint32_t timeo_optval = 100;
         setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &timeo_optval, sizeof(timeo_optval));
 
         if (::connect(sock_fd, res->ai_addr, res->ai_addrlen) < 0) {
             ::close(sock_fd);
             sock_fd = -1;
-            return false;
+            rv = false;
+            goto exit;
         }
         is_ssl = true;
 
-        return true;
+    exit:
+        if(res != nullptr) {
+            freeaddrinfo(res);
+            res = nullptr;
+        }
+
+        return rv;
     }
 #endif
 
