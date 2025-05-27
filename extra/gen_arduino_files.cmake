@@ -21,7 +21,7 @@ foreach(variant ${VARIANTS})
 		continue()
 	endif()
 
-	cmake_path(SET dir ${TOP_DIR}/variants/${variant})
+	cmake_path(SET dir ${TOP_DIR}/variants/${variant} NORMALIZE)
 	if(NOT EXISTS ${dir}/llext-edk/cmake.cflags)
 		continue()
 	endif()
