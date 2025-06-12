@@ -1,5 +1,6 @@
 #ifndef _PURE_ANALOG_PINS_
 #define _PURE_ANALOG_PINS_
+#ifdef __cplusplus
 
 /******************************************************************************
  * INCLUDE
@@ -53,5 +54,7 @@ int       analogRead  (PureAnalogPin pin);
 void      PURE_ANALOG_AS_DIGITAL_ATTRIBUTE analogWrite (PureAnalogPin pin, int value);
 
 #undef PURE_ANALOG_AS_DIGITAL_ATTRIBUTE
+
+#endif /* __cplusplus */
 
 #endif /* _PURE_ANALOG_PINS_ */
