@@ -31,3 +31,5 @@ extern "C" int strcmp(const char* s1, const char* s2) {
   }
   return *(const unsigned char*)s1 - *(const unsigned char*)s2;
 }
+
+extern "C" void* __dso_handle = (void*) &__dso_handle;
