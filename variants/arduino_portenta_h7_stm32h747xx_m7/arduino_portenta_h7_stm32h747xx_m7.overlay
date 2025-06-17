@@ -289,40 +289,40 @@
 
 / {
 	zephyr,user {
-		digital-pin-gpios = <&gpioh 15 GPIO_ACTIVE_LOW>,	/* D0 */
-				    <&gpiok 1 GPIO_ACTIVE_LOW>,		/* D1 */
-				    <&gpioj 11 GPIO_ACTIVE_LOW>,	/* D2 */
-				    <&gpiog 7 GPIO_ACTIVE_LOW>,		/* D3 */
-				    <&gpioc 7 GPIO_ACTIVE_LOW>,		/* D4 */
-				    <&gpioc 6 GPIO_ACTIVE_LOW>,		/* D5 */
-				    <&gpioa 8 GPIO_ACTIVE_LOW>,		/* D6 */
-				    <&gpioi 0 GPIO_ACTIVE_LOW>,		/* D7 */
-				    <&gpioc 3 GPIO_ACTIVE_LOW>,		/* D8 */
-				    <&gpioi 1 GPIO_ACTIVE_LOW>,		/* D9 */
-				    <&gpioc 2 GPIO_ACTIVE_LOW>,		/* D10 */
-				    <&gpioh 8 GPIO_ACTIVE_LOW>,		/* D11 */
-				    <&gpioh 7 GPIO_ACTIVE_LOW>,		/* D12 */
-				    <&gpioa 10 GPIO_ACTIVE_LOW>,	/* D13 */
-				    <&gpioa 9 GPIO_ACTIVE_LOW>,		/* D14 */
+		digital-pin-gpios = <&gpioh 15 0>,	/* D0 */
+				    <&gpiok 1 0>,		/* D1 */
+				    <&gpioj 11 0>,	/* D2 */
+				    <&gpiog 7 0>,		/* D3 */
+				    <&gpioc 7 0>,		/* D4 */
+				    <&gpioc 6 0>,		/* D5 */
+				    <&gpioa 8 0>,		/* D6 */
+				    <&gpioi 0 0>,		/* D7 */
+				    <&gpioc 3 0>,		/* D8 */
+				    <&gpioi 1 0>,		/* D9 */
+				    <&gpioc 2 0>,		/* D10 */
+				    <&gpioh 8 0>,		/* D11 */
+				    <&gpioh 7 0>,		/* D12 */
+				    <&gpioa 10 0>,	/* D13 */
+				    <&gpioa 9 0>,		/* D14 */
 
-				    <&gpioz 0 GPIO_ACTIVE_LOW>,		/* A0	 ADC2_INP0 */
-				    <&gpioz 1 GPIO_ACTIVE_LOW>,		/* A1	 ADC2_INP1 */
-				    <&gpioz 2 GPIO_ACTIVE_LOW>,		/* A2	 ADC3_INP0 */
-				    <&gpioz 3 GPIO_ACTIVE_LOW>,		/* A3	 ADC3_INP1 */
-				    <&gpioz 4 GPIO_ACTIVE_LOW>,		/* A4 hack for duplicate PC_2 */
-				    <&gpioz 5 GPIO_ACTIVE_LOW>,		/* A5 hack for duplicate PC_3 */
-				    /* <&gpioc 2 GPIO_ACTIVE_LOW>,	A4 _ALT0?   ADC1_INP12 */
-				    /* <&gpioc 3 GPIO_ACTIVE_LOW>,	A5 _ALT0?   ADC1_INP13 */
-				    <&gpioa 4 GPIO_ACTIVE_LOW>,		/* A6	 ADC1_INP18 */
-				    <&gpioa 6 GPIO_ACTIVE_LOW>,		/* A7	 ADC1_INP7 */
+				    <&gpioz 0 0>,		/* A0	 ADC2_INP0 */
+				    <&gpioz 1 0>,		/* A1	 ADC2_INP1 */
+				    <&gpioz 2 0>,		/* A2	 ADC3_INP0 */
+				    <&gpioz 3 0>,		/* A3	 ADC3_INP1 */
+				    <&gpioz 4 0>,		/* A4 hack for duplicate PC_2 */
+				    <&gpioz 5 0>,		/* A5 hack for duplicate PC_3 */
+				    /* <&gpioc 2 0>,	A4 _ALT0?   ADC1_INP12 */
+				    /* <&gpioc 3 0>,	A5 _ALT0?   ADC1_INP13 */
+				    <&gpioa 4 0>,		/* A6	 ADC1_INP18 */
+				    <&gpioa 6 0>,		/* A7	 ADC1_INP7 */
 
-				    <&gpiok 5 GPIO_ACTIVE_LOW>,		/* LEDR */
-				    <&gpiok 6 GPIO_ACTIVE_LOW>,		/* LEDG */
-				    <&gpiok 7 GPIO_ACTIVE_LOW>;		/* LEDB */
+				    <&gpiok 5 0>,		/* LEDR */
+				    <&gpiok 6 0>,		/* LEDG */
+				    <&gpiok 7 0>;		/* LEDB */
 
-		builtin-led-gpios = <&gpiok 5 GPIO_ACTIVE_LOW>,
-				    <&gpiok 6 GPIO_ACTIVE_LOW>,
-				    <&gpiok 7 GPIO_ACTIVE_LOW>;
+		builtin-led-gpios = <&gpiok 5 0>,
+				    <&gpiok 6 0>,
+				    <&gpiok 7 0>;
 
 		pwm-pin-gpios =	<&gpioa 8 0>,
 				<&gpioc 6 0>,
