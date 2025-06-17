@@ -118,6 +118,9 @@ FORCE_EXPORT_SYM(net_buf_simple_pull);
 FORCE_EXPORT_SYM(net_buf_simple_add_mem);
 FORCE_EXPORT_SYM(net_buf_simple_pull_mem);
 FORCE_EXPORT_SYM(net_buf_unref);
+#if defined(CONFIG_BT_HCI_SETUP)
+FORCE_EXPORT_SYM(bt_h4_vnd_setup);
+#endif
 #endif
 
 #if defined(CONFIG_STACK_CANARIES)
@@ -227,8 +230,13 @@ FORCE_EXPORT_SYM(__aeabi_uidivmod);
 FORCE_EXPORT_SYM(__aeabi_dcmpeq);
 FORCE_EXPORT_SYM(__aeabi_d2iz);
 FORCE_EXPORT_SYM(__aeabi_f2d);
+FORCE_EXPORT_SYM(__aeabi_ul2d);
+FORCE_EXPORT_SYM(__aeabi_l2f);
 FORCE_EXPORT_SYM(__aeabi_idivmod);
 FORCE_EXPORT_SYM(__aeabi_ldivmod);
 FORCE_EXPORT_SYM(__aeabi_ul2f);
 FORCE_EXPORT_SYM(__aeabi_dcmpge);
+
+#if defined (CONFIG_CPP)
 FORCE_EXPORT_SYM(__cxa_pure_virtual);
+#endif

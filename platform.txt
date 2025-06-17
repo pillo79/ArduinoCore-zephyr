@@ -19,11 +19,11 @@ compiler.path={build.compiler_path}
 compiler.c.cmd={build.crossprefix}gcc
 compiler.c.flags=-g -c {compiler.warning_flags} {compiler.zephyr.macros} "@{compiler.zephyr.cflags_file}" {compiler.zephyr.arch.define} -MMD -mcpu={build.mcu} {build.float-abi} {build.fpu}
 compiler.c.elf.cmd={build.crossprefix}g++
-compiler.c.elf.flags={build.llext_link_flags} -Wl,--gc-sections -mcpu={build.mcu} {build.float-abi} {build.fpu} -std=c++17
+compiler.c.elf.flags={build.llext_link_flags} -Wl,--gc-sections -mcpu={build.mcu} {build.float-abi} {build.fpu} -std=gnu++17
 compiler.S.cmd={build.crossprefix}g++
 compiler.S.flags=-c -x assembler-with-cpp -mcpu={build.mcu} {build.fpu}
 compiler.cpp.cmd={build.crossprefix}g++
-compiler.cpp.flags=-g -Os -std=c++17 -c {compiler.warning_flags} {compiler.zephyr.macros} "@{compiler.zephyr.cxxflags_file}" {compiler.zephyr.common_ldflags} {compiler.zephyr.extra_ldflags} {compiler.zephyr.common_cxxflags} {compiler.zephyr.extra_cxxflags} {compiler.zephyr.arch.define} -MMD -mcpu={build.mcu} {build.float-abi} {build.fpu}
+compiler.cpp.flags=-g -Os -std=gnu++17 -c {compiler.warning_flags} {compiler.zephyr.macros} "@{compiler.zephyr.cxxflags_file}" {compiler.zephyr.common_ldflags} {compiler.zephyr.extra_ldflags} {compiler.zephyr.common_cxxflags} {compiler.zephyr.extra_cxxflags} {compiler.zephyr.arch.define} -MMD -mcpu={build.mcu} {build.float-abi} {build.fpu}
 compiler.ar.cmd={build.crossprefix}ar
 compiler.ar.flags=rcs
 compiler.objcopy.cmd=
@@ -44,7 +44,7 @@ compiler.zephyr.common_cxxflags=-fdata-sections -ffunction-sections -fno-unwind-
 compiler.zephyr.common_ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit -lstdc++ -lsupc++ -lnosys -nostdlib
 
 compiler.zephyr.extra_cxxflags=
-compiler.zephyr.extra_ldflags=
+compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++
 
 # this can be overriden in boards.txt
 build.extra_flags=
@@ -99,7 +99,7 @@ recipe.S.o.pattern="{compiler.path}{compiler.S.cmd}" {compiler.S.flags} -DARDUIN
 recipe.ar.pattern="{compiler.path}{compiler.ar.cmd}" {compiler.ar.flags} {compiler.ar.extra_flags} "{archive_file_path}" "{object_file}"
 
 ## Combine gc-sections, archives, and objects
-recipe.c.combine.pattern="{compiler.path}{compiler.c.elf.cmd}"  "-L{build.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {build.extra_flags} {build.extra_ldflags} {compiler.zephyr.common_ldflags} "-T{build.ldscript}" "-Wl,-Map,{build.path}/{build.project_name}.map" --specs=picolibc.specs --specs=nosys.specs {compiler.ldflags} -o "{build.path}/{build.project_name}_debug.elf" {object_files} "{build.path}/{archive_file}" {compiler.zephyr} {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags}
+recipe.c.combine.pattern="{compiler.path}{compiler.c.elf.cmd}"  "-L{build.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {build.extra_flags} {build.extra_ldflags} {compiler.zephyr.common_ldflags} "-T{build.ldscript}" "-Wl,-Map,{build.path}/{build.project_name}.map" --specs=picolibc.specs --specs=nosys.specs {compiler.ldflags} -o "{build.path}/{build.project_name}_debug.elf" {object_files} -Wl,--start-group "{build.path}/{archive_file}" {compiler.zephyr} {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags} -Wl,--end-group
 recipe.hooks.linking.postlink.1.pattern="{compiler.path}{build.crossprefix}strip" --strip-debug "{build.path}/{build.project_name}_debug.elf" -o "{build.path}/{build.project_name}.elf"
 
 ## Create eeprom
