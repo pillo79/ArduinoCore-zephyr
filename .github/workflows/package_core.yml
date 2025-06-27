@@ -29,7 +29,7 @@ jobs:
 
       - name: Initialize Zephyr environment
         run: |
-          ./extra/bootstrap.sh -o=--filter=tree:0
+          yes | ./extra/bootstrap.sh -o=--filter=tree:0
           echo "CORE_TAG=$(git describe --always)" >> "$GITHUB_ENV"
           echo "CORE_ARTIFACT=ArduinoCore-zephyr-$(git describe --always)" >> "$GITHUB_ENV"
           echo "BOARD_VARIANTS=$(extra/get_board_details.sh | jq -cr 'sort_by(.variant)')" >> "$GITHUB_ENV"
