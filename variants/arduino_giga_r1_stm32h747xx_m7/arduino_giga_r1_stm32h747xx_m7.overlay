@@ -37,7 +37,7 @@
 
 		port {
 			gc2145_ep_out: endpoint {
-				remote-endpoint = <&dcmi_ep_in>;
+				remote-endpoint-label = "dcmi_ep_in";
 			};
 		};
 	};
