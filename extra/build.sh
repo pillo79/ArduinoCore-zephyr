@@ -91,6 +91,7 @@ done
 
 # Generate the provides.ld file for linked builds
 echo "Generating exported symbol scripts"
+extra/gen_provides.py "${BUILD_DIR}/zephyr/zephyr.elf" -L > ${VARIANT_DIR}/syms-dynamic.ld
 extra/gen_provides.py "${BUILD_DIR}/zephyr/zephyr.elf" -LF \
 	"+kheap_llext_heap" \
 	"+kheap__system_heap" \
@@ -100,6 +101,6 @@ extra/gen_provides.py "${BUILD_DIR}/zephyr/zephyr.elf" -LF \
 	"free=__wrap_free" \
 	"realloc=__wrap_realloc" \
 	"calloc=__wrap_calloc" \
-	"random=__wrap_random" > ${VARIANT_DIR}/provides.ld
+	"random=__wrap_random" > ${VARIANT_DIR}/syms-static.ld
 
 cmake -P extra/gen_arduino_files.cmake $variant
