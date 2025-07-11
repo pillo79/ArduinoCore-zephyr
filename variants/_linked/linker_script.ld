@@ -1,10 +1,9 @@
 INCLUDE "provides.ld"
 
-PROVIDE(TEXT_LENGTH = 0x100000);
-
 MEMORY
 {
-    FLASH (rx) : ORIGIN = _sketch_start + 16, LENGTH = TEXT_LENGTH
+    /* 16 below compensates for the zsk header that is added before the .bin */
+    FLASH (rx) : ORIGIN = _sketch_start + 16, LENGTH = _sketch_max_size - 16
     RAM (rwx) : ORIGIN = kheap_llext_heap, LENGTH = kheap_llext_heap_size
 }
 
