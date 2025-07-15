@@ -1,5 +1,7 @@
 menu.debug=Debug
-menu.mode=Mode
+menu.link_mode=Link mode
+
+##########################################################################################
 
 giga.name=Arduino Giga R1
 giga.build.core=arduino
@@ -423,18 +425,12 @@ portentac33.build.compiler_path={runtime.tools.arm-zephyr-eabi-0.16.8.path}/bin/
 
 portentac33.menu.debug.false=Standard
 portentac33.menu.debug.true=Debug
+portentac33.menu.debug.true.build.zsk_args.debug=-debug
 
-portentac33.menu.debug.false.postbuild_debug=
-portentac33.menu.debug.true.postbuild_debug=-debug
-
-portentac33.menu.mode.llext=llext
-portentac33.menu.mode.linked=linked
-
-portentac33.menu.mode.linked.build.extra_ldflags=-lc -lm -lgcc -L{build.variant.path} -Wl,--wrap=random -Wl,--wrap=calloc -Wl,--wrap=free -Wl,--wrap=malloc -Wl,--wrap=realloc 
-portentac33.menu.mode.linked.build.llext_link_flags=
-portentac33.menu.mode.linked.build.ldscript={runtime.platform.path}/variants/_linked/linker_script.ld
-portentac33.menu.mode.linked.upload.extension=bin-zsk.bin
-portentac33.menu.mode.linked.postbuild_mode=-prelinked
+portentac33.menu.link_mode.dynamic=Dynamic
+portentac33.menu.link_mode.static=Static
+portentac33.menu.link_mode.static.build.link_mode=static
+portentac33.menu.link_mode.static.upload.extension=bin-zsk.bin
 
 portentac33.build.zephyr_target=arduino_portenta_c33
 portentac33.build.zephyr_args=
