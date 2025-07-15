@@ -19,14 +19,12 @@ giga.build.variant=arduino_giga_r1_stm32h747xx_m7
 giga.build.mcu=cortex-m7
 giga.build.fpu=-mfpu=fpv5-d16
 giga.build.architecture=cortex-m7
-giga.compiler.zephyr.arch.define=-DCORE_CM7
 
 giga.build.float-abi=-mfloat-abi=softfp
 giga.build.extra_flags=
 giga.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 giga.build.architecture=cortex-m7
 giga.build.board=ARDUINO_GIGA
-giga.compiler.zephyr=
 giga.vid.0=0x2341
 giga.pid.0=0x0066
 giga.upload_port.0.vid=0x2341
@@ -85,14 +83,12 @@ nano33ble.build.variant=arduino_nano_33_ble_nrf52840_sense
 nano33ble.build.mcu=cortex-m4
 nano33ble.build.fpu=-mfpu=fpv4-sp-d16
 nano33ble.build.architecture=cortex-m4
-nano33ble.compiler.zephyr.arch.define=
 
 nano33ble.build.float-abi=-mfloat-abi=hard
 nano33ble.build.extra_flags=
 nano33ble.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 nano33ble.build.architecture=cortex-m4
 nano33ble.build.board=ARDUINO_NANO33BLE
-nano33ble.compiler.zephyr=
 nano33ble.vid.0=0x2341
 nano33ble.pid.0=0x035a
 nano33ble.upload_port.0.vid=0x2341
@@ -149,19 +145,16 @@ ek_ra8d1.build.variant=ek_ra8d1_r7fa8d1bhecbd
 ek_ra8d1.build.mcu=cortex-m85+nomve
 ek_ra8d1.build.fpu=-mfpu=fpv5-d16
 ek_ra8d1.build.architecture=cortex-m85+nomve
-ek_ra8d1.compiler.zephyr.arch.define=
 
 ek_ra8d1.build.float-abi=-mfloat-abi=hard
 ek_ra8d1.build.extra_flags=
 ek_ra8d1.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 ek_ra8d1.build.architecture=cortex-m85+nomve
 ek_ra8d1.build.board=EK_RA8D1
-ek_ra8d1.compiler.zephyr.arch.define=
 
 #ek_ra8d1.recipe.hooks.objcopy.postobjcopy.4.pattern=cp {build.variant.path}/flasher.jlink "{build.path}/flasher.jlink"
 #ek_ra8d1.recipe.hooks.objcopy.postobjcopy.5.pattern=sed -i 's|SKETCH|"{build.path}/{build.project_name}.llext.dfu.bin"|g' "{build.path}/flasher.jlink"
 
-ek_ra8d1.compiler.zephyr=
 ek_ra8d1.vid.0=0x2341
 ek_ra8d1.pid.0=0x0077
 ek_ra8d1.upload_port.0.vid=0x2341
@@ -208,14 +201,11 @@ frdm_mcxn947.build.variant=frdm_mcxn947_mcxn947_cpu0
 frdm_mcxn947.build.mcu=cortex-m33
 frdm_mcxn947.build.fpu=-mfpu=fpv5-sp-d16
 frdm_mcxn947.build.architecture=cortex-m33
-frdm_mcxn947.compiler.zephyr.arch.define=
 
 frdm_mcxn947.build.float-abi=-mfloat-abi=hard
 frdm_mcxn947.build.extra_flags=
 frdm_mcxn947.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 frdm_mcxn947.build.board=FRDM_MCXN947
-frdm_mcxn947.compiler.zephyr.arch.define=
-frdm_mcxn947.compiler.zephyr=
 frdm_mcxn947.vid.0=0x1fc9
 frdm_mcxn947.pid.0=0x0143
 frdm_mcxn947.upload_port.0.vid=0x1fc9
@@ -262,14 +252,12 @@ portentah7.build.variant=arduino_portenta_h7_stm32h747xx_m7
 portentah7.build.mcu=cortex-m7
 portentah7.build.fpu=-mfpu=fpv5-d16
 portentah7.build.architecture=cortex-m7
-portentah7.compiler.zephyr.arch.define=-DCORE_CM7
 
 portentah7.build.float-abi=-mfloat-abi=softfp
 portentah7.build.extra_flags=
 portentah7.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 portentah7.build.architecture=cortex-m7
 portentah7.build.board=ARDUINO_PORTENTA_H7
-portentah7.compiler.zephyr=
 portentah7.vid.0=0x2341
 portentah7.pid.0=0x005b
 portentah7.upload_port.0.vid=0x2341
@@ -328,14 +316,11 @@ frdm_rw612.build.variant=frdm_rw612_rw612
 frdm_rw612.build.mcu=cortex-m33+nodsp
 frdm_rw612.build.fpu=-mfpu=fpv5-sp-d16
 frdm_rw612.build.architecture=cortex-m33+nodsp
-frdm_rw612.compiler.zephyr.arch.define=
 
 frdm_rw612.build.float-abi=-mfloat-abi=hard
 frdm_rw612.build.extra_flags=
 frdm_rw612.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 frdm_rw612.build.board=FRDM_RW612
-frdm_rw612.compiler.zephyr.arch.define=
-frdm_rw612.compiler.zephyr=
 frdm_rw612.vid.0=0x1fc9
 frdm_rw612.pid.0=0x0143
 frdm_rw612.upload_port.0.vid=0x1fc9
@@ -381,14 +366,12 @@ niclasense.build.variant=arduino_nicla_sense_me_nrf52832
 niclasense.build.mcu=cortex-m4
 niclasense.build.fpu=-mfpu=fpv4-sp-d16
 niclasense.build.architecture=cortex-m4
-niclasense.compiler.zephyr.arch.define=
 
 niclasense.build.float-abi=-mfloat-abi=hard
 niclasense.build.extra_flags=
 niclasense.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 niclasense.build.architecture=cortex-m4
 niclasense.build.board=ARDUINO_NICLA_SENSE_ME
-niclasense.compiler.zephyr=
 niclasense.vid.0=0x2341
 niclasense.pid.0=0x0360
 niclasense.upload_port.0.vid=0x2341
@@ -449,7 +432,6 @@ portentac33.menu.mode.linked=linked
 
 portentac33.menu.mode.linked.build.extra_ldflags=-lc -lm -lgcc -L{build.variant.path} -Wl,--wrap=random -Wl,--wrap=calloc -Wl,--wrap=free -Wl,--wrap=malloc -Wl,--wrap=realloc 
 portentac33.menu.mode.linked.build.llext_link_flags=
-portentac33.menu.mode.linked.build.suffix=_linked
 portentac33.menu.mode.linked.build.ldscript={runtime.platform.path}/variants/_linked/linker_script.ld
 portentac33.menu.mode.linked.upload.extension=bin-zsk.bin
 portentac33.menu.mode.linked.postbuild_mode=-prelinked
@@ -461,14 +443,11 @@ portentac33.build.variant=arduino_portenta_c33_r7fa6m5bh3cfc
 portentac33.build.mcu=cortex-m33
 portentac33.build.fpu=-mfpu=fpv5-sp-d16
 portentac33.build.architecture=cortex-m33
-portentac33.compiler.zephyr.arch.define=
 
 portentac33.build.float-abi=-mfloat-abi=hard
 portentac33.build.extra_flags=
 portentac33.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 portentac33.build.board=ARDUINO_PORTENTA_C33
-portentac33.compiler.zephyr.arch.define=
-portentac33.compiler.zephyr=
 portentac33.vid.0=0x2341
 portentac33.pid.0=0x0068
 portentac33.upload_port.0.vid=0x2341
@@ -517,14 +496,12 @@ opta.build.variant=arduino_opta_stm32h747xx_m7
 opta.build.mcu=cortex-m7
 opta.build.fpu=-mfpu=fpv5-d16
 opta.build.architecture=cortex-m7
-opta.compiler.zephyr.arch.define=-DCORE_CM7
 
 opta.build.float-abi=-mfloat-abi=softfp
 opta.build.extra_flags=
 opta.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 opta.build.architecture=cortex-m7
 opta.build.board=ARDUINO_OPTA
-opta.compiler.zephyr=
 opta.vid.0=0x2341
 opta.pid.0=0x0064
 opta.upload_port.0.vid=0x2341
