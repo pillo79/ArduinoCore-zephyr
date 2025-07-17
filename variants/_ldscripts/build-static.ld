@@ -1,19 +1,5 @@
-INCLUDE "provides.ld"
-
-PROVIDE(TEXT_LENGTH = 0x100000);
-
-MEMORY
-{
-    FLASH (rx) : ORIGIN = _sketch_start + 16, LENGTH = TEXT_LENGTH
-    RAM (rwx) : ORIGIN = kheap_llext_heap, LENGTH = kheap_llext_heap_size
-}
-
-PROVIDE(__heap_start = kheap__system_heap);
-PROVIDE(__heap_end = kheap__system_heap + kheap__system_heap_size);
-
 ENTRY(entry_point)
 SECTIONS {
-
     /DISCARD/ : {
         *(.ARM.attributes)
         *(.ARM.attributes.*)

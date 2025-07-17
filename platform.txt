@@ -3,7 +3,7 @@
 # For more info:
 # https://github.com/arduino/Arduino/wiki/Arduino-IDE-1.5---3rd-party-Hardware-specification
 
-name=Arduino Zephyr Boards (llext)
+name=Arduino Zephyr Boards
 version=9.9.9
 
 # Compile variables
@@ -17,13 +17,13 @@ compiler.warning_flags.all=-Wall -Wextra
 
 compiler.path={build.compiler_path}
 compiler.c.cmd={build.crossprefix}gcc
-compiler.c.flags=-g -c {compiler.warning_flags} {compiler.zephyr.macros} "@{compiler.zephyr.cflags_file}" {compiler.zephyr.arch.define} -MMD -mcpu={build.mcu} {build.float-abi} {build.fpu}
+compiler.c.flags=-g -c {compiler.warning_flags} {compiler.zephyr.macros} "@{compiler.zephyr.cflags_file}" -MMD -mcpu={build.mcu} {build.float-abi} {build.fpu}
 compiler.c.elf.cmd={build.crossprefix}g++
-compiler.c.elf.flags={build.llext_link_flags} -Wl,--gc-sections -mcpu={build.mcu} {build.float-abi} {build.fpu} -std=gnu++17
+compiler.c.elf.flags=-Wl,--gc-sections -mcpu={build.mcu} {build.float-abi} {build.fpu} -std=gnu++17
 compiler.S.cmd={build.crossprefix}g++
 compiler.S.flags=-c -x assembler-with-cpp -mcpu={build.mcu} {build.fpu}
 compiler.cpp.cmd={build.crossprefix}g++
-compiler.cpp.flags=-g -Os -std=gnu++17 -c {compiler.warning_flags} {compiler.zephyr.macros} "@{compiler.zephyr.cxxflags_file}" {compiler.zephyr.common_ldflags} {compiler.zephyr.extra_ldflags} {compiler.zephyr.common_cxxflags} {compiler.zephyr.extra_cxxflags} {compiler.zephyr.arch.define} -MMD -mcpu={build.mcu} {build.float-abi} {build.fpu}
+compiler.cpp.flags=-g -Os -std=gnu++17 -c {compiler.warning_flags} {compiler.zephyr.macros} "@{compiler.zephyr.cxxflags_file}" {compiler.zephyr.common_ldflags} {compiler.zephyr.extra_ldflags} {compiler.zephyr.common_cxxflags} {compiler.zephyr.extra_cxxflags} -MMD -mcpu={build.mcu} {build.float-abi} {build.fpu}
 compiler.ar.cmd={build.crossprefix}ar
 compiler.ar.flags=rcs
 compiler.objcopy.cmd=
@@ -46,18 +46,36 @@ compiler.zephyr.common_ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics
 compiler.zephyr.extra_cxxflags=
 compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++
 
-# this can be overriden in boards.txt
+# these can be overriden in boards.txt
 build.extra_flags=
 build.extra_ldflags=
-compiler.zephyr=
-
-build.ldscript={runtime.platform.path}/variants/_llext/linker_script.ld
-build.llext_link_flags=-r -e main
-build.extra_extra_ldflags=
-build.suffix=
+build.link_mode=dynamic
 upload.extension=elf-zsk.bin
-postbuild_debug=
-postbuild_mode=
+
+build.ldscript.path={runtime.platform.path}/variants/_ldscripts
+build.link_command="{compiler.path}{compiler.c.elf.cmd}" "-L{build.path}" "-L{build.variant.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {build.extra_flags} {build.extra_ldflags} {compiler.zephyr.common_ldflags} --specs=picolibc.specs --specs=nosys.specs {compiler.ldflags} {object_files} -Wl,--start-group "{build.path}/{archive_file}" {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags} -Wl,--end-group {build.link_args.{build.link_mode}}
+
+build.check_command-dynamic={build.link_command} {build.link_args.check-dynamic} -o "{build.path}/{build.project_name}_check.tmp"
+build.check_command-static=/bin/true
+build.check_command-static.windows=cmd /C cd .
+build.combine_command={build.link_command} {build.link_args.build-{build.link_mode}} {build.link_args.build-common}
+
+# link_args.* are included by any link_command depending on the link_mode
+build.link_args.dynamic=-e main
+build.link_args.static=-lc -lm -lgcc -Wl,--wrap=random -Wl,--wrap=calloc -Wl,--wrap=free -Wl,--wrap=malloc -Wl,--wrap=realloc
+
+# link_args.check-* are used to check the build. Only LLEXT needs these to emulate a static build (no -r!).
+build.link_args.check-dynamic="-T{build.variant.path}/syms-dynamic.ld" "-T{build.ldscript.path}/memory-check.ld" "-T{build.ldscript.path}/build-static.ld"
+
+# link_args.build-* are used to create the final binary. -common are added to both static and dynamic.
+build.link_args.build-dynamic="-T{build.ldscript.path}/build-dynamic.ld" -r
+build.link_args.build-static="-T{build.variant.path}/syms-static.ld" "-T{build.ldscript.path}/memory-static.ld" "-T{build.ldscript.path}/build-static.ld"
+build.link_args.build-common="-Wl,-Map,{build.path}/{build.project_name}.map" -o "{build.path}/{build.project_name}_debug.elf"
+
+# zsk_args are used to create the final binary with zephyr-sketch-tool
+build.zsk_args.debug=
+build.zsk_args.mode-dynamic=
+build.zsk_args.mode-static=-prelinked
 
 # These can be overridden in platform.local.txt
 compiler.c.extra_flags=
@@ -99,7 +117,9 @@ recipe.S.o.pattern="{compiler.path}{compiler.S.cmd}" {compiler.S.flags} -DARDUIN
 recipe.ar.pattern="{compiler.path}{compiler.ar.cmd}" {compiler.ar.flags} {compiler.ar.extra_flags} "{archive_file_path}" "{object_file}"
 
 ## Combine gc-sections, archives, and objects
-recipe.c.combine.pattern="{compiler.path}{compiler.c.elf.cmd}"  "-L{build.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {build.extra_flags} {build.extra_ldflags} {compiler.zephyr.common_ldflags} "-T{build.ldscript}" "-Wl,-Map,{build.path}/{build.project_name}.map" --specs=picolibc.specs --specs=nosys.specs {compiler.ldflags} -o "{build.path}/{build.project_name}_debug.elf" {object_files} -Wl,--start-group "{build.path}/{archive_file}" {compiler.zephyr} {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags} -Wl,--end-group
+recipe.c.combine.1.pattern={build.check_command-{build.link_mode}}
+recipe.c.combine.2.pattern={build.combine_command}
+recipe.c.combine.pattern={build.combine_command}
 recipe.hooks.linking.postlink.1.pattern="{compiler.path}{build.crossprefix}strip" --strip-debug "{build.path}/{build.project_name}_debug.elf" -o "{build.path}/{build.project_name}.elf"
 
 ## Create eeprom
@@ -112,8 +132,8 @@ recipe.objcopy.bin.pattern="{compiler.path}{compiler.elf2hex.cmd}" {compiler.elf
 recipe.objcopy.hex.pattern="{compiler.path}{compiler.elf2hex.cmd}" {compiler.elf2hex.hex.flags} {compiler.elf2hex.extra_flags} "{build.path}/{build.project_name}.elf" "{build.path}/{build.project_name}.hex"
 
 ## Mangle the file
-recipe.hooks.objcopy.postobjcopy.1.pattern="{runtime.tools.zephyr-sketch-tool.path}/zephyr-sketch-tool" {postbuild_debug} {postbuild_mode} "{build.path}/{build.project_name}.elf"
-recipe.hooks.objcopy.postobjcopy.2.pattern="{runtime.tools.zephyr-sketch-tool.path}/zephyr-sketch-tool" {postbuild_debug} {postbuild_mode} "{build.path}/{build.project_name}.bin"
+recipe.hooks.objcopy.postobjcopy.1.pattern="{runtime.tools.zephyr-sketch-tool.path}/zephyr-sketch-tool" {build.zsk_args.debug} {build.zsk_args.mode-{build.link_mode}} "{build.path}/{build.project_name}.elf"
+recipe.hooks.objcopy.postobjcopy.2.pattern="{runtime.tools.zephyr-sketch-tool.path}/zephyr-sketch-tool" {build.zsk_args.debug} {build.zsk_args.mode-{build.link_mode}} "{build.path}/{build.project_name}.bin"
 
 ## Compute size
 recipe.size.pattern="{compiler.path}{compiler.size.cmd}" -A "{build.path}/{build.project_name}.elf"

@@ -13,5 +13,4 @@ README.md
 doc/
 cores/
 libraries/
-variants/_llext/
-variants/_linked/
+variants/_ldscripts/

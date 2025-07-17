@@ -6,4 +6,5 @@ llext-edk/
 cflags.txt
 cxxflags.txt
 includes.txt
-provides.ld
+syms-dynamic.ld
+syms-static.ld
