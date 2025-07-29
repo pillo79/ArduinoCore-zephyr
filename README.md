@@ -180,10 +180,28 @@ associated variant will be updated.
 
 ### Flash the Loader
 
-If the board is fully supported by Zephyr, you can flash the firmware directly onto the board using the following command:
+To flash the loader, run:
+
 ```bash
-west flash
+west flash -d build/<variant-name>
 ```
+
+The `<variant-name>` appears in the build output when you run the build script. For example:
+
+```bash
+% ./extra/build.sh portentah7
+
+Build target: arduino_portenta_h7@1.0.0//m7
+Build variant: arduino_portenta_h7_stm32h747xx_m7
+-- west build: generating a build system
+...
+```
+
+In this case, you would flash with:
+```bash
+west flash -d build/arduino_portenta_h7_stm32h747xx_m7
+```
+
 This can also be performed via the "Burn bootloader" action in the IDE if the core is properly installed, as detailed below.
 
 ### Using the Core in Arduino IDE/CLI
