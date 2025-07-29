@@ -125,10 +125,21 @@ git clone https://github.com/arduino/ArduinoCore-zephyr
 ### Pre-requirements
 Before running the installation script, ensure that Python, `pip` and `venv` are installed on your system. The script will automatically install `west` and manage the necessary dependencies.
 
-On Ubuntu or similar `apt`-based distros, make sure to run the following command:
+#### On Ubuntu or similar apt-based distros
 ```bash
 sudo apt install python3-pip python3-setuptools python3-venv build-essential git cmake ninja-build zstd jq
 ```
+#### On macOS
+Make sure you have Homebrew installed. Then run:
+
+```bash
+# Install Xcode Command Line Tools (needed for compilers and make)
+xcode-select --install
+
+# Install required tools and libraries
+brew install python cmake ninja zstd jq git
+```
+Note: Homebrew’s Python installation already includes `pip`, `setuptools` and `venv`.
 
 ### Run the ```bootstrap``` script
 ```bash
