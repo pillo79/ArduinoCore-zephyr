@@ -208,6 +208,9 @@ This can also be performed via the "Burn bootloader" action in the IDE if the co
 
 After running the `bootstrap.sh` script, you can symlink the core to `$sketchbook/hardware/arduino-git/zephyr`. Once linked, it will appear in the IDE/CLI, and the board's Fully Qualified Board Name (FQBN) will be formatted as `arduino-git:zephyr:name_from_boards_txt`.
 
+Remember to also update the core from the Board Manager in the IDE to get the latest tools and dependencies. See section
+[⚙️ Installation](#️-installation).
+
 ## 🚀 Adding a new target
 
 > [!TIP]
