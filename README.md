@@ -125,10 +125,21 @@ git clone https://github.com/arduino/ArduinoCore-zephyr
 ### Pre-requirements
 Before running the installation script, ensure that Python, `pip` and `venv` are installed on your system. The script will automatically install `west` and manage the necessary dependencies.
 
-On Ubuntu or similar `apt`-based distros, make sure to run the following command:
+#### On Ubuntu or similar apt-based distros
 ```bash
 sudo apt install python3-pip python3-setuptools python3-venv build-essential git cmake ninja-build zstd jq
 ```
+#### On macOS
+Make sure you have Homebrew installed. Then run:
+
+```bash
+# Install Xcode Command Line Tools (needed for compilers and make)
+xcode-select --install
+
+# Install required tools and libraries
+brew install python cmake ninja zstd jq git
+```
+Note: Homebrew’s Python installation already includes `pip`, `setuptools` and `venv`.
 
 ### Run the ```bootstrap``` script
 ```bash
@@ -169,15 +180,36 @@ associated variant will be updated.
 
 ### Flash the Loader
 
-If the board is fully supported by Zephyr, you can flash the firmware directly onto the board using the following command:
+To flash the loader, run:
+
 ```bash
-west flash
+west flash -d build/<variant-name>
 ```
+
+The `<variant-name>` appears in the build output when you run the build script. For example:
+
+```bash
+% ./extra/build.sh portentah7
+
+Build target: arduino_portenta_h7@1.0.0//m7
+Build variant: arduino_portenta_h7_stm32h747xx_m7
+-- west build: generating a build system
+...
+```
+
+In this case, you would flash with:
+```bash
+west flash -d build/arduino_portenta_h7_stm32h747xx_m7
+```
+
 This can also be performed via the "Burn bootloader" action in the IDE if the core is properly installed, as detailed below.
 
 ### Using the Core in Arduino IDE/CLI
 
 After running the `bootstrap.sh` script, you can symlink the core to `$sketchbook/hardware/arduino-git/zephyr`. Once linked, it will appear in the IDE/CLI, and the board's Fully Qualified Board Name (FQBN) will be formatted as `arduino-git:zephyr:name_from_boards_txt`.
+
+Remember to also install and/or update the officially published core in the IDE Board Manager to get the latest tools and dependencies. 
+[⚙️ Installation](#️-installation).
 
 ## 🚀 Adding a new target
 
