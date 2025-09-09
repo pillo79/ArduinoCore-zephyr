@@ -40,7 +40,7 @@ const struct device *const usb_dev =
 	DEVICE_DT_GET(DT_PHANDLE_BY_IDX(DT_PATH(zephyr_user), cdc_acm, 0));
 
 static int enable_shell_usb(void) {
-	bool log_backend = CONFIG_SHELL_BACKEND_SERIAL_LOG_LEVEL > 0;
+	  bool log_backend = CONFIG_SHELL_BACKEND_SERIAL_LOG_LEVEL > 0;
 	uint32_t level = (CONFIG_SHELL_BACKEND_SERIAL_LOG_LEVEL > LOG_LEVEL_DBG) ?
 						 CONFIG_LOG_MAX_LEVEL :
 						 CONFIG_SHELL_BACKEND_SERIAL_LOG_LEVEL;
