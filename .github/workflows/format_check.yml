@@ -47,7 +47,7 @@ jobs:
             libraries/extras/**
             libraries/ea_malloc/**
           write_output_files: true
-          base_sha: ${{ steps.first-commit.outputs.sha if github.event_name == 'workflow_dispatch' else '' }}
+          base_sha: ${{ steps.first-commit.outputs.sha }}
 
       - name: List changed files
         if: steps.changed-files.outputs.any_changed == 'true'
