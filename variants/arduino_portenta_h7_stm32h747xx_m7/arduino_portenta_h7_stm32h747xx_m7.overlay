@@ -20,6 +20,17 @@
 	status = "okay";
 };
 
+&rtc {
+    status = "okay";
+    label = "RTC_0";
+
+	clocks = <&rcc STM32_CLOCK_BUS_APB1 0x10000000>,
+		 	<&rcc STM32_SRC_LSI RTC_SEL(2)>;
+
+    alarms-count = <2>;
+    alrm-exti-line = <17>;
+};
+
 &i2c3 {
 	status = "okay";
 

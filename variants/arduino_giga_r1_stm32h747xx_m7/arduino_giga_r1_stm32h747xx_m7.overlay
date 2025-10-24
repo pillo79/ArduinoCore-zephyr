@@ -33,6 +33,17 @@
 	status = "okay";
 };
 
+&rtc {
+    status = "okay";
+    label = "RTC_0";
+
+    clocks = <&rcc STM32_CLOCK_BUS_APB1 0x10000000>,  /* RTCAPB */
+             <&rcc STM32_SRC_LSE RTC_SEL(1)>;         /* Use LSI instead of LSE */
+
+    alarms-count = <2>;
+    alrm-exti-line = <17>;
+};
+
 &i2c4 {
 	status = "okay";
 	gc2145: gc2145@3c {

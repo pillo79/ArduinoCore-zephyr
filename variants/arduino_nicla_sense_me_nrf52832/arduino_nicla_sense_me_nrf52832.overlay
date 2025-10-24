@@ -23,6 +23,12 @@
 	};
 };
 
+&rtc2 {
+    status = "okay";
+    clock-frequency = <32768>;
+    prescaler = <1>;  // Optional: sets the RTC tick to ~30.5 µs
+};
+
 / {
 	zephyr,user {
 		digital-pin-gpios = <&gpio0 10 0>,		// 0: GPIO3
