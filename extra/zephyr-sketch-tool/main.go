@@ -11,6 +11,7 @@ import (
 func main() {
 	var output = flag.String("output", "", "Output to a specific file (default: add -zsk.bin suffix)")
 	var debug = flag.Bool("debug", false, "Enable debugging mode")
+	var immediate = flag.Bool("immediate", false, "Start sketch immediately [UNO Q]")
 	var linked = flag.Bool("prelinked", false, "Provided file has already been linked to Zephyr")
 	var force = flag.Bool("force", false, "Ignore safety checks and overwrite the header")
 	var add_header = flag.Bool("add_header", false, "Add space for the header to the file")
@@ -58,6 +59,9 @@ func main() {
 	}
 	if *linked {
 		header.flags |= 0x02
+	}
+	if *immediate {
+		header.flags |= 0x04
 	}
 
 	var bytes = make([]byte, 9)

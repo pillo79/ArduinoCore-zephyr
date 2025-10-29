@@ -1,6 +1,7 @@
 menu.debug=Debug
 menu.link_mode=Link mode
 menu.flash_mode=Flash mode
+menu.wait_linux_boot=Startup mode
 
 ##########################################################################################
 
@@ -543,6 +544,9 @@ unoq.menu.flash_mode.flash=Flash
 unoq.menu.flash_mode.flash.openocd_cfg=flash_sketch.cfg
 unoq.menu.flash_mode.ram=RAM
 unoq.menu.flash_mode.ram.openocd_cfg=flash_sketch_ram.cfg
+unoq.menu.wait_linux_boot.yes=Wait for Linux
+unoq.menu.wait_linux_boot.no=Immediate
+unoq.menu.wait_linux_boot.no.build.boot_mode=immediate
 
 unoq.build.zephyr_target=arduino_uno_q
 unoq.build.zephyr_args=
