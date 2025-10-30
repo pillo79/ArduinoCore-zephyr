@@ -14,7 +14,7 @@ public:
 		return connectSSL(host, port, nullptr);
 	}
 
-	int connect(const char *host, uint16_t port, char *cert) {
+	int connect(const char *host, uint16_t port, const char *cert) {
 		return connectSSL(host, port, cert);
 	}
 };

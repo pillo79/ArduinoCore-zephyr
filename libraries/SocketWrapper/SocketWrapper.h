@@ -30,8 +30,8 @@ public:
 	bool connect(const char *host, uint16_t port) {
 
 		// Resolve address
-		struct addrinfo hints;
-		struct addrinfo *res;
+		struct addrinfo hints = {0};
+		struct addrinfo *res = nullptr;
 		bool rv = true;
 
 		hints.ai_family = AF_INET;
@@ -102,24 +102,27 @@ public:
 	}
 
 #if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
-	bool connectSSL(const char *host, uint16_t port, char *ca_certificate_pem = nullptr) {
+	bool connectSSL(const char *host, uint16_t port, const char *ca_certificate_pem = nullptr) {
 
 		// Resolve address
-		struct addrinfo hints;
-		struct addrinfo *res;
+		struct addrinfo hints = {0};
+		struct addrinfo *res = nullptr;
 
 		hints.ai_family = AF_INET;
 		hints.ai_socktype = SOCK_STREAM;
 
 		int resolve_attempts = 100;
 		int ret;
-		bool rv = true;
+		bool rv = false;
 
 		sec_tag_t sec_tag_opt[] = {
 			CA_CERTIFICATE_TAG,
 		};
 
-		uint32_t timeo_optval = 100;
+		struct timeval timeout_opt = {
+			.tv_sec = 0,
+			.tv_usec = 100000,
+		};
 
 		while (resolve_attempts--) {
 			ret = getaddrinfo(host, String(port).c_str(), &hints, &res);
@@ -132,33 +135,33 @@ public:
 		}
 
 		if (ret != 0) {
-			rv = false;
 			goto exit;
 		}
 
 		if (ca_certificate_pem != nullptr) {
 			ret = tls_credential_add(CA_CERTIFICATE_TAG, TLS_CREDENTIAL_CA_CERTIFICATE,
 									 ca_certificate_pem, strlen(ca_certificate_pem) + 1);
+			if (ret != 0) {
+				goto exit;
+			}
 		}
 
 		sock_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TLS_1_2);
 		if (sock_fd < 0) {
-			rv = false;
 			goto exit;
 		}
 
-		setsockopt(sock_fd, SOL_TLS, TLS_SEC_TAG_LIST, sec_tag_opt, sizeof(sec_tag_opt));
-
-		setsockopt(sock_fd, SOL_TLS, TLS_HOSTNAME, host, strlen(host));
-
-		setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &timeo_optval, sizeof(timeo_optval));
+		if (setsockopt(sock_fd, SOL_TLS, TLS_HOSTNAME, host, strlen(host)) ||
+			setsockopt(sock_fd, SOL_TLS, TLS_SEC_TAG_LIST, sec_tag_opt, sizeof(sec_tag_opt)) ||
+			setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout_opt, sizeof(timeout_opt))) {
+			goto exit;
+		}
 
 		if (::connect(sock_fd, res->ai_addr, res->ai_addrlen) < 0) {
-			::close(sock_fd);
-			sock_fd = -1;
-			rv = false;
 			goto exit;
 		}
+
+		rv = true;
 		is_ssl = true;
 
 	exit:
@@ -167,6 +170,10 @@ public:
 			res = nullptr;
 		}
 
+		if (!rv && sock_fd >= 0) {
+			::close(sock_fd);
+			sock_fd = -1;
+		}
 		return rv;
 	}
 #endif
