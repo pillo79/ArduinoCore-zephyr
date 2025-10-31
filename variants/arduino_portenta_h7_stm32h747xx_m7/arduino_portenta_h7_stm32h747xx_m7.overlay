@@ -304,6 +304,11 @@
 	};
 };
 
+
+/* Include common flash filesystem configuration */
+qspi_flash: &mx25l12833f {};
+#include "../common/arduino_flash_fs.dtsi"
+
 / {
 	zephyr,user {
 		digital-pin-gpios = <&gpioh 15 0>,	/* D0 */
