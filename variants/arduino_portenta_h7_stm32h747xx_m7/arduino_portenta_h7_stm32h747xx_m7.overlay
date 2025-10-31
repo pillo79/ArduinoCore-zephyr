@@ -264,6 +264,7 @@
 	soc {
 		flash-controller@52002000 {
 			flash0: flash@8000000 {
+				/delete-node/ partitions;
 				compatible = "st,stm32-nv-flash", "soc-nv-flash";
 				write-block-size = <32>;
 				erase-block-size = <DT_SIZE_K(128)>;
@@ -277,6 +278,22 @@
 					compatible = "fixed-partitions";
 					#address-cells = <1>;
 					#size-cells = <1>;
+
+					boot_partition: partition@0 {
+							label = "mcuboot";
+							reg = <0x00000000 0x00020000>;
+							read-only;
+					};
+
+					scratch_partition: partition@20000 {
+							label = "image-scratch";
+							reg = <0x00020000 0x00020000>;
+					};
+
+					slot0_partition: partition@40000 {
+							label = "image-0";
+							reg = <0x00040000 0x000C0000>;
+					};
 
 					user_sketch: partition@e0000 {
 						reg = <0x0E0000 0x20000>;
