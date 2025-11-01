@@ -76,7 +76,7 @@
 		/* tim1_etr_pa12 is not available for PWM */
 		/* Currently only the pins marked with ~ on the pin headers are enabled */
 		/* pinctrl-0 = <&tim1_ch4_pa11 &tim1_ch3n_pb15 &tim1_ch1n_pb13 &tim1_ch2n_pb14>; */
-		pinctrl-0 = <&tim1_ch4_pa11 &tim1_ch3n_pb15>;
+		pinctrl-0 = <&tim1_ch4_pa11>;
 		pinctrl-names = "default";
 	};
 };
@@ -269,7 +269,7 @@
 				/* <&gpiob 4 0>, */    /* D8/PB4 - TIM3_CH1 */
 				<&gpiob 8 0>,     /* D9/PB8 - TIM4_CH3 */
 				<&gpiob 9 0>,     /* D10/PB9 - TIM4_CH4 */
-				<&gpiob 15 0>,    /* D11/PB15 - TIM1_CH3N */
+				/* <&gpiob 15 0>, */   /* D11/PB15 - TIM1_CH3N */
 				/* <&gpiob 14 0>, */   /* D12/PB14 - TIM1_CH2N */
 				/* <&gpiob 13 0>, */   /* D13/PB13 - TIM1_CH1N */
 				/* <&gpiob 11 0>, */   /* D20/PB11 - TIM2_CH4 */
@@ -301,7 +301,7 @@
 		       /* <&pwm3 1 PWM_HZ(500) PWM_POLARITY_NORMAL>, */   /* D8/PB4 → TIM3_CH1 */
 		       <&pwm4 3 PWM_HZ(500) PWM_POLARITY_NORMAL>,   /* D9/PB8 → TIM4_CH3 */
 		       <&pwm4 4 PWM_HZ(500) PWM_POLARITY_NORMAL>,   /* D10/PB9 → TIM4_CH4 */
-		       <&pwm1 3 PWM_HZ(500) PWM_POLARITY_INVERTED>, /* D11/PB15 → TIM1_CH3N */
+		       /* <&pwm1 3 PWM_HZ(500) PWM_POLARITY_INVERTED>, */ /* D11/PB15 → TIM1_CH3N */
 		       /* <&pwm1 2 PWM_HZ(500) PWM_POLARITY_INVERTED>, */ /* D12/PB14 → TIM1_CH2N */
 		       /* <&pwm1 1 PWM_HZ(500) PWM_POLARITY_INVERTED>, */ /* D13/PB13 → TIM1_CH1N */
 		       /* <&pwm2 4 PWM_HZ(500) PWM_POLARITY_NORMAL>, */   /* D20/PB11 → TIM2_CH4 */
