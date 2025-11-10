@@ -1,6 +1,3 @@
-[submodule "libraries/Arduino_RPCLite"]
-	path = libraries/Arduino_RPCLite
-	url = git@github.com:arduino-libraries/Arduino_RPCLite.git
 [submodule "libraries/Arduino_RouterBridge"]
 	path = libraries/Arduino_RouterBridge
 	url = git@github.com:arduino-libraries/Arduino_RouterBridge.git
