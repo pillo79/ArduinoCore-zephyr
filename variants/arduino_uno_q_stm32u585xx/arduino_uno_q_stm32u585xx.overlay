@@ -313,12 +313,12 @@
 		control-gpios = <&gpiog 13 GPIO_ACTIVE_HIGH>;    /* Internal SPI RDY */
 		analog-switch-gpios = <&gpioa 2 GPIO_ACTIVE_HIGH>;    /* Analog switch for VREF */
 
-		io-channels =	<&adc1 9>,
-				<&adc1 10>,
-				<&adc1 11>,
-				<&adc1 12>,
-				<&adc1 1>,
-				<&adc1 2>;
+		io-channels =	<&adc1 9>,     /* A0 - PA4 */
+				<&adc1 10>,   /* A1 - PA5 */
+				<&adc1 11>,   /* A2 - PA6 */
+				<&adc1 12>,   /* A3 - PA7 */
+				<&adc1 2>,    /* A4 - PC1 */
+				<&adc1 1>;    /* A5 - PC0 */
 
 		dac = <&dac1>;
 		dac-channels = <1>, <2>;
