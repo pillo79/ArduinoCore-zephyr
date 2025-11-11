@@ -113,3 +113,6 @@
 				<&adc3 9>;
 	};
 };
+
+/* Include common flash filesystem configuration */
+#include "../common/arduino_flash_fs.dtsi"
