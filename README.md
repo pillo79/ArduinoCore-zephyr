@@ -231,7 +231,14 @@ This can also be performed via the "Burn bootloader" action in the IDE if the co
 
 ### Using the Core in Arduino IDE/CLI
 
-After running the `bootstrap.sh` script, you can symlink the core to `$sketchbook/hardware/arduino-git/zephyr`. Once linked, it will appear in the IDE/CLI, and the board's Fully Qualified Board Name (FQBN) will be formatted as `arduino-git:zephyr:name_from_boards_txt`.
+After running the `bootstrap.sh` script, you can create a symlink from the
+`ArduinoCore-zephyr` folder to `${sketchbook}/hardware/arduino-git/zephyr`, so
+that the `boards.txt` file in this repository will be also available as
+`${sketchbook}/hardware/arduino-git/zephyr/boards.txt`.
+
+Once this is done, your development folder will appear in the IDE/CLI package
+list as `arduino-git:zephyr`, and the Fully Qualified Board Name (FQBN) to use
+will be `arduino-git:zephyr:name_from_boards_txt`.
 
 Remember to also install and/or update the officially published core in the IDE Board Manager to get the latest tools and dependencies. 
 [⚙️ Installation](#️-installation).
