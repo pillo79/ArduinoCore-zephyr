@@ -83,25 +83,25 @@ void arduino::ZephyrSPI::beginTransaction(SPISettings settings) {
 	case SPI_MODE0:
 		break;
 	case SPI_MODE1:
-		mode = SPI_MODE_CPHA;
+		mode |= SPI_MODE_CPHA;
 		break;
 	case SPI_MODE2:
-		mode = SPI_MODE_CPOL;
+		mode |= SPI_MODE_CPOL;
 		break;
 	case SPI_MODE3:
-		mode = SPI_MODE_CPOL | SPI_MODE_CPHA;
+		mode |= SPI_MODE_CPOL | SPI_MODE_CPHA;
 		break;
 	}
 
 	// Set SPI configuration structure for 8-bit transfers
 	memset(&config, 0, sizeof(struct spi_config));
 	config.operation = mode | SPI_WORD_SET(8);
-	config.frequency = max(SPI_MIN_CLOCK_FEQUENCY, settings.getClockFreq());
+	config.frequency = max(SPI_MIN_CLOCK_FREQUENCY, settings.getClockFreq());
 
 	// Set SPI configuration structure for 16-bit transfers
 	memset(&config16, 0, sizeof(struct spi_config));
 	config16.operation = mode | SPI_WORD_SET(16);
-	config16.frequency = max(SPI_MIN_CLOCK_FEQUENCY, settings.getClockFreq());
+	config16.frequency = max(SPI_MIN_CLOCK_FREQUENCY, settings.getClockFreq());
 }
 
 void arduino::ZephyrSPI::endTransaction(void) {
