@@ -336,6 +336,13 @@
 
 &flash0 {
 	partitions {
+		/delete-node/ slot0_partition;
+
+		slot0_partition: partition@40000 {
+			label = "image-0";
+			reg = <0x040000 0xa0000>;
+		};
+
 		user_sketch: partition@e0000 {
 			reg = <0x0E0000 0x20000>;
 		};
