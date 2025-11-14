@@ -160,11 +160,24 @@ int ArduinoRTC::getSeconds()
 #if defined(ARDUINO_GIGA) || defined(ARDUINO_PORTENTA_H7) || defined(ARDUINO_OPTA)
 #define RTC_NODE DT_NODELABEL(rtc)
 
+/**
+ * @brief RTC library constructor
+ *
+ * Constructor used with the STM32 microcontroller based boards (OPTA, PORTENTA H7, GIGA R1)
+ *
+ */
 ArduinoRTC::ArduinoRTC()
 {
     rtc_dev = DEVICE_DT_GET(RTC_NODE);
 }
 
+/**
+ * @brief RTC library classic begin() function
+ *
+ * Takes care of the underlying STM32 RTC HAL driver initalization
+ *
+ * @return bool operation result
+ */
 bool ArduinoRTC::begin()
 {
     if (!device_is_ready(rtc_dev)) {
@@ -178,6 +191,19 @@ bool ArduinoRTC::begin()
     return true;
 }
 
+/**
+ * @brief RTC library setter function
+ *
+ * Used to set the time and data with a single function call
+ *
+ * @param int year to be set
+ * @param int month to be set
+ * @param int day to be set
+ * @param int hour to be set
+ * @param int minute to be set
+ * @param int second to be set
+ * @return int operation result
+ */
 int ArduinoRTC::setTime(int year, int month, int day, int hour, int minute, int second)
 {
     struct rtc_time time = {
@@ -191,6 +217,18 @@ int ArduinoRTC::setTime(int year, int month, int day, int hour, int minute, int 
     return rtc_set_time(rtc_dev, &time);
 }
 
+/**
+ * @brief RTC library getter
+ *
+ * Used to set the time and data with a single function call
+ *
+ * @param int reference to currently set year
+ * @param int reference to currently set month
+ * @param int reference to currently set day of month
+ * @param int reference to currently set hour
+ * @param int reference to currently set minute
+ * @param int reference to currently set second
+ */
 int ArduinoRTC::getTime(int &year, int &month, int &day, int &hour, int &minute, int &second)
 {
     struct rtc_time time;
@@ -207,8 +245,19 @@ int ArduinoRTC::getTime(int &year, int &month, int &day, int &hour, int &minute,
     return 0;
 }
 
-// ------------------- ALARM API -------------------------
-
+/**
+ * @brief RTC library setter
+ *
+ * Used to set the alarm time through a single function call
+ *
+ * @param int year to be set
+ * @param int month to be set
+ * @param int day to be set
+ * @param int hour to be set
+ * @param int minute to be set
+ * @param int second to be set
+ * @return int operation result
+ */
 int ArduinoRTC::setAlarm(int year, int month, int day, int hour, int minute, int second, RTCAlarmCallback cb, void *user_data)
 {
     struct rtc_time alarm_time = {
@@ -240,6 +289,19 @@ int ArduinoRTC::setAlarm(int year, int month, int day, int hour, int minute, int
     return rtc_alarm_set_time(rtc_dev, alarmId, mask, &alarm_time);
 }
 
+/**
+ * @brief RTC library getter
+ *
+ * Used to get the time and date of the currently set alarm
+ *
+ * @param int reference to currently set year
+ * @param int reference to currently set month
+ * @param int reference to currently set day of month
+ * @param int reference to currently set hour
+ * @param int reference to currently set minute
+ * @param int reference to currently set second
+ * @return int operation result
+ */
 int ArduinoRTC::getAlarm(int &year, int &month, int &day, int &hour, int &minute, int &second)
 {
     struct rtc_time alarm_time;
@@ -258,6 +320,13 @@ int ArduinoRTC::getAlarm(int &year, int &month, int &day, int &hour, int &minute
     return 0;
 }
 
+/**
+ * @brief RTC utility function
+ *
+ * Used to cancel a previously set alarm
+ *
+ * @return int operation result
+ */
 int ArduinoRTC::cancelAlarm()
 {
     // Seting time with value zero cancels it
@@ -265,14 +334,30 @@ int ArduinoRTC::cancelAlarm()
     return rtc_alarm_set_time(rtc_dev, alarmId, 0, &dummy);
 }
 
+/**
+ * @brief RTC utility function
+ *
+ * Used to check if an alarm is currently set
+ *
+ * @return bool operation result, true for alarm pening, false otherwise
+ */
 bool ArduinoRTC::isAlarmPending()
 {
     int ret = rtc_alarm_is_pending(rtc_dev, alarmId);
     return ret > 0;
 }
 
-// ------------------- CALLBACKS -------------------------
-
+/**
+ * @brief RTC callback function
+ *
+ * This alarm callback wrapper is needed to make the connection between C-style low level driver function callabacks
+ * which need to be static and the objects derived from the RTC class;
+ * You do not need to call this direcly in the app
+ *
+ * @param const struct device *dev is the hardware device (not used at this level)
+ * @param uint16_t id is an event/alarm identifier
+ * @param void *user_data is a void pointer the user can set when registering the callback
+ */
 void ArduinoRTC::alarmCallbackWrapper(const struct device *dev, uint16_t id, void *user_data)
 {
     ArduinoRTC *self = static_cast<ArduinoRTC *>(user_data);
@@ -281,6 +366,14 @@ void ArduinoRTC::alarmCallbackWrapper(const struct device *dev, uint16_t id, voi
     }
 }
 
+/**
+ * @brief RTC utility function
+ *
+ * This function allows for updating the user callback and the message passed to it
+ *
+ * @param RTCUpdateCallback cb is the new callback which will be called in the app when the event fires later on
+ * @param void *user_data is a void pointer the user can set when registering the callback
+ */
 int ArduinoRTC::setUpdateCallback(RTCUpdateCallback cb, void *user_data)
 {
     userUpdateCallback = cb;
@@ -289,6 +382,14 @@ int ArduinoRTC::setUpdateCallback(RTCUpdateCallback cb, void *user_data)
     return rtc_update_set_callback(rtc_dev, ArduinoRTC::updateCallbackWrapper, this);
 }
 
+/**
+ * @brief RTC utility function
+ *
+ * This function is a wrapper which allows for connecting the low level driver and the registered callback with the instance of the object we use in the application sketch
+ *
+ * @param const struct device *dev is the hardware device (not used at this level)
+ * @param void *user_data is a void pointer the user can set when registering the callback
+ */
 void ArduinoRTC::updateCallbackWrapper(const struct device *dev, void *user_data)
 {
     ArduinoRTC *self = static_cast<ArduinoRTC *>(user_data);
@@ -297,13 +398,31 @@ void ArduinoRTC::updateCallbackWrapper(const struct device *dev, void *user_data
     }
 }
 
-// ------------------- CALIBRATION -------------------------
-
+/**
+ * @brief Sets the RTC calibration value.
+ *
+ * This function writes a calibration value to the RTC hardware to adjust
+ * timing accuracy. A positive or negative calibration factor may be applied,
+ * depending on whether the clock is running fast or slow.
+ *
+ * @param calibration The calibration adjustment value in parts per million (ppm).
+ * @return 0 if successful, or a negative error code on failure.
+ */
 int ArduinoRTC::setCalibration(int32_t calibration)
 {
     return rtc_set_calibration(rtc_dev, calibration);
 }
 
+
+/**
+ * @brief Retrieves the current RTC calibration value.
+ *
+ * This function reads the current calibration adjustment applied to the RTC.
+ *
+ * @param calibration Reference to an integer where the current calibration
+ *        value (in parts per million) will be stored.
+ * @return 0 if successful, or a negative error code on failure.
+ */
 int ArduinoRTC::getCalibration(int32_t &calibration)
 {
     return rtc_get_calibration(rtc_dev, &calibration);
@@ -311,12 +430,21 @@ int ArduinoRTC::getCalibration(int32_t &calibration)
 
 #elif defined(ARDUINO_NANO33BLE) || defined(ARDUINO_NICLA_SENSE_ME)
 
-// ------------------- NRF Boards --------------------------
-
 #define COUNTER_NODE DT_NODELABEL(rtc2)
 LOG_MODULE_REGISTER(ArduinoRTC);
 
-// Static callback handler
+/**
+ * @brief Static alarm handler for the RTC driver.
+ *
+ * This function acts as a static wrapper between the hardware interrupt and
+ * the user-defined callback. It retrieves the relevant `ArduinoRTC` instance
+ * from the provided `user_data` and invokes the user’s callback function.
+ *
+ * @param dev Pointer to the RTC device structure (hardware driver).
+ * @param chan_id The alarm channel identifier.
+ * @param ticks The current tick count at the time of the alarm.
+ * @param user_data Pointer to user-defined data (the ArduinoRTC instance).
+ */
 void ArduinoRTC::alarmHandler(const struct device *dev, uint8_t chan_id, uint32_t ticks, void *user_data)
 {
     ArduinoRTC *rtc = static_cast<ArduinoRTC *>(user_data);
@@ -325,6 +453,12 @@ void ArduinoRTC::alarmHandler(const struct device *dev, uint8_t chan_id, uint32_
     }
 }
 
+/**
+ * @brief Constructs an ArduinoRTC object.
+ *
+ * Initializes internal variables, sets default offsets, and retrieves
+ * the hardware RTC counter device.
+ */
 ArduinoRTC::ArduinoRTC()
 {
     counter_dev = DEVICE_DT_GET(COUNTER_NODE);
@@ -333,7 +467,13 @@ ArduinoRTC::ArduinoRTC()
     user_data = nullptr;
 }
 
-// Initialize the RTC
+/**
+ * @brief Initializes the RTC hardware interface.
+ *
+ * This function checks if the RTC device is ready and starts the counter.
+ *
+ * @return true if the device is ready and successfully started, false otherwise.
+ */
 bool ArduinoRTC::begin()
 {
     if (!device_is_ready(counter_dev)) {
@@ -344,6 +484,20 @@ bool ArduinoRTC::begin()
     return true;
 }
 
+/**
+ * @brief Sets the current RTC time.
+ *
+ * This function converts a date and time into epoch format and adjusts the
+ * internal time offset based on the current tick counter.
+ *
+ * @param year   The current year (e.g., 2025).
+ * @param month  The current month (1–12).
+ * @param day    The day of the month (1–31).
+ * @param hour   The hour (0–23).
+ * @param minute The minute (0–59).
+ * @param second The second (0–59).
+ * @return 0 if successful, or a negative error code if frequency or ticks are invalid.
+ */
 int ArduinoRTC::setTime(int year, int month, int day, int hour, int minute, int second)
 {
     time_t target = datetimeToEpoch(year, month, day, hour, minute, second);
@@ -360,6 +514,20 @@ int ArduinoRTC::setTime(int year, int month, int day, int hour, int minute, int 
     return 0;
 }
 
+/**
+ * @brief Retrieves the current RTC time.
+ *
+ * This function reads the current counter value, applies the time offset,
+ * and converts the epoch time to a human-readable date and time.
+ *
+ * @param year   Reference to store the current year.
+ * @param month  Reference to store the current month.
+ * @param day    Reference to store the current day.
+ * @param hour   Reference to store the current hour.
+ * @param minute Reference to store the current minute.
+ * @param second Reference to store the current second.
+ * @return 0 if successful.
+ */
 int ArduinoRTC::getTime(int &year, int &month, int &day, int &hour, int &minute, int &second)
 {
     uint32_t ticks;
@@ -372,6 +540,22 @@ int ArduinoRTC::getTime(int &year, int &month, int &day, int &hour, int &minute,
     return 0;
 }
 
+/**
+ * @brief Sets an RTC alarm.
+ *
+ * This function schedules an alarm for a specific date and time. When the
+ * target time is reached, the registered user callback is invoked.
+ *
+ * @param year      Target alarm year.
+ * @param month     Target alarm month.
+ * @param day       Target alarm day.
+ * @param hour      Target alarm hour.
+ * @param minute    Target alarm minute.
+ * @param second    Target alarm second.
+ * @param callback  Function pointer to the user-defined callback.
+ * @param cb_user_data Pointer to user data passed to the callback when triggered.
+ * @return 0 if successful, or a negative error code if the target time is invalid.
+ */
 int ArduinoRTC::setAlarm(int year, int month, int day, int hour, int minute, int second,
                                 void (*callback)(const struct device *dev, uint8_t chan_id, uint32_t ticks, void *user_data),
                                 void *cb_user_data)
@@ -410,7 +594,12 @@ int ArduinoRTC::setAlarm(int year, int month, int day, int hour, int minute, int
     return 0;
 }
 
-// Cancel alarm
+/**
+ * @brief Cancels the currently scheduled alarm.
+ *
+ * This function stops any active alarm and clears the registered callback
+ * and user data.
+ */
 void ArduinoRTC::cancelAlarm()
 {
     counter_cancel_channel_alarm(counter_dev, 0);
@@ -428,6 +617,20 @@ static bool is_leap(int year) {
     return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
 }
 
+/**
+ * @brief Converts a date and time to Unix epoch seconds.
+ *
+ * This utility function calculates the number of seconds since
+ * January 1, 1970 (the Unix epoch) for the provided date and time.
+ *
+ * @param year   Year value (e.g., 2025).
+ * @param month  Month value (1–12).
+ * @param day    Day value (1–31).
+ * @param hour   Hour value (0–23).
+ * @param minute Minute value (0–59).
+ * @param second Second value (0–59).
+ * @return Corresponding epoch time in seconds.
+ */
 time_t ArduinoRTC::datetimeToEpoch(int year, int month, int day, int hour, int minute, int second)
 {
     int y = year;
@@ -450,6 +653,20 @@ time_t ArduinoRTC::datetimeToEpoch(int year, int month, int day, int hour, int m
     return (((days * 24 + hour) * 60 + minute) * 60 + second);
 }
 
+/**
+ * @brief Converts Unix epoch seconds to a date and time.
+ *
+ * This utility function breaks down a given epoch timestamp into a
+ * human-readable calendar date and time.
+ *
+ * @param t       Epoch time in seconds.
+ * @param year    Reference to store the year.
+ * @param month   Reference to store the month.
+ * @param day     Reference to store the day.
+ * @param hour    Reference to store the hour.
+ * @param minute  Reference to store the minute.
+ * @param second  Reference to store the second.
+ */
 void ArduinoRTC::epochToDatetime(time_t t, int &year, int &month, int &day, int &hour, int &minute, int &second)
 {
     time_t seconds_in_day = t % 86400;
