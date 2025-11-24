@@ -161,7 +161,7 @@ pluggable_monitor.required.serial=builtin:serial-monitor
 #
 # OpenOCD
 #
-tools.openocd.path={runtime.tools.openocd-0.11.0-arduino2.path}
+tools.openocd.path={runtime.tools.openocd-0.12.0-arduino1-static.path}
 tools.openocd.cmd=bin/openocd
 tools.openocd.cmd.windows=bin/openocd.exe
 
