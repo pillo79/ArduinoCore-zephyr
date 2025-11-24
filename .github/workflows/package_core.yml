@@ -45,6 +45,7 @@ jobs:
           echo "SUB_ARCHES=$(jq -c 'map(.subarch) | unique' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
 
           (cd && tar cphf - .cmake work zephyr-sdk-* | zstd > build-env.tar.zstd)
+          tar cphf - cores/arduino/api | zstd > arduino-api.tar.zstd
 
       - name: Archive build environment
         uses: actions/upload-artifact@v4
@@ -52,14 +53,25 @@ jobs:
           name: build-env
           path: ~/build-env.tar.zstd
 
-  package-core:
-    name: Build and package cores
+      - name: Archive API snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: arduino-api
+          path: arduino-api.tar.zstd
+
+  build-board:
+    name: Build loader for ${{ matrix.board }}
     runs-on: ubuntu-latest
     needs:
       - build-env
     env:
       CCACHE_IGNOREOPTIONS: -specs=*
-      CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
+      OUTPUT_ARTIFACT: binaries-${{ matrix.board }}-${{ needs.build-env.outputs.CORE_HASH }}
+    strategy:
+      matrix:
+        include:
+          ${{ fromJSON( needs.build-env.outputs.ALL_BOARD_DATA ) }}
+      fail-fast: false
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -75,45 +87,79 @@ jobs:
         with:
           verbose: 1
 
-      - name: Build variants
+      - name: Build loader
         shell: bash
         run: |
-          ./extra/build_all.sh -f
+          ./extra/build.sh ${{ matrix.board }}
 
-      - name: Package cores
+      - name: Package board binaries
         run: |
-          jq -cr '.[]' <<< ${ARTIFACTS} | while read -r artifact; do
-            ARTIFACT_NAME=ArduinoCore-${artifact}-${CORE_HASH}
-            ./extra/package_core.sh ${artifact} ${CORE_TAG} distrib/${ARTIFACT_NAME}.tar.bz2
-          done
+          tar chf - firmwares/*${{ matrix.variant }}* variants/${{ matrix.variant }}/ | zstd > ${OUTPUT_ARTIFACT}.tar.zstd
 
-      - name: Archive cores
+      - name: Archive board binaries
         uses: actions/upload-artifact@v4
         with:
-          name: ArduinoCore-archives-${{ env.CORE_HASH }}
-          path: distrib/*.tar.bz2
+          name: ${{ env.OUTPUT_ARTIFACT }}
+          path: ${{ env.OUTPUT_ARTIFACT }}.tar.zstd
 
-  split-core:
-    name: Split off ${{ matrix.artifact }}
+  package-core:
+    name: Package ${{ matrix.artifact }}
     runs-on: ubuntu-latest
     needs:
       - build-env
-      - package-core
+      - build-board
     env:
-      ALL_CORES_ARTIFACT: ArduinoCore-archives-${{ needs.build-env.outputs.CORE_HASH }}
       CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}
+      CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
     strategy:
       matrix:
         artifact: ${{ fromJSON( needs.build-env.outputs.ARTIFACTS ) }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: 0
+          persist-credentials: false
+          fetch-tags: true
+
       - uses: actions/download-artifact@v4
         with:
-          name: ${{ env.ALL_CORES_ARTIFACT }}
+          path: .
+          name: arduino-api
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: .
+          pattern: binaries-*
+          merge-multiple: true
+
+      - name: Package core
+        run: |
+          rm -f cores/arduino/api # remove broken symlink
+          tar --use-compress-program=unzstd -xpf arduino-api.tar.zstd
+          for f in binaries-*.tar.zstd ; do
+            tar --use-compress-program=unzstd -xpf $f
+          done
+          ./extra/package_core.sh ${{ matrix.artifact }} ${CORE_TAG} distrib/${CORE_ARTIFACT}.tar.bz2
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CORE_ARTIFACT }}
-          path: ${{ env.CORE_ARTIFACT }}.tar.bz2
+          path: distrib/${{ env.CORE_ARTIFACT }}.tar.bz2
+
+  cleanup-build:
+    name: Clean up intermediates
+    runs-on: ubuntu-latest
+    needs:
+      - package-core
+    steps:
+      - uses: geekyeggo/delete-artifact@v5.1.0
+        with:
+          name: |
+            arduino-api
+            binaries-*
+            build-env
+          failOnError: false
 
   test-core:
     name: Test ${{ matrix.subarch }}:${{ matrix.board }}
@@ -121,7 +167,6 @@ jobs:
     needs:
       - build-env
       - package-core
-      - split-core
     strategy:
       matrix:
         include:
@@ -277,12 +322,12 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    env:
-      ALL_CORES_ARTIFACT: ArduinoCore-archives-${{ needs.build-env.outputs.CORE_HASH }}
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: ${{ env.ALL_CORES_ARTIFACT }}
+          path: .
+          pattern: ArduinoCore-*
+          merge-multiple: true
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -296,16 +341,14 @@ jobs:
             aws s3 cp $f s3://${{ secrets.S3_BUCKET }}/
           done
 
-  publish-json:
-    name: Publish jsons
+  prepare-json:
+    name: Prepare jsons
     runs-on: ubuntu-latest
-    if: ${{ github.repository == 'arduino/ArduinoCore-zephyr' }}
     needs:
       - build-env
       - package-core
       - test-core
     env:
-      ALL_CORES_ARTIFACT: ArduinoCore-archives-${{ needs.build-env.outputs.CORE_HASH }}
       CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
       CORE_HASH: ${{ needs.build-env.outputs.CORE_HASH }}
       ARTIFACTS: ${{ needs.build-env.outputs.ARTIFACTS }}
@@ -318,7 +361,9 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: ${{ env.ALL_CORES_ARTIFACT }}
+          path: .
+          pattern: ArduinoCore-*
+          merge-multiple: true
 
       - name: Prepare package index snippets
         run: |
@@ -333,18 +378,3 @@ jobs:
         with:
           name: ArduinoCore-zephyr-${{ env.CORE_TAG }}-jsons
           path: ArduinoCore-*-${{ env.CORE_TAG }}.json
-
-  cleanup-artifacts:
-    runs-on: ubuntu-latest
-    needs:
-      - build-env
-      - package-core
-      - publish-core
-      - publish-json
-    if: ${{ !cancelled() }}
-    steps:
-      - name: Clean up intermediate artifacts
-        uses: geekyeggo/delete-artifact@v5.1.0
-        with:
-          name: ArduinoCore-archives-${{ needs.build-env.outputs.CORE_HASH }}
-          failOnError: false
