@@ -90,16 +90,29 @@ jobs:
       - name: Build loader
         shell: bash
         run: |
-          ./extra/build.sh ${{ matrix.board }}
+          if ! ./extra/build.sh ${{ matrix.board }} 2> >(tee error.log) ; then
+            echo "### :x: ${{ matrix.board }} (\`${{ matrix.variant }}\`) build errors" > $GITHUB_STEP_SUMMARY
+            echo >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            cat error.log >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
 
       - name: Package board binaries
+        if: ${{ !cancelled() }}
         run: |
-          tar chf - firmwares/*${{ matrix.variant }}* variants/${{ matrix.variant }}/ | zstd > ${OUTPUT_ARTIFACT}.tar.zstd
+          tar chf - \
+            firmwares/*${{ matrix.variant }}* \
+            variants/${{ matrix.variant }}/ \
+            ${{ (job.status == 'failure') && format('build/{0}/', matrix.variant) }} \
+          | zstd > ${OUTPUT_ARTIFACT}.tar.zstd
 
       - name: Archive board binaries
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.OUTPUT_ARTIFACT }}
+          name: ${{ format('{0}{1}', (job.status == 'failure') && 'failed-' || '', env.OUTPUT_ARTIFACT) }}
           path: ${{ env.OUTPUT_ARTIFACT }}.tar.zstd
 
   package-core:
@@ -114,6 +127,8 @@ jobs:
     strategy:
       matrix:
         artifact: ${{ fromJSON( needs.build-env.outputs.ARTIFACTS ) }}
+      fail-fast: false
+    if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -143,6 +158,7 @@ jobs:
           ./extra/package_core.sh ${{ matrix.artifact }} ${CORE_TAG} distrib/${CORE_ARTIFACT}.tar.bz2
 
       - uses: actions/upload-artifact@v4
+        if: ${{ success() || failure() }}
         with:
           name: ${{ env.CORE_ARTIFACT }}
           path: distrib/${{ env.CORE_ARTIFACT }}.tar.bz2
@@ -152,6 +168,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - package-core
+    if: always()
     steps:
       - uses: geekyeggo/delete-artifact@v5.1.0
         with:
@@ -176,6 +193,7 @@ jobs:
       PLAT: arduino:${{ matrix.subarch }}
       FQBN: arduino:${{ matrix.subarch }}:${{ matrix.board }}
       CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}
+    if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -245,7 +263,7 @@ jobs:
       - build-env
       - package-core
       - test-core
-    if: ${{ !cancelled() && needs.package-core.result == 'success' }}
+    if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     env:
       ALL_BOARD_DATA: ${{ needs.build-env.outputs.ALL_BOARD_DATA }}
     steps:

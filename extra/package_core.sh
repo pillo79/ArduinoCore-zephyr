@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+RET=0
 
 if [ -z "$1" ]; then
 	echo "Usage: $0 ARTIFACT VERSION [OUTPUT_FILE]"
@@ -72,7 +73,11 @@ declutter_file extra/artifacts/$ARTIFACT.inc >> ${TEMP_INC}
 for variant in $INCLUDED_VARIANTS ; do
 	echo "- ${variant}"
 	echo "variants/${variant}/" >> ${TEMP_INC}
-	ls firmwares/zephyr-${variant}.* >> ${TEMP_INC}
+	# add the firmwares, if some are missing notify at end
+	if ! ls firmwares/zephyr-${variant}.* >> ${TEMP_INC} ; then
+		log_msg error "No firmware for '${variant}' found."
+		RET=3
+	fi
 done
 
 # create the list of files and directories to exclude
@@ -88,3 +93,5 @@ tar -cjhf ${OUTPUT_FILE} -X ${TEMP_EXC} -T ${TEMP_INC} \
 rm -f ${TEMP_INC} ${TEMP_EXC} ${TEMP_BOARDS} ${TEMP_PLATFORM}
 
 log_msg endgroup
+
+exit $RET
