@@ -5,6 +5,17 @@
 	};
 };
 
+/{
+	chosen {
+		zephyr,log-uart = &log_uarts;
+	};
+
+	log_uarts: log_uarts {
+		compatible = "zephyr,log-uart";
+		uarts = <&uart9 &board_cdc_acm_uart>;
+	};
+};
+
 &flash0 {
 	partitions {
 		mcuboot: partition@0 {
