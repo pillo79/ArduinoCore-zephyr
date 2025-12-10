@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+RET=0
 
 if [ -z "$1" ]; then
 	echo "Usage: $0 ARTIFACT VERSION [OUTPUT_FILE]"
@@ -15,6 +16,14 @@ fi
 ARTIFACT=$1
 VERSION=$2
 OUTPUT_FILE=${3:-distrib/${ARTIFACT}-${VERSION}.tar.bz2}
+
+log_msg() {
+	if [ -n $GITHUB_WORKSPACE ] ; then
+		echo "::$1::$2"
+	else
+		echo "$2"
+	fi
+}
 
 # we use variants for include because we filter on file paths
 # and boards for exclude because we want to remove matching lines in boards.txt
@@ -31,7 +40,7 @@ else
 	EXCLUDED_BOARDS=$(echo ${BOARD_DETAILS} | jq -cr "map(select(.artifact != \"$ARTIFACT\")) | .[].board")
 fi
 
-[ -n $GITHUB_WORKSPACE ] && echo "::group::Packaging ${ARTIFACT_NAME:-all variants} ($(basename $OUTPUT_FILE))"
+log_msg group "Packaging ${ARTIFACT_NAME:-all variants} ($(basename $OUTPUT_FILE))"
 
 # create a temporary boards.txt file with the correct list of boards
 TEMP_BOARDS=$(mktemp -p . | sed 's/\.\///')
@@ -50,6 +59,7 @@ cat platform.txt > ${TEMP_PLATFORM}
 sed -ie "s/^version=.*/version=$(extra/get_core_version.sh)/" ${TEMP_PLATFORM}
 
 declutter_file() {
+	# remove comments and empty lines
 	[ -f "$1" ] || return 0
 	cat "$1" | sed -e 's/\s*#.*//' | grep -v '^\s*$'
 }
@@ -61,9 +71,13 @@ echo ${TEMP_PLATFORM} >> ${TEMP_INC}
 declutter_file extra/artifacts/_common.inc >> ${TEMP_INC}
 declutter_file extra/artifacts/$ARTIFACT.inc >> ${TEMP_INC}
 for variant in $INCLUDED_VARIANTS ; do
-	echo "::info::\`${variant}\`"
+	echo "- ${variant}"
 	echo "variants/${variant}/" >> ${TEMP_INC}
-	ls firmwares/zephyr-${variant}.* >> ${TEMP_INC}
+	# add the firmwares, if some are missing notify at end
+	if ! ls firmwares/zephyr-${variant}.* >> ${TEMP_INC} ; then
+		log_msg error "No firmware for '${variant}' found."
+		RET=3
+	fi
 done
 
 # create the list of files and directories to exclude
@@ -78,4 +92,6 @@ tar -cjhf ${OUTPUT_FILE} -X ${TEMP_EXC} -T ${TEMP_INC} \
 	--transform "s,^,ArduinoCore-zephyr/,"
 rm -f ${TEMP_INC} ${TEMP_EXC} ${TEMP_BOARDS} ${TEMP_PLATFORM}
 
-[ -n $GITHUB_WORKSPACE ] && echo "::endgroup::"
+log_msg endgroup
+
+exit $RET
