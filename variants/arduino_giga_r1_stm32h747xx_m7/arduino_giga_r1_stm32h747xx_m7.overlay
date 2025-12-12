@@ -463,7 +463,8 @@
 						<&gpioz 2 0>,			/* analog only A10 */
 						<&gpioz 3 0>;			/* analog only A11 */
 
-		builtin-led-gpios = <&gpioi 12 GPIO_ACTIVE_LOW>,
+		builtin-led-gpios = <&gpioj 13 GPIO_ACTIVE_LOW>,
+                        <&gpioi 12 GPIO_ACTIVE_LOW>,
                         <&gpioj 13 GPIO_ACTIVE_LOW>,
                         <&gpioe 3 GPIO_ACTIVE_LOW>;
 
