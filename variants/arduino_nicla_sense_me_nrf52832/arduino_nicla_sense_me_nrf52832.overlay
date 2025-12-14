@@ -30,6 +30,12 @@
 
 		builtin-led-gpios = <&gpio0 10 0>;		// TODO: fixme: use real i2c led (will need some magic like PureAnalog)
 
+		adc-pin-gpios = <&gpio0 2 0>,				// 10: A0 (AIN0)
+				<&gpio0 30 0>;				// 11: A1 (AIN6)
+
+		io-channels =	<&adc 0>,
+				<&adc 6>;
+
 		serials = <&uart0>;
 		i2cs = <&i2c1>;
 		spis = <&spi1>;
