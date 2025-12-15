@@ -1,12 +1,12 @@
 #include "stdint.h"
 
-__attribute__((packed)) struct bootanimation_user_data {
+struct bootanimation_user_data {
 	size_t magic; // must be 0xBA for bootanimation
 	size_t len_loop;
 	size_t len_end;
 	size_t empty;
 	uint8_t *buf_loop;
-};
+} __attribute__((packed));
 
 unsigned int bootanimation_end_len = 3120;
 unsigned int bootanimation_len = 18720;

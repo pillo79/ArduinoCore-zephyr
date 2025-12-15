@@ -269,7 +269,7 @@ private:
 	IPAddress _send_to_ip;
 	uint16_t _send_to_port;
 	std::vector<uint8_t> _tx_data;
-	int _rx_pkt_list_size = 10;
+	size_t _rx_pkt_list_size = 10;
 
 	/* UDP RECEPTION */
 	class UdpRxPacket {
