@@ -34,7 +34,7 @@ private:
 protected:
 	struct net_if *netif = nullptr;
 	int dhcp();
-	void enable_dhcpv4_server(struct net_if *netif, char *_netmask = "255.255.255.0");
+	void enable_dhcpv4_server(struct net_if *netif, const char *_netmask = "255.255.255.0");
 
 public:
 	NetworkInterface() {
@@ -57,7 +57,7 @@ public:
 	void setGatewayIP(const IPAddress gateway);
 	void setDnsServerIP(const IPAddress dns_server);
 
-	int begin(bool blocking = true, uint32_t additional_event_mask = 0);
+	int begin(bool blocking = true, uint64_t additional_event_mask = 0);
 
 	bool disconnect();
 };

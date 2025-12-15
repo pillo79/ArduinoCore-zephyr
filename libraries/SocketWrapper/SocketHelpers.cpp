@@ -64,7 +64,7 @@ int NetworkInterface::dhcp() {
 	return 0;
 }
 
-void NetworkInterface::enable_dhcpv4_server(struct net_if *netif, char *_netmask) {
+void NetworkInterface::enable_dhcpv4_server(struct net_if *netif, const char *_netmask) {
 	static struct in_addr addr;
 	static struct in_addr netmaskAddr;
 
@@ -146,7 +146,7 @@ void NetworkInterface::setMACAddress(const uint8_t *mac) {
 	net_if_up(netif); // Bring the interface back up after changing the MAC address
 }
 
-int NetworkInterface::begin(bool blocking, uint32_t additional_event_mask) {
+int NetworkInterface::begin(bool blocking, uint64_t additional_event_mask) {
 	dhcp();
 	int ret = net_mgmt_event_wait_on_iface(netif, NET_EVENT_IPV4_ADDR_ADD | additional_event_mask,
 										   NULL, NULL, NULL, blocking ? K_FOREVER : K_SECONDS(1));
