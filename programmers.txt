@@ -15,3 +15,9 @@ jlink.program.tool=pyocd
 jlink.program.tool.default=pyocd
 jlink.program.extra_params=
 jlink.programmer.protocol=jlink
+
+openocd.name=OpenOCD
+openocd.protocol=SWD
+openocd.program.tool=openocd
+openocd.program.tool.default=openocd
+openocd.program.extra_params=

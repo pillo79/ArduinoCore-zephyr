@@ -568,6 +568,74 @@ opta.debug.server.openocd.scripts.2=target/stm32h7x_dual_bank.cfg
 opta.debug.cortex-debug.custom.request=attach
 opta.debug.svd_file={runtime.platform.path}/svd/STM32H747_CM7.svd
 
+##########################################################################################
+
+nano_matter.name=Arduino Nano Matter
+nano_matter.build.core=arduino
+nano_matter.build.crossprefix=arm-zephyr-eabi-
+nano_matter.build.compiler_path={runtime.tools.arm-zephyr-eabi-0.16.8.path}/bin/
+
+nano_matter.menu.debug.false=Standard
+nano_matter.menu.debug.true=Debug
+nano_matter.menu.debug.true.build.zsk_args.debug=-debug
+
+nano_matter.menu.link_mode.dynamic=Dynamic
+nano_matter.menu.link_mode.static=Static
+nano_matter.menu.link_mode.static.build.link_mode=static
+nano_matter.menu.link_mode.static.upload.extension=bin-zsk.bin
+
+nano_matter.build.zephyr_target=arduino_nano_matter
+nano_matter.build.zephyr_args=
+nano_matter.build.zephyr_hals=hal_silabs
+nano_matter.build.variant=arduino_nano_matter_mgm240sd22vna
+nano_matter.build.mcu=cortex-m33
+nano_matter.build.fpu=-mfpu=fpv4-sp-d16
+nano_matter.build.architecture=cortex-m33
+
+nano_matter.build.float-abi=-mfloat-abi=hard
+nano_matter.build.extra_flags=
+nano_matter.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
+nano_matter.build.architecture=cortex-m33
+nano_matter.build.board=ARDUINO_NANO_MATTER
+nano_matter.vid.0=0x2341
+nano_matter.pid.0=0x0072
+nano_matter.upload_port.0.vid=0x2341
+nano_matter.upload_port.0.pid=0x0072
+
+nano_matter.upload.tool=openocd
+nano_matter.upload.tool.default=openocd
+nano_matter.upload.config=-f target/efm32s2_g23.cfg
+nano_matter.upload.programmer=-f interface/cmsis-dap.cfg
+nano_matter.upload.maximum_data_size=262144
+nano_matter.upload.maximum_size=1572864
+nano_matter.upload.address=0x080C4000
+nano_matter.upload.protocol=SWD
+nano_matter.upload.setup_command=
+nano_matter.upload.use_1200bps_touch=false
+nano_matter.upload.wait_for_upload_port=false
+nano_matter.upload.native_usb=false
+
+nano_matter.bootloader.tool=openocd
+nano_matter.bootloader.tool.default=openocd
+nano_matter.bootloader.vid=0x2341
+nano_matter.bootloader.pid=0x0072
+nano_matter.bootloader.interface=0
+nano_matter.bootloader.file=zephyr-{build.variant}.hex
+nano_matter.bootloader.target=arduino_nano_matter
+
+nano_matter.debug.server=openocd
+nano_matter.debug.server.openocd.scripts.0=interface/cmsis-dap.cfg
+nano_matter.debug.server.openocd.scripts.1=target/efm32s2_g23.cfg
+nano_matter.debug.cortex-debug.custom.postAttachCommands.0=monitor reset halt
+#nano_matter.debug.cortex-debug.custom.postAttachCommands.1=monitor reset_config srst_nogate
+#nano_matter.debug.cortex-debug.custom.postAttachCommands.2=monitor gdb_breakpoint_override hard
+nano_matter.debug.cortex-debug.custom.postAttachCommands.3=monitor gdb_sync
+nano_matter.debug.cortex-debug.custom.postAttachCommands.4=c
+nano_matter.debug.cortex-debug.custom.overrideRestartCommands.0=monitor reset halt
+nano_matter.debug.cortex-debug.custom.overrideRestartCommands.1=monitor gdb_sync
+nano_matter.debug.cortex-debug.custom.overrideRestartCommands.2=c
+nano_matter.debug.cortex-debug.custom.request=attach
+
 ##############################################################################################################
 
 unoq.name=Arduino UNO Q

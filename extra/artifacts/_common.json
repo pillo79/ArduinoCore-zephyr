@@ -46,6 +46,11 @@
       "packager": "arduino",
       "name": "remoteocd",
       "version": "0.0.4-rc.4"
+    },
+    {
+      "packager": "SiliconLabs",
+      "name": "openocd",
+      "version": "0.12.0-arduino1-static"
     }
   ]
 }
