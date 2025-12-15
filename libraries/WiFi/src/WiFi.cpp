@@ -84,6 +84,7 @@ int WiFiClass::status() {
 
 int8_t WiFiClass::scanNetworks() {
 	// TODO: borrow code from mbed core for scan results handling
+	return 0;
 }
 
 char *WiFiClass::SSID() {

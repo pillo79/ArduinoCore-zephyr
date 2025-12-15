@@ -31,12 +31,16 @@ uint32_t FrameBuffer::getBufferSize() {
 	if (this->vbuf) {
 		return this->vbuf->bytesused;
 	}
+
+	return 0;
 }
 
 uint8_t *FrameBuffer::getBuffer() {
 	if (this->vbuf) {
 		return this->vbuf->buffer;
 	}
+
+	return NULL;
 }
 
 Camera::Camera() : vdev(NULL), byte_swap(false), yuv_to_gray(false) {

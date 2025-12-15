@@ -163,7 +163,6 @@ void NetworkInterface::config(const IPAddress ip, const IPAddress dns_server,
 	setDnsServerIP(dns_server);
 	setGatewayIP(gateway);
 	setSubnetMask(subnet);
-	return;
 }
 
 void NetworkInterface::setLocalIP(const IPAddress ip) {
@@ -175,7 +174,6 @@ void NetworkInterface::setLocalIP(const IPAddress ip) {
 		return;
 	}
 	LOG_INF("Local IP address set: %s", ip.toString().c_str());
-	return;
 }
 
 void NetworkInterface::setSubnetMask(const IPAddress subnet) {
