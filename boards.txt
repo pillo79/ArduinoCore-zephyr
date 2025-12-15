@@ -572,10 +572,6 @@ nano_matter.build.core=arduino
 nano_matter.build.crossprefix=arm-zephyr-eabi-
 nano_matter.build.compiler_path={runtime.tools.arm-zephyr-eabi-0.16.8.path}/bin/
 
-nano_matter.menu.debug.false=Standard
-nano_matter.menu.debug.true=Debug
-nano_matter.menu.debug.true.build.zsk_args.debug=-debug
-
 nano_matter.menu.link_mode.dynamic=Dynamic
 nano_matter.menu.link_mode.static=Static
 nano_matter.menu.link_mode.static.build.link_mode=static
