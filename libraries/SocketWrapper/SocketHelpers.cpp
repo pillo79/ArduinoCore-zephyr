@@ -10,6 +10,8 @@ void NetworkInterface::event_handler(struct net_mgmt_event_callback *cb, uint64_
 									 struct net_if *iface) {
 	int i = 0;
 
+	ARG_UNUSED(cb);
+
 	if (mgmt_event != NET_EVENT_IPV4_ADDR_ADD) {
 		return;
 	}
@@ -37,6 +39,10 @@ void NetworkInterface::event_handler(struct net_mgmt_event_callback *cb, uint64_
 void NetworkInterface::option_handler(struct net_dhcpv4_option_callback *cb, size_t length,
 									  enum net_dhcpv4_msg_type msg_type, struct net_if *iface) {
 	char buf[NET_IPV4_ADDR_LEN];
+
+	ARG_UNUSED(length);
+	ARG_UNUSED(msg_type);
+	ARG_UNUSED(iface);
 
 	LOG_INF("DHCP Option %d: %s", cb->option, net_addr_ntop(AF_INET, cb->data, buf, sizeof(buf)));
 }
@@ -185,9 +191,9 @@ void NetworkInterface::setGatewayIP(const IPAddress gateway) {
 	gw_addr.s_addr = gateway;
 	net_if_ipv4_set_gw(netif, &gw_addr);
 	LOG_INF("Gateway IP set: %s", gateway.toString().c_str());
-	return;
 }
 
 void NetworkInterface::setDnsServerIP(const IPAddress dns_server) {
-	return; // DNS server dynamic configuration is not supported
+	// DNS server dynamic configuration is not supported
+	ARG_UNUSED(dns_server);
 }

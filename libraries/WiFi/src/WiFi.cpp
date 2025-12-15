@@ -12,6 +12,8 @@ String WiFiClass::firmwareVersion() {
 
 int WiFiClass::begin(const char *ssid, const char *passphrase, wl_enc_type security,
 					 bool blocking) {
+	ARG_UNUSED(security); // currently unsupported
+
 	sta_iface = net_if_get_wifi_sta();
 	netif = sta_iface;
 	sta_config.ssid = (const uint8_t *)ssid;
