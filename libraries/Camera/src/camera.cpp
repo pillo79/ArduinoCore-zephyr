@@ -43,7 +43,7 @@ uint8_t *FrameBuffer::getBuffer() {
 	return NULL;
 }
 
-Camera::Camera() : vdev(NULL), byte_swap(false), yuv_to_gray(false) {
+Camera::Camera() : byte_swap(false), yuv_to_gray(false), vdev(NULL) {
 	for (size_t i = 0; i < ARRAY_SIZE(this->vbuf); i++) {
 		this->vbuf[i] = NULL;
 	}
