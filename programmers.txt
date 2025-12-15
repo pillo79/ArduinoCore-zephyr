@@ -2,8 +2,8 @@ cmsis-dap.name=ARM CMSIS-DAP compatible
 cmsis-dap.communication=USB
 cmsis-dap.protocol=
 cmsis-dap.program.protocol=
-cmsis-dap.program.tool=pyocd
-cmsis-dap.program.tool.default=pyocd
+cmsis-dap.program.tool=openocd
+cmsis-dap.program.tool.default=openocd
 cmsis-dap.program.extra_params=
 cmsis-dap.programmer.protocol=cmsis-dap
 
