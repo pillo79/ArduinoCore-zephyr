@@ -43,7 +43,8 @@
 				<&gpioc 4 0>, /* 26 Serial Tx */
 				<&gpioc 5 0>; /* 27 Serial Rx */
 
-		builtin-led-gpios = <&gpioc 1 GPIO_ACTIVE_LOW>, /* 22 LED R */
+		builtin-led-gpios = <&gpioc 2 GPIO_ACTIVE_LOW>, /* 23 LED G */
+							<&gpioc 1 GPIO_ACTIVE_LOW>, /* 22 LED R */
 							<&gpioc 2 GPIO_ACTIVE_LOW>, /* 23 LED G */
 							<&gpioc 3 GPIO_ACTIVE_LOW>; /* 24 LED B */
 
