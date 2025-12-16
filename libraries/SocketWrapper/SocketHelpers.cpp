@@ -10,6 +10,8 @@ void NetworkInterface::event_handler(struct net_mgmt_event_callback *cb, uint64_
 									 struct net_if *iface) {
 	int i = 0;
 
+	ARG_UNUSED(cb);
+
 	if (mgmt_event != NET_EVENT_IPV4_ADDR_ADD) {
 		return;
 	}
@@ -38,6 +40,10 @@ void NetworkInterface::option_handler(struct net_dhcpv4_option_callback *cb, siz
 									  enum net_dhcpv4_msg_type msg_type, struct net_if *iface) {
 	char buf[NET_IPV4_ADDR_LEN];
 
+	ARG_UNUSED(length);
+	ARG_UNUSED(msg_type);
+	ARG_UNUSED(iface);
+
 	LOG_INF("DHCP Option %d: %s", cb->option, net_addr_ntop(AF_INET, cb->data, buf, sizeof(buf)));
 }
 
@@ -58,7 +64,7 @@ int NetworkInterface::dhcp() {
 	return 0;
 }
 
-void NetworkInterface::enable_dhcpv4_server(struct net_if *netif, char *_netmask) {
+void NetworkInterface::enable_dhcpv4_server(struct net_if *netif, const char *_netmask) {
 	static struct in_addr addr;
 	static struct in_addr netmaskAddr;
 
@@ -140,7 +146,7 @@ void NetworkInterface::setMACAddress(const uint8_t *mac) {
 	net_if_up(netif); // Bring the interface back up after changing the MAC address
 }
 
-int NetworkInterface::begin(bool blocking, uint32_t additional_event_mask) {
+int NetworkInterface::begin(bool blocking, uint64_t additional_event_mask) {
 	dhcp();
 	int ret = net_mgmt_event_wait_on_iface(netif, NET_EVENT_IPV4_ADDR_ADD | additional_event_mask,
 										   NULL, NULL, NULL, blocking ? K_FOREVER : K_SECONDS(1));
@@ -157,7 +163,6 @@ void NetworkInterface::config(const IPAddress ip, const IPAddress dns_server,
 	setDnsServerIP(dns_server);
 	setGatewayIP(gateway);
 	setSubnetMask(subnet);
-	return;
 }
 
 void NetworkInterface::setLocalIP(const IPAddress ip) {
@@ -169,13 +174,17 @@ void NetworkInterface::setLocalIP(const IPAddress ip) {
 		return;
 	}
 	LOG_INF("Local IP address set: %s", ip.toString().c_str());
-	return;
 }
 
 void NetworkInterface::setSubnetMask(const IPAddress subnet) {
 	struct in_addr netmask_addr;
 	netmask_addr.s_addr = subnet;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+	// TODO: store the address that was manually set and replace this call
+	// with net_if_ipv4_set_netmask_by_addr
 	net_if_ipv4_set_netmask(netif, &netmask_addr);
+#pragma GCC diagnostic pop
 	LOG_INF("Subnet mask set: %s", subnet.toString().c_str());
 	return;
 }
@@ -185,9 +194,9 @@ void NetworkInterface::setGatewayIP(const IPAddress gateway) {
 	gw_addr.s_addr = gateway;
 	net_if_ipv4_set_gw(netif, &gw_addr);
 	LOG_INF("Gateway IP set: %s", gateway.toString().c_str());
-	return;
 }
 
 void NetworkInterface::setDnsServerIP(const IPAddress dns_server) {
-	return; // DNS server dynamic configuration is not supported
+	// DNS server dynamic configuration is not supported
+	ARG_UNUSED(dns_server);
 }

@@ -110,10 +110,10 @@ void loop() {
     Serial.print("Received ");
     Serial.print(byteCount);
     Serial.print(" bytes in ");
-    float seconds = (float)(endMicros - beginMicros) / 1000000.0;
+    float seconds = (endMicros - beginMicros) / 1000000.0f;
     Serial.print(seconds, 4);
-    float rate = (float)byteCount / seconds / 1000.0;
     Serial.print(", rate = ");
+    float rate = byteCount / 1000.0f / seconds;
     Serial.print(rate);
     Serial.print(" kbytes/second");
     Serial.println();

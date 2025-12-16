@@ -580,6 +580,7 @@ nano_matter.menu.link_mode.static.upload.extension=bin-zsk.bin
 nano_matter.build.zephyr_target=arduino_nano_matter
 nano_matter.build.zephyr_args=
 nano_matter.build.zephyr_hals=hal_silabs
+nano_matter.build.artifact=zephyr_main
 nano_matter.build.variant=arduino_nano_matter_mgm240sd22vna
 nano_matter.build.mcu=cortex-m33
 nano_matter.build.fpu=-mfpu=fpv4-sp-d16

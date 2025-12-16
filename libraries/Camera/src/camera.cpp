@@ -31,15 +31,19 @@ uint32_t FrameBuffer::getBufferSize() {
 	if (this->vbuf) {
 		return this->vbuf->bytesused;
 	}
+
+	return 0;
 }
 
 uint8_t *FrameBuffer::getBuffer() {
 	if (this->vbuf) {
 		return this->vbuf->buffer;
 	}
+
+	return NULL;
 }
 
-Camera::Camera() : vdev(NULL), byte_swap(false), yuv_to_gray(false) {
+Camera::Camera() : byte_swap(false), yuv_to_gray(false), vdev(NULL) {
 	for (size_t i = 0; i < ARRAY_SIZE(this->vbuf); i++) {
 		this->vbuf[i] = NULL;
 	}
@@ -74,13 +78,13 @@ bool Camera::begin(uint32_t width, uint32_t height, uint32_t pixformat, bool byt
 		return false;
 	}
 
-	for (size_t i = 0; caps.format_caps[i].pixelformat != NULL; i++) {
+	for (size_t i = 0; caps.format_caps[i].pixelformat != 0; i++) {
 		const struct video_format_cap *fcap = &caps.format_caps[i];
 		if (fcap->width_min == width && fcap->height_min == height &&
 			fcap->pixelformat == pixformat) {
 			break;
 		}
-		if (caps.format_caps[i + 1].pixelformat == NULL) {
+		if (caps.format_caps[i + 1].pixelformat == 0) {
 			Serial.println("The specified format is not supported");
 			return false;
 		}

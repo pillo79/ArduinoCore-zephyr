@@ -40,6 +40,8 @@ public:
 	}
 
 	ZephyrClient accept(uint8_t *status = nullptr) {
+		ARG_UNUSED(status);
+
 		ZephyrClient client;
 		int sock = ZephyrSocketWrapper::accept();
 		client.setSocket(sock);

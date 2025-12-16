@@ -36,17 +36,17 @@ void frameBuffer() {
     // simply initialize the memory as
 
     SDRAM.begin(SDRAM_START_ADDRESS + 2 * 1024 * 1024);
-    // 2MB of contiguous memory available at the beginning
 
+    // 2MB of contiguous memory available at the beginning
     uint32_t* framebuffer = (uint32_t*)SDRAM_START_ADDRESS;
 
-    // We can't allocate anymore the huge 7MB array
-
+    // We can't allocate the huge 7MB array anymore
     uint8_t* myVeryBigArray = (uint8_t*)SDRAM.malloc(7 * 1024 * 1024);
     if (myVeryBigArray == NULL) {
         Serial.println("Oops, too big :)");
     }
 
+    ARG_UNUSED(framebuffer); // suppress unused variable warning
 }
 
 void setup() {
