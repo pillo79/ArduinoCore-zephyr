@@ -51,6 +51,11 @@ else
 	args="$*"
 fi
 
+# Check for debug flag and append
+if [ x$2 == x"--debug" ]; then
+	args="$args -- -DEXTRA_CONF_FILE=../extra/debug.conf"
+fi
+
 echo
 echo "Build target: $target $args"
 
