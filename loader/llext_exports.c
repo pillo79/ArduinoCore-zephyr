@@ -190,7 +190,6 @@ FORCE_EXPORT_SYM(close);
 FORCE_EXPORT_SYM(accept);
 FORCE_EXPORT_SYM(bind);
 FORCE_EXPORT_SYM(listen);
-EXPORT_SYMBOL(exit);
 FORCE_EXPORT_SYM(inet_pton);
 FORCE_EXPORT_SYM(sendto);
 FORCE_EXPORT_SYM(recvfrom);
@@ -235,6 +234,12 @@ EXPORT_SYMBOL(snprintf);
 EXPORT_SYMBOL(cbvprintf);
 FORCE_EXPORT_SYM(abort);
 EXPORT_SYMBOL(sscanf);
+EXPORT_SYMBOL(exit);
+FORCE_EXPORT_SYM(_exit);
+FORCE_EXPORT_SYM(__assert_no_args);
+EXPORT_SYMBOL(stdin);
+EXPORT_SYMBOL(stdout);
+EXPORT_SYMBOL(stderr);
 
 #if defined(CONFIG_RING_BUFFER)
 EXPORT_SYMBOL(ring_buf_get);
@@ -277,7 +282,6 @@ FORCE_EXPORT_SYM(__aeabi_dcmpge);
 
 #if defined (CONFIG_CPP)
 FORCE_EXPORT_SYM(__cxa_pure_virtual);
-FORCE_EXPORT_SYM(__assert_no_args);
 #endif
 
 #if defined(CONFIG_BOARD_ARDUINO_UNO_Q)
