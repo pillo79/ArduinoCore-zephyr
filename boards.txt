@@ -378,10 +378,6 @@ niclasense.build.core=arduino
 niclasense.build.crossprefix=arm-zephyr-eabi-
 niclasense.build.compiler_path={runtime.tools.arm-zephyr-eabi-0.16.8.path}/bin/
 
-niclasense.menu.debug.false=Standard
-niclasense.menu.debug.true=Debug
-niclasense.menu.debug.true.build.zsk_args.debug=-debug
-
 niclasense.menu.link_mode.dynamic=Dynamic
 niclasense.menu.link_mode.static=Static
 niclasense.menu.link_mode.static.build.link_mode=static
