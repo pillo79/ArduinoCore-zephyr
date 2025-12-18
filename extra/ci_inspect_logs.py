@@ -255,22 +255,32 @@ def print_mem_report(artifact, artifact_boards):
         print("</tr>")
     print("</table>")
 
-    print("<details><summary>Raw data</summary><blockquote>\n")
-    print("<table>")
-    for soc, board in sorted((ALL_BOARD_DATA[board]['soc'], board) for board in artifact_boards):
-        print(f"<td><code>{board}</code></td>")
-        print(f"<td><code>{soc}</code></td>")
-        print(f"<td><pre>")
-        sorted_regions = ['FLASH', 'RAM'] + sorted(r for r in REGIONS_BY_SOC[soc] if r not in ('FLASH', 'RAM'))
+    print("<details><summary>SoC-specific data</summary><blockquote>\n")
+
+    for soc in sorted(list(set([ ALL_BOARD_DATA[board]['soc'] for board in artifact_boards ]))):
+        soc_boards = [ board for board in artifact_boards if ALL_BOARD_DATA[board]['soc'] == soc ]
+        sorted_regions = sorted(r for r in REGIONS_BY_SOC[soc] if r not in ('FLASH', 'RAM'))
+        if not sorted_regions:
+            continue
+ 
+        print(f"#### <code>{soc}</code>\n")
+        print("<table><tr><th><code>Board</code></th>"
         for r in sorted_regions:
-            used, total = BOARD_MEM_REPORTS[board].get(r, ['',''])
-            print(f"{r:>25} {used:8} {total:8}")
-        print
-        for c in ('CONFIG_HEAP_MEM_POOL_SIZE', 'CONFIG_LLEXT_HEAP_SIZE', 'CONFIG_MBEDTLS_HEAP_SIZE'):
-            if c in BOARD_CONFIGS[board]:
-                print(f"{c:>25} {BOARD_CONFIGS[board][c]:8}")
-        print("</pre></td></tr>")
-    print("</table></blockquote></details>")
+              print("<th>{r}</th>")
+        print("</tr>")
+        for board in sorted(soc_boards):
+            print(f"<tr><th><code>{board}</code></th>")
+            for r in sorted_regions:
+                if r in BOARD_MEM_REPORTS[board]:
+                    print(f"<td>{color_entry(BOARD_MEM_REPORTS[board][r]}</td>")
+            print("</tr>")
+        print("</table>\n")
+       # print()
+       # for c in ('CONFIG_HEAP_MEM_POOL_SIZE', 'CONFIG_LLEXT_HEAP_SIZE', 'CONFIG_MBEDTLS_HEAP_SIZE'):
+       #     if c in BOARD_CONFIGS[board]:
+       #         print(f"{c:>25} {BOARD_CONFIGS[board][c]:8}")
+       # print("</pre></td></tr>")
+    print("</blockquote></details>")
 
 # --- Main Logic ---
 
