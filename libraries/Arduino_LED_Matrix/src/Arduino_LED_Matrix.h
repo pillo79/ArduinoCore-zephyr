@@ -73,16 +73,12 @@ public:
 	}
 
 	// Plays a video sequence, in grayscale.
-	void playVideo(uint8_t *buf, uint32_t len) {
+	void playVideo(const uint8_t *buf, uint32_t len) {
 		matrixPlay(buf, len);
 	}
 
-	void playVideo(const uint8_t *buf, uint32_t len) {
-		matrixPlay((uint8_t *)buf, len);
-	}
-
 	// Draws a grayscale picture.
-	void draw(uint8_t *buf) {
+	void draw(const uint8_t *buf) {
 		matrixGrayscaleWrite(buf);
 	}
 
