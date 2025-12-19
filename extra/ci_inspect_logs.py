@@ -188,7 +188,7 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
             sketch_id = sketch.replace('/', '_').replace(' ', '_').replace('-', '_')
             print(f"<a name='{artifact}_{sketch_id}'></a>")
             print(f"<details name='{artifact}_{title}'><summary><code>{artifact}</code> logs for {TEST_STATUS[res.status]} <code>{group}</code> <code>{sample}</code></summary>")
-            print("<blockquote><table>")
+            print("<blockquote><br><table>")
 
             # Test logs by board
             for test in sorted(res.tests_with_issues, key=lambda x: x.status, reverse=True):
@@ -263,11 +263,10 @@ def print_mem_report(artifact, artifact_boards):
             continue
 
         if not extra_data_present:
-            print("<details><summary>SoC-specific data</summary><blockquote>\n")
+            print("<details><summary>SoC-specific data</summary><blockquote><br>\n")
             extra_data_present = True
  
-        print(f"#### <code>{soc}</code>\n")
-        print("<table><tr><th><code>Board</code></th>")
+        print(f"<table><tr><th rowspan='{len(soc_boards)+1}'><code>{soc}</code></th><th>Board</th>")
         for r in sorted_regions:
               print(f"<th>{r}</th>")
         print("</tr>")
@@ -276,6 +275,8 @@ def print_mem_report(artifact, artifact_boards):
             for r in sorted_regions:
                 if r in BOARD_MEM_REPORTS[board]:
                     print(f"<td>\n\n{color_entry(BOARD_MEM_REPORTS[board][r])}\n\n</td>")
+                else:
+                    print(f"<td></td>")
             print("</tr>")
         print("</table>\n")
        # print()
@@ -437,7 +438,7 @@ print("</table>\n")
 
 # Print the legend
 print("<details><summary>Legend</summary>")
-print("<blockquote><table><tr><th align='center'>Board</th><th align='center'>Test</th><th>Status description</th></tr>")
+print("<blockquote><br><table><tr><th align='center'>Board</th><th align='center'>Test</th><th>Status description</th></tr>")
 for status in FAILURE, ERROR, EXPECTED_ERROR, WARNING, PASS, SKIP:
     print(f"<tr><td align='center'>{BOARD_STATUS[status]}</td>")
     print(f"<td align='center'>{TEST_STATUS[status]}</td>")
@@ -471,11 +472,11 @@ for artifact in sorted(list(artifacts)):
         if warning_tests:
             summary += f" ({warning_tests} with warnings)"
 
-        print(f"<details><summary>{summary}</summary><blockquote>\n")
+        print(f"<details><summary>{summary}</summary><blockquote><br>\n")
         print_test_matrix(artifact, artifact_boards, "tests", sketch_filter=lambda res: res.status in (PASS, WARNING))
         print("</blockquote></details>\n")
 
-    print(f"<details><summary>Memory usage report for <code>{artifact}</code></summary><blockquote>")
+    print(f"<details><summary>Memory usage report for <code>{artifact}</code></summary><blockquote><br>")
     print_mem_report(artifact, artifact_boards)
     print("</blockquote></details>")
 
