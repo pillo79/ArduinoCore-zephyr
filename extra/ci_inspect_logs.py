@@ -101,6 +101,63 @@ def log_test(artifact, board, sketch, exceptions, status, issues, job_link=None)
     BOARD_TESTS[board].track(test_entry)
     SKETCH_TESTS[artifact][sketch].track(test_entry)
 
+def print_summary():
+    if ci_run_passed:
+        title = "# CI run PASSED :green_circle:\n"
+    else:
+        failed_boards = [ f"{BOARD_STATUS[res.status]} `{board}`" for board, res in BOARD_TESTS.items() if res.status in (ERROR, FAILURE) ]
+        title = f"# CI run FAILED: {', '.join(failed_boards)}\n"
+    f_print(title)
+
+    # Print the recap table
+    f_print("<table>\n<tr><th>Artifact</th><th>Board</th><th>Status</th><th>RAM</th><th>Sketches</th><th>Warnings</th><th>Errors</th></tr>")
+
+    for artifact in ARTIFACTS:
+        artifact_boards = sorted(ARTIFACT_TESTS[artifact].boards)
+        artifact_status = ARTIFACT_TESTS[artifact].status
+
+        first_line = True
+        for board in artifact_boards:
+            f_print(f"<tr>", f"<td rowspan='{len(artifact_boards)}'>{BOARD_STATUS[artifact_status]} <a href='#user-content-{artifact}'><code>{artifact}</code></a></td>" if first_line else "")
+            first_line = False
+
+            res = BOARD_TESTS[board]
+
+            f_print(f"<td><code>{board}</code></td><td align='center'>{BOARD_STATUS[res.status]}</td>")
+            if res.status == FAILURE:
+                # only one test and one line in the issues array here
+                f_print(f"<td colspan='4'>{res.tests[0].issues[0]}</td></tr>")
+            else:
+                f_print(f"<td align='right'>\n\n{color_entry(BOARD_MEM_REPORTS[board]['RAM'], False)}\n\n</td>")
+                tests_str = len(res.tests) or "-"
+                warnings_str = res.counts[WARNING] or "-"
+                errors_str = f"<b>{res.counts[ERROR]}</b>" if res.counts[ERROR] else "-"
+                if res.counts[EXPECTED_ERROR]:
+                    if errors_str == "-": # only expected errors
+                        errors_str = f"<i>({res.counts[EXPECTED_ERROR]}*)</i>"
+                    else: # both actual and expected errors
+                        errors_str += f" <i>(+{res.counts[EXPECTED_ERROR]}*)</i>"
+                f_print(f"<td align='right'>{tests_str}</td><td align='right'>{warnings_str}</td><td align='right'>{errors_str}</td></tr>")
+    f_print("</table>\n")
+
+    # Print the legend
+    f_print("<details><summary>Legend</summary>")
+    f_print("<blockquote><br><table><tr><th align='center'>Board</th><th align='center'>Test</th><th>Status description</th></tr>")
+    for status in FAILURE, ERROR, EXPECTED_ERROR, WARNING, PASS, SKIP:
+        f_print(f"<tr><td align='center'>{BOARD_STATUS[status]}</td>")
+        f_print(f"<td align='center'>{TEST_STATUS[status]}</td>")
+        f_print(f"<td>{TEST_LEGEND[status]}</td></tr>")
+    f_print("</table></blockquote></details>\n")
+
+    # Print artifact error warnings
+    for artifact in ARTIFACTS:
+        artifact_boards = sorted(ARTIFACT_TESTS[artifact].boards)
+        failed_boards = [ f"`{board}`" for board in artifact_boards if BOARD_TESTS[board].status in (ERROR, FAILURE) ]
+
+        if failed_boards:
+            f_print("> [!CAUTION]")
+            f_print(f"> `{artifact}` is blocked due to failures on {', '.join(failed_boards)}!\n")
+
 def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: True):
     """
     Prints a matrix of test results for a given artifact and its boards. The
@@ -171,11 +228,11 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
         return
 
     # Print the table
-    print("<table>")
-    print(header_row)
+    f_print("<table>")
+    f_print(header_row)
     for row in data_rows:
-        print(row)
-    print("</table>\n")
+        f_print(row)
+    f_print("</table>\n")
 
     # Print detailed logs for sketches with issues
     for group in sorted(sketch_groups.keys()):
@@ -186,9 +243,9 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
             # Header and anchor for the detailed logs
             sketch = next(iter(res.sketches)) # only one
             sketch_id = sketch.replace('/', '_').replace(' ', '_').replace('-', '_')
-            print(f"<a name='{artifact}_{sketch_id}'></a>")
-            print(f"<details name='{artifact}_{title}'><summary><code>{artifact}</code> logs for {TEST_STATUS[res.status]} <code>{group}</code> <code>{sample}</code></summary>")
-            print("<blockquote><br><table>")
+            f_print(f"<a name='{artifact}_{sketch_id}'></a>")
+            f_print(f"<details name='{artifact}_{title}'><summary><code>{artifact}</code> logs for {TEST_STATUS[res.status]} <code>{group}</code> <code>{sample}</code></summary>")
+            f_print("<blockquote><br><table>")
 
             # Test logs by board
             for test in sorted(res.tests_with_issues, key=lambda x: x.status, reverse=True):
@@ -196,12 +253,12 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
                 test_text = f"<code>{test.board}</code>"
                 if job_link:
                     test_text += f" (<a href='{job_link}'>full log</a>)"
-                print(f"<tr><td>{TEST_STATUS[test.status]} {test_text}<br>\n\n```")
+                f_print(f"<tr><td>{TEST_STATUS[test.status]} {test_text}<br>\n\n```")
                 for line in test.issues:
-                    print(line)
-                print("```\n</td></tr>")
+                    f_print(line)
+                f_print("```\n</td></tr>")
 
-            print("</table></blockquote></details>\n")
+            f_print("</table></blockquote></details>\n")
 
 BOARD_MEM_REPORTS = defaultdict(dict) # { board: { region: [used, total] } }
 BOARD_CONFIGS = defaultdict(dict)     # { board: { config_symbol: value } }
@@ -218,7 +275,7 @@ def color_cmd(percent):
 def color_entry(values, full=True):
     if not values:
         return ""
-    
+
     percent = values[0] / values[1]
     if full:
         return f"${{{color_cmd(percent)}\\frac{{{values[0]}}}{{{values[1]}}}\\space({percent*100:0.1f}\\\\%)}}$"
@@ -227,14 +284,14 @@ def color_entry(values, full=True):
 
 def print_mem_report(artifact, artifact_boards):
 
-    print("<table><tr>", end='')
-    print("<th rowspan='2' colspan='2'>Board</th>", end='')
-    print("<th rowspan='2'>SoC</th>", end='')
-    print("<th rowspan='2'>FLASH</th>", end='')
-    print("<th rowspan='2'>RAM</th>", end='')
-    print("<th colspan='2'>User heaps</th>", end='')
-    print("</tr>")
-    print("<tr><th>SYS</th><th>LIBC</th><th>LLEXT</th><th>MBEDTLS</th></tr>")
+    f_print("<table><tr>", end='')
+    f_print("<th rowspan='2' colspan='2'>Board</th>", end='')
+    f_print("<th rowspan='2'>SoC</th>", end='')
+    f_print("<th rowspan='2'>FLASH</th>", end='')
+    f_print("<th rowspan='2'>RAM</th>", end='')
+    f_print("<th colspan='2'>User heaps</th>", end='')
+    f_print("</tr>")
+    f_print("<tr><th>SYS</th><th>LIBC</th><th>LLEXT</th><th>MBEDTLS</th></tr>")
 
     for soc, board in sorted((ALL_BOARD_DATA[board]['soc'], board) for board in artifact_boards):
         max_pct = max([ (BOARD_MEM_REPORTS[board][r][0] / BOARD_MEM_REPORTS[board][r][1]) for r in ('FLASH', 'RAM') ])
@@ -252,13 +309,13 @@ def print_mem_report(artifact, artifact_boards):
                 f"${{{ BOARD_CONFIGS[board]['CONFIG_LLEXT_HEAP_SIZE']*1024 }}}$",
                 f"${{{ BOARD_CONFIGS[board].get('CONFIG_MBEDTLS_HEAP_SIZE', '-') }}}$"
               ]
-        
-        print("<tr>")
+
+        f_print("<tr>")
         col_aligns = ['center', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right']
         for index, cell in enumerate(row):
-            print(f"<td align='{col_aligns[index]}'>\n\n{cell}\n\n</td>")
-        print("</tr>")
-    print("</table>")
+            f_print(f"<td align='{col_aligns[index]}'>\n\n{cell}\n\n</td>")
+        f_print("</tr>")
+    f_print("</table>")
 
     extra_data_present = False
     for soc in sorted(list(set([ ALL_BOARD_DATA[board]['soc'] for board in artifact_boards ]))):
@@ -268,32 +325,33 @@ def print_mem_report(artifact, artifact_boards):
             continue
 
         if not extra_data_present:
-            print("<details><summary>SoC-specific data</summary><blockquote><br>\n")
+            f_print("<details><summary>SoC-specific data</summary><blockquote><br>\n")
             extra_data_present = True
- 
-        print(f"<table><tr><th rowspan='{len(soc_boards)+1}'><code>{soc}</code></th><th>Board</th>")
+
+        f_print(f"<table><tr><th rowspan='{len(soc_boards)+1}'><code>{soc}</code></th><th>Board</th>")
         for r in sorted_regions:
-              print(f"<th>{r}</th>")
-        print("</tr>")
+              f_print(f"<th>{r}</th>")
+        f_print("</tr>")
         for board in sorted(soc_boards):
-            print(f"<tr><th><code>{board}</code></th>")
+            f_print(f"<tr><th><code>{board}</code></th>")
             for r in sorted_regions:
                 if r in BOARD_MEM_REPORTS[board]:
-                    print(f"<td>\n\n{color_entry(BOARD_MEM_REPORTS[board][r])}\n\n</td>")
+                    f_print(f"<td>\n\n{color_entry(BOARD_MEM_REPORTS[board][r])}\n\n</td>")
                 else:
-                    print(f"<td></td>")
-            print("</tr>")
-        print("</table>\n")
-       # print()
+                    f_print(f"<td></td>")
+            f_print("</tr>")
+        f_print("</table>\n")
+       # f_print()
        # for c in ('CONFIG_HEAP_MEM_POOL_SIZE', 'CONFIG_LLEXT_HEAP_SIZE', 'CONFIG_MBEDTLS_HEAP_SIZE'):
        #     if c in BOARD_CONFIGS[board]:
-       #         print(f"{c:>25} {BOARD_CONFIGS[board][c]:8}")
-       # print("</pre></td></tr>")
+       #         f_print(f"{c:>25} {BOARD_CONFIGS[board][c]:8}")
+       # f_print("</pre></td></tr>")
 
     if extra_data_present:
-        print("</blockquote></details>")
+        f_print("</blockquote></details>")
 
-# --- Main Logic ---
+# Main Logic
+# ----------
 
 # Environment Variable Checks
 ALL_BOARD_DATA_STR = os.environ.get('ALL_BOARD_DATA')
@@ -304,6 +362,18 @@ if not ALL_BOARD_DATA_STR or not GITHUB_REPOSITORY or not GITHUB_RUN_ID:
     print("Not in a Github CI run, cannot proceed.")
     sys.exit(0)
 
+if not len(sys.argv) in (1, 4):
+    print("Usage: ci_inspect_logs.py [<result_file> <summary_file> <full_report_file>]")
+    sys.exit(1)
+
+if len(sys.argv) == 4:
+    results_file = sys.argv[1]
+    summary_file = sys.argv[2]
+    full_report_file = sys.argv[3]
+else:
+    results_file = "/dev/null"
+    summary_file = full_report_file = "/dev/stdout"
+
 ALL_BOARD_DATA = json.loads(ALL_BOARD_DATA_STR)
 ALL_BOARD_DATA = { b['board']: b for b in ALL_BOARD_DATA }
 
@@ -313,7 +383,7 @@ for board_data in ALL_BOARD_DATA.values():
     board = board_data['board']
     variant = board_data['variant']
     subarch = board_data['subarch']
-     
+
     # get board's config settings
     report_file = f"zephyr-{variant}.config"
     try:
@@ -404,87 +474,41 @@ ARTIFACTS = sorted(ARTIFACT_TESTS.keys())
 
 ci_run_status = max(res.status for res in ARTIFACT_TESTS.values())
 ci_run_passed = ci_run_status in (PASS, WARNING, EXPECTED_ERROR)
-if ci_run_passed:
-    title = "# CI run PASSED :green_circle:\n"
-else:
-    failed_boards = [ f"{BOARD_STATUS[res.status]} `{board}`" for board, res in BOARD_TESTS.items() if res.status in (ERROR, FAILURE) ]
-    title = f"# CI run FAILED: {', '.join(failed_boards)}\n"
-print(title)
 
-# Print the recap table
-print("<table>\n<tr><th>Artifact</th><th>Board</th><th>Status</th><th>RAM</th><th>Sketches</th><th>Warnings</th><th>Errors</th></tr>")
+with open(summary_file, 'w') as f:
+    f_print = lambda *args, **kwargs: print(*args, file=f, **kwargs)
 
-for artifact in ARTIFACTS:
-    artifact_boards = sorted(ARTIFACT_TESTS[artifact].boards)
-    artifact_status = ARTIFACT_TESTS[artifact].status
+    print_summary()
 
-    first_line = True
-    for board in artifact_boards:
-        print(f"<tr>", f"<td rowspan='{len(artifact_boards)}'>{BOARD_STATUS[artifact_status]} <a href='#user-content-{artifact}'><code>{artifact}</code></a></td>" if first_line else "")
-        first_line = False
+with open(full_report_file, 'w') as f:
+    f_print = lambda *args, **kwargs: print(*args, file=f, **kwargs)
 
-        res = BOARD_TESTS[board]
+    # Print the test matrix sections per artifact
+    for artifact in ARTIFACTS:
+        artifact_boards = sorted([ board for board in ARTIFACT_TESTS[artifact].boards if BOARD_TESTS[board].status != FAILURE ])
 
-        print(f"<td><code>{board}</code></td><td align='center'>{BOARD_STATUS[res.status]}</td>")
-        if res.status == FAILURE:
-            # only one test and one line in the issues array here
-            print(f"<td colspan='4'>{res.tests[0].issues[0]}</td></tr>")
-        else:
-            print(f"<td align='right'>\n\n{color_entry(BOARD_MEM_REPORTS[board]['RAM'], False)}\n\n</td>")
-            tests_str = len(res.tests) or "-"
-            warnings_str = res.counts[WARNING] or "-"
-            errors_str = f"<b>{res.counts[ERROR]}</b>" if res.counts[ERROR] else "-"
-            if res.counts[EXPECTED_ERROR]:
-                if errors_str == "-": # only expected errors
-                    errors_str = f"<i>({res.counts[EXPECTED_ERROR]}*)</i>"
-                else: # both actual and expected errors
-                    errors_str += f" <i>(+{res.counts[EXPECTED_ERROR]}*)</i>"
-            print(f"<td align='right'>{tests_str}</td><td align='right'>{warnings_str}</td><td align='right'>{errors_str}</td></tr>")
-print("</table>\n")
+        if not artifact_boards:
+            continue
 
-# Print the legend
-print("<details><summary>Legend</summary>")
-print("<blockquote><br><table><tr><th align='center'>Board</th><th align='center'>Test</th><th>Status description</th></tr>")
-for status in FAILURE, ERROR, EXPECTED_ERROR, WARNING, PASS, SKIP:
-    print(f"<tr><td align='center'>{BOARD_STATUS[status]}</td>")
-    print(f"<td align='center'>{TEST_STATUS[status]}</td>")
-    print(f"<td>{TEST_LEGEND[status]}</td></tr>")
-print("</table></blockquote></details>\n")
+        f_print(f"<a name='{artifact}'></a>")
+        f_print("\n---\n")
+        print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status in (ERROR, EXPECTED_ERROR))
 
-# Print artifact error warnings
-for artifact in ARTIFACTS:
-    artifact_boards = sorted(ARTIFACT_TESTS[artifact].boards)
-    failed_boards = [ f"`{board}`" for board in artifact_boards if BOARD_TESTS[board].status in (ERROR, FAILURE) ]
+        successful_tests = ARTIFACT_TESTS[artifact].counts[PASS] + ARTIFACT_TESTS[artifact].counts[WARNING]
+        warning_tests = ARTIFACT_TESTS[artifact].counts[WARNING]
+        if successful_tests:
+            summary = f"{successful_tests} successful <code>{artifact}</code> tests hidden"
+            if warning_tests:
+                summary += f" ({warning_tests} with warnings)"
 
-    if failed_boards:
-        print("> [!CAUTION]")
-        print(f"> `{artifact}` is blocked due to failures on {', '.join(failed_boards)}!\n")
+            f_print(f"<details><summary>{summary}</summary><blockquote><br>\n")
+            print_test_matrix(artifact, artifact_boards, "tests", sketch_filter=lambda res: res.status in (PASS, WARNING))
+            f_print("</blockquote></details>\n")
 
-# Print the test matrix sections per artifact
-for artifact in ARTIFACTS:
-    artifact_boards = sorted([ board for board in ARTIFACT_TESTS[artifact].boards if BOARD_TESTS[board].status != FAILURE ])
+        f_print(f"<details><summary>Memory usage report for <code>{artifact}</code></summary><blockquote><br>")
+        print_mem_report(artifact, artifact_boards)
+        f_print("</blockquote></details>")
 
-    if not artifact_boards:
-        continue
-
-    print(f"<a name='{artifact}'></a>")
-    print("\n---\n")
-    print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status in (ERROR, EXPECTED_ERROR))
-
-    successful_tests = ARTIFACT_TESTS[artifact].counts[PASS] + ARTIFACT_TESTS[artifact].counts[WARNING]
-    warning_tests = ARTIFACT_TESTS[artifact].counts[WARNING]
-    if successful_tests:
-        summary = f"{successful_tests} successful <code>{artifact}</code> tests hidden"
-        if warning_tests:
-            summary += f" ({warning_tests} with warnings)"
-
-        print(f"<details><summary>{summary}</summary><blockquote><br>\n")
-        print_test_matrix(artifact, artifact_boards, "tests", sketch_filter=lambda res: res.status in (PASS, WARNING))
-        print("</blockquote></details>\n")
-
-    print(f"<details><summary>Memory usage report for <code>{artifact}</code></summary><blockquote><br>")
-    print_mem_report(artifact, artifact_boards)
-    print("</blockquote></details>")
-
-if not ci_run_passed:
-    sys.exit(1)
+with open(results_file, 'w') as f:
+    if ci_run_passed:
+        f.write('PASSED\n')

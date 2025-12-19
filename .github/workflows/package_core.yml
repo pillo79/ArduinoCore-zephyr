@@ -309,7 +309,10 @@ jobs:
           merge-multiple: true
 
       # Collect and summarize logs, will fail the step if any test failed
-      - run: extra/ci_inspect_logs.py > $GITHUB_STEP_SUMMARY
+      - run: |
+          extra/ci_inspect_logs.py result summary full_log
+          echo "CI_RESULT=$(cat result)" > $GITHUB_OUTPUT
+          cat summary full_log > $GITHUB_STEP_SUMMARY
 
       - name: Clean up intermediate artifacts
         uses: geekyeggo/delete-artifact@v5.1.0
@@ -328,7 +331,8 @@ jobs:
     if: ${{ !cancelled() }}
     steps:
       - name: CI run result
-        run: exit ${{ contains(needs.*.result, 'failure') && '1' || '0' }}
+        run: |
+          exit ${{ needs.inspect-logs.CI_RESULT == 'PASSED' && contains(needs.*.result, 'failure') && '1' || '0' }}
 
   publish-core:
     name: Publish core
