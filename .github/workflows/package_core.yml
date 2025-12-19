@@ -114,6 +114,9 @@ jobs:
             exit 1
           fi
 
+          cp output.log firmwares/zephyr-${{ matrix.variant }}.stderr
+          cp error.log firmwares/zephyr-${{ matrix.variant }}.stderr
+
           # extract the memory usage table (from the header to the first non-% line)
           cat output.log | sed -n '/^Memory region/,/^[^%]*$/p' | head -n -1 \
                          | awk 'BEGIN {split("B KB MB GB", u); for(i in u) m[u[i]]=1024^(i-1)} /:/ {print "[\"" $1 "\"," $2*m[$3] "," $4*m[$5] "]"}' \
