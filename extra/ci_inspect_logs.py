@@ -207,20 +207,25 @@ BOARD_MEM_REPORTS = defaultdict(dict) # { board: { region: [used, total] } }
 BOARD_CONFIGS = defaultdict(dict)     # { board: { config_symbol: value } }
 REGIONS_BY_SOC = defaultdict(set)    # { soc: set(regions) }
 
-def print_mem_report(artifact, artifact_boards):
-    BASE_COLOR = 0x60
-    DELTA_COLOR = 0xff-BASE_COLOR
+BASE_COLOR = 0x20
+DELTA_COLOR = 0xff-2*BASE_COLOR
 
-    def color_cmd(percent):
-        color_amt = int(DELTA_COLOR * percent)
-        return f"\\color{{#{BASE_COLOR + color_amt:02x}{0xff - color_amt:02x}{BASE_COLOR:02x}}}"
+# percent is in range [0, 1] where 0 is good, 1 is bad
+def color_cmd(percent):
+    color_amt = int(DELTA_COLOR * percent)
+    return f"\\color{{#{BASE_COLOR + color_amt:02x}{0xff - color_amt:02x}{BASE_COLOR:02x}}}"
 
-    def color_entry(values):
-        if not values:
-            return ""
-        
-        percent = values[0] / values[1]
+def color_entry(values, full=True):
+    if not values:
+        return ""
+    
+    percent = values[0] / values[1]
+    if full:
         return f"${{{color_cmd(percent)}\\frac{{{values[0]}}}{{{values[1]}}}\\space({percent*100:0.1f}\\\\%)}}$"
+    else:
+        return f"{'' if percent < 0.85 else ':warning:'} ${{{color_cmd(percent)}{percent*100:0.1f}\\\\%}}$"
+
+def print_mem_report(artifact, artifact_boards):
 
     print("<table><tr>", end='')
     print("<th rowspan='2' colspan='2'>Board</th>", end='')
@@ -233,7 +238,7 @@ def print_mem_report(artifact, artifact_boards):
 
     for soc, board in sorted((ALL_BOARD_DATA[board]['soc'], board) for board in artifact_boards):
         max_pct = max([ (BOARD_MEM_REPORTS[board][r][0] / BOARD_MEM_REPORTS[board][r][1]) for r in ('FLASH', 'RAM') ])
-        icon = ':warning:' if max_pct > 0.90 else ''
+        icon = ':warning:' if max_pct > 0.85 else ''
         board_str = board.replace('_', '\\\\_')
 
         row = [
@@ -392,7 +397,7 @@ for board_data in ALL_BOARD_DATA.values():
 
         log_test(artifact, board, sketch, exceptions, status, sketch_issues, job_link)
 
-artifacts = ARTIFACT_TESTS.keys()
+ARTIFACTS = sorted(ARTIFACT_TESTS.keys())
 
 # Begin output of the report
 # --------------------------
@@ -407,9 +412,9 @@ else:
 print(title)
 
 # Print the recap table
-print("<table>\n<tr><th>Artifact</th><th>Board</th><th>Status</th><th>Sketches</th><th>Warnings</th><th>Errors</th></tr>")
+print("<table>\n<tr><th>Artifact</th><th>Board</th><th>Status</th><th>RAM</th><th>Sketches</th><th>Warnings</th><th>Errors</th></tr>")
 
-for artifact in sorted(list(artifacts)):
+for artifact in ARTIFACTS:
     artifact_boards = sorted(ARTIFACT_TESTS[artifact].boards)
     artifact_status = ARTIFACT_TESTS[artifact].status
 
@@ -423,8 +428,9 @@ for artifact in sorted(list(artifacts)):
         print(f"<td><code>{board}</code></td><td align='center'>{BOARD_STATUS[res.status]}</td>")
         if res.status == FAILURE:
             # only one test and one line in the issues array here
-            print(f"<td colspan='3'>{res.tests[0].issues[0]}</td></tr>")
+            print(f"<td colspan='4'>{res.tests[0].issues[0]}</td></tr>")
         else:
+            print(f"<td align='right'>\n\n{color_entry(BOARD_MEM_REPORTS[board]['RAM'], False)}\n\n</td>")
             tests_str = len(res.tests) or "-"
             warnings_str = res.counts[WARNING] or "-"
             errors_str = f"<b>{res.counts[ERROR]}</b>" if res.counts[ERROR] else "-"
@@ -446,7 +452,7 @@ for status in FAILURE, ERROR, EXPECTED_ERROR, WARNING, PASS, SKIP:
 print("</table></blockquote></details>\n")
 
 # Print artifact error warnings
-for artifact in sorted(list(artifacts)):
+for artifact in ARTIFACTS:
     artifact_boards = sorted(ARTIFACT_TESTS[artifact].boards)
     failed_boards = [ f"`{board}`" for board in artifact_boards if BOARD_TESTS[board].status in (ERROR, FAILURE) ]
 
@@ -455,7 +461,7 @@ for artifact in sorted(list(artifacts)):
         print(f"> `{artifact}` is blocked due to failures on {', '.join(failed_boards)}!\n")
 
 # Print the test matrix sections per artifact
-for artifact in sorted(list(artifacts)):
+for artifact in ARTIFACTS:
     artifact_boards = sorted([ board for board in ARTIFACT_TESTS[artifact].boards if BOARD_TESTS[board].status != FAILURE ])
 
     if not artifact_boards:
