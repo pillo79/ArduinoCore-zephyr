@@ -255,24 +255,27 @@ def print_mem_report(artifact, artifact_boards):
         print("</tr>")
     print("</table>")
 
-    print("<details><summary>SoC-specific data</summary><blockquote>\n")
-
+    extra_data_present = False
     for soc in sorted(list(set([ ALL_BOARD_DATA[board]['soc'] for board in artifact_boards ]))):
         soc_boards = [ board for board in artifact_boards if ALL_BOARD_DATA[board]['soc'] == soc ]
         sorted_regions = sorted(r for r in REGIONS_BY_SOC[soc] if r not in ('FLASH', 'RAM'))
         if not sorted_regions:
             continue
+
+        if not extra_data_present:
+            print("<details><summary>SoC-specific data</summary><blockquote>\n")
+            extra_data_present = True
  
         print(f"#### <code>{soc}</code>\n")
-        print("<table><tr><th><code>Board</code></th>"
+        print("<table><tr><th><code>Board</code></th>")
         for r in sorted_regions:
-              print("<th>{r}</th>")
+              print(f"<th>{r}</th>")
         print("</tr>")
         for board in sorted(soc_boards):
             print(f"<tr><th><code>{board}</code></th>")
             for r in sorted_regions:
                 if r in BOARD_MEM_REPORTS[board]:
-                    print(f"<td>{color_entry(BOARD_MEM_REPORTS[board][r]}</td>")
+                    print(f"<td>\n\n{color_entry(BOARD_MEM_REPORTS[board][r])}\n\n</td>")
             print("</tr>")
         print("</table>\n")
        # print()
@@ -280,7 +283,9 @@ def print_mem_report(artifact, artifact_boards):
        #     if c in BOARD_CONFIGS[board]:
        #         print(f"{c:>25} {BOARD_CONFIGS[board][c]:8}")
        # print("</pre></td></tr>")
-    print("</blockquote></details>")
+
+    if extra_data_present:
+        print("</blockquote></details>")
 
 # --- Main Logic ---
 
