@@ -42,6 +42,17 @@
 	};
 };
 
+/{
+	chosen {
+		zephyr,log-uart = &log_uarts;
+	};
+
+	log_uarts: log_uarts {
+		compatible = "zephyr,log-uart";
+		uarts = <&uart0 &board_cdc_acm_uart>;
+	};
+};
+
 
 / {
 	zephyr,user {

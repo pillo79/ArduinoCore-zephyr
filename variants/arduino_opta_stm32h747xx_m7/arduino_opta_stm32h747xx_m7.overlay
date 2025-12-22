@@ -40,6 +40,12 @@
 		zephyr,console = &usart6;
 		zephyr,shell-uart = &usart6;
 		zephyr,uart-mcumgr = &usart6;
+		zephyr,log-uart = &log_uarts;
+	};
+
+	log_uarts: log_uarts {
+		compatible = "zephyr,log-uart";
+		uarts = <&usart6 &board_cdc_acm_uart>;
 	};
 
 	/* used to overcome problems with _C analog pins */
