@@ -114,38 +114,17 @@ jobs:
             exit 1
           fi
 
-          # look for warnings (errors are a happy path!)
-          grep -i "warning:" output.log > firmwares/zephyr-${{ matrix.variant }}.warnings || true
+          cp output.log firmwares/zephyr-${{ matrix.variant }}.stderr
+          cp error.log firmwares/zephyr-${{ matrix.variant }}.stderr
 
           # extract the memory usage table (from the header to the first non-% line)
           cat output.log | sed -n '/^Memory region/,/^[^%]*$/p' | head -n -1 \
                          | awk 'BEGIN {split("B KB MB GB", u); for(i in u) m[u[i]]=1024^(i-1)} /:/ {print "[\"" $1 "\"," $2*m[$3] "," $4*m[$5] "]"}' \
                          | sort | jq -s > firmwares/zephyr-${{ matrix.variant }}.meminfo
 
-      - name: Get build job ID
-        id: job_id
-        if: ${{ success() || failure() }}
-        uses: actions/github-script@main
-        with:
-          script: |
-            const { data: workflow_run } = await github.rest.actions.listJobsForWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: context.runId
-            });
-            const job_name = `Build loader for ${{ matrix.board }}`
-            return workflow_run.jobs.find((job) => job.name === job_name).id;
-
-      - name: Package board artifacts
+      - name: Package board binaries
         if: ${{ !cancelled() }}
         run: |
-          # Archive job ID, warnings and memory info as 'report' artifact
-          echo ${{ steps.job_id.outputs.result }} > firmwares/zephyr-${{ matrix.variant }}.jobid
-          tar chf - \
-            firmwares/zephyr-${{ matrix.variant }}.{jobid,warnings,meminfo} \
-          | zstd > build-report-${ARTIFACT_TAG}.tar.zstd
-          rm firmwares/zephyr-${{ matrix.variant }}.{jobid,warnings,meminfo}
-          # Archive built binaries (and build dir on failure)
           tar chf - \
             firmwares/*${{ matrix.variant }}* \
             variants/${{ matrix.variant }}/ \
@@ -163,8 +142,10 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: build-report-${{ env.ARTIFACT_TAG }}
-          path: build-report-${{ env.ARTIFACT_TAG }}.tar.zstd
+          name: mem-report-${{ env.ARTIFACT_TAG }}
+          path: |
+            firmwares/zephyr-${{ matrix.variant }}.meminfo
+            firmwares/zephyr-${{ matrix.variant }}.config
 
   package-core:
     name: Package ${{ matrix.artifact }}
@@ -292,7 +273,7 @@ jobs:
           enable-issues-report: 'true'
           always-succeed: 'true'
 
-      - name: Get test job ID
+      - name: Get job ID
         id: job_id
         if: ${{ success() || failure() }}
         uses: actions/github-script@main
@@ -362,7 +343,7 @@ jobs:
         uses: geekyeggo/delete-artifact@v5.1.0
         with:
           name: |
-            build-report-*
+            mem-report-*
             test-report-*
           failOnError: false
 

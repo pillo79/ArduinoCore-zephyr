@@ -40,12 +40,49 @@ BOARD_STATUS = [
     ":new_moon:" # -1
 ]
 
-class CoreEntry:
+# Loader build status data structure
+class LoaderEntry:
     def __init__(self, artifact, board, variant):
         self.artifact = artifact
         self.board = board
-        self.status = status
-        self.warnings = warnings
+        self.variant = variant
+
+        self.config = self.read_config()
+        self.meminfo = self.read_meminfo()
+
+        self.status = PASS if self.config and self.meminfo else FAILURE
+
+    def read_config(self):
+        # get board's config settings
+        report_file = f"zephyr-{self.variant}.config"
+        try:
+            with open(report_file, 'r') as f:
+                configs = {}
+                for line in f:
+                    if line.startswith('#') or '=' not in line:
+                        continue
+                    sym, val = line.strip().split('=', 1)
+                    if val.startswith('"'):
+                        configs[sym] = val.strip('"')
+                    elif val=='y':
+                        configs[sym] = 1
+                    else:
+                        configs[sym] = eval(val)
+                return configs
+        except Exception as e:
+            return {}
+
+    def read_meminfo(self):
+        # get board's memory report
+        report_file = f"zephyr-{self.variant}.meminfo"
+        try:
+            with open(report_file, 'r') as f:
+                report_data = json.load(f)
+                meminfo = { region.replace(':',''): [used, total] for region, used, total in report_data }
+                meminfo.pop('IDT_LIST', None)
+                return meminfo
+        except Exception as e:
+            return {}
 
 # Single test data structure
 class TestEntry:
@@ -83,7 +120,7 @@ class TestGroup:
         self.boards.add(test_entry.board)
         self.sketches.add(test_entry.sketch)
 
-BOARD_CORES = {}                      # { board: CoreEntry() }
+BOARD_LOADERS = {}                                 # { board: LoaderEntry() }
 ARTIFACT_TESTS = defaultdict(TestGroup)            # { artifact: TestGroup() }
 BOARD_TESTS = defaultdict(TestGroup)               # { board: TestGroup() }
 SKETCH_TESTS = defaultdict(lambda: defaultdict(TestGroup)) # { artifact: { sketch: TestGroup() } }
@@ -118,16 +155,7 @@ def print_summary():
     f_print(title)
 
     # Print the recap table
-    # 8 columns:
-    # - Artifact name
-    # - Board name
-    # - Core compilation status (ok, number of warnings)
-    # - Overall sketch compilation status for the core
-    # - Used RAM percent
-    # - Sketches tested
-    # - Sketches wiht warnings
-    # - Failed sketches
-    f_print("<table>\n<tr><th>Artifact</th><th>Board</th><th>Core</th><th>Tests</th><th>RAM</th><th>Sketches</th><th>Warnings</th><th>Errors</th></tr>")
+    f_print("<table>\n<tr><th>Artifact</th><th>Board</th><th>Status</th><th>RAM</th><th>Sketches</th><th>Warnings</th><th>Errors</th></tr>")
 
     for artifact in ARTIFACTS:
         artifact_boards = sorted(ARTIFACT_TESTS[artifact].boards)
@@ -135,43 +163,26 @@ def print_summary():
 
         first_line = True
         for board in artifact_boards:
-            # Artifact name
-            if first_line:
-                f_print(f"<tr>", f"<td rowspan='{len(artifact_boards)}'>{BOARD_STATUS[artifact_status]} <a href='#user-content-{artifact}'><code>{artifact}</code></a></td>")
-                first_line = False
+            f_print(f"<tr>", f"<td rowspan='{len(artifact_boards)}'>{BOARD_STATUS[artifact_status]} <a href='#user-content-{artifact}'><code>{artifact}</code></a></td>" if first_line else "")
+            first_line = False
 
-            # Board name
-            f_print(f"<td><code>{board}</code>")
-
-            # Core build status + message on failure
-            if not os.path.exists(f"zephyr-{variant}.elf"):
-                f_print(f"<td align='center'>{BOARD_STATUS[FAILURE]}</td><td colspan='6'>Core build failed!</td></tr>")
-                continue
-
-            pin = f"{len(BOARD_WARNINGS[board])} :label:" if board in BOARD_WARNINGS else ":green_book:"
-            f_print(f"</td><td align='center'>{pin}</td>")
-
-            # Sketch build status + message on failure
             res = BOARD_TESTS[board]
-            f_print(f"<td align='center'>{BOARD_STATUS[res.status]}</td>")
+
+            f_print(f"<td><code>{board}</code></td><td align='center'>{BOARD_STATUS[res.status]}</td>")
             if res.status == FAILURE:
                 # only one test and one line in the issues array here
-                f_print(f"<td colspan='5'>{res.tests[0].issues[0]}</td></tr>")
-                continue
-
-            # Memory usage
-            f_print(f"<td align='right'>\n\n{color_entry(BOARD_MEM_REPORTS[board]['RAM'], False)}\n\n</td>")
-
-            # Test count summary
-            tests_str = len(res.tests) or "-"
-            warnings_str = res.counts[WARNING] or "-"
-            errors_str = f"<b>{res.counts[ERROR]}</b>" if res.counts[ERROR] else "-"
-            if res.counts[EXPECTED_ERROR]:
-                if errors_str == "-": # only expected errors
-                    errors_str = f"<i>({res.counts[EXPECTED_ERROR]}*)</i>"
-                else: # both actual and expected errors
-                    errors_str += f" <i>(+{res.counts[EXPECTED_ERROR]}*)</i>"
-            f_print(f"<td align='right'>{tests_str}</td><td align='right'>{warnings_str}</td><td align='right'>{errors_str}</td></tr>")
+                f_print(f"<td colspan='4'>{res.tests[0].issues[0]}</td></tr>")
+            else:
+                f_print(f"<td align='right'>\n\n{color_entry(BOARD_LOADERS[board].meminfo['RAM'], False)}\n\n</td>")
+                tests_str = len(res.tests) or "-"
+                warnings_str = res.counts[WARNING] or "-"
+                errors_str = f"<b>{res.counts[ERROR]}</b>" if res.counts[ERROR] else "-"
+                if res.counts[EXPECTED_ERROR]:
+                    if errors_str == "-": # only expected errors
+                        errors_str = f"<i>({res.counts[EXPECTED_ERROR]}*)</i>"
+                    else: # both actual and expected errors
+                        errors_str += f" <i>(+{res.counts[EXPECTED_ERROR]}*)</i>"
+                f_print(f"<td align='right'>{tests_str}</td><td align='right'>{warnings_str}</td><td align='right'>{errors_str}</td></tr>")
     f_print("</table>\n")
 
     # Print the legend
@@ -294,15 +305,17 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
 
             f_print("</table></blockquote></details>\n")
 
-BOARD_WARNINGS = {}                   # { board: [warning_strings] }
-BOARD_MEM_REPORTS = defaultdict(dict) # { board: { region: [used, total] } }
-BOARD_CONFIGS = defaultdict(dict)     # { board: { config_symbol: value } }
 REGIONS_BY_SOC = defaultdict(set)     # { soc: set(regions) }
 
 BASE_COLOR = 0x20
 DELTA_COLOR = 0xff-2*BASE_COLOR
 
 # percent is in range [0, 1] where 0 is good, 1 is bad
+def get_percent(values):
+    if not values:
+        return 0.0
+    return values[0] / values[1]
+
 def color_cmd(percent):
     color_amt = int(DELTA_COLOR * percent)
     return f"\\color{{#{BASE_COLOR + color_amt:02x}{0xff - color_amt:02x}{BASE_COLOR:02x}}}"
@@ -311,7 +324,7 @@ def color_entry(values, full=True):
     if not values:
         return ""
 
-    percent = values[0] / values[1]
+    percent = get_percent(values)
     if full:
         return f"${{{color_cmd(percent)}\\frac{{{values[0]}}}{{{values[1]}}}\\space({percent*100:0.1f}\\\\%)}}$"
     else:
@@ -329,7 +342,7 @@ def print_mem_report(artifact, artifact_boards):
     f_print("<tr><th>SYS</th><th>LIBC</th><th>LLEXT</th><th>MBEDTLS</th></tr>")
 
     for soc, board in sorted((ALL_BOARD_DATA[board]['soc'], board) for board in artifact_boards):
-        max_pct = max([ (BOARD_MEM_REPORTS[board][r][0] / BOARD_MEM_REPORTS[board][r][1]) for r in ('FLASH', 'RAM') ])
+        max_pct = max([ get_percent(BOARD_LOADERS[board].meminfo[r]) for r in ('FLASH', 'RAM') ])
         icon = ':warning:' if max_pct > 0.85 else ''
         board_str = board.replace('_', '\\\\_')
 
@@ -337,12 +350,12 @@ def print_mem_report(artifact, artifact_boards):
                 icon,
                 f"${{{color_cmd(max_pct)}\\texttt{{{board_str}}}}}$",
                 f"<code>{soc}</code>",
-                color_entry(BOARD_MEM_REPORTS[board]['FLASH']),
-                color_entry(BOARD_MEM_REPORTS[board]['RAM']),
-                f"${{{ BOARD_CONFIGS[board].get('CONFIG_HEAP_MEM_POOL_SIZE', 0) }}}$",
-                f"${{{ BOARD_CONFIGS[board]['CONFIG_SRAM_SIZE']*1024 - BOARD_MEM_REPORTS[board]['RAM'][0] }}}$",
-                f"${{{ BOARD_CONFIGS[board]['CONFIG_LLEXT_HEAP_SIZE']*1024 }}}$",
-                f"${{{ BOARD_CONFIGS[board].get('CONFIG_MBEDTLS_HEAP_SIZE', '-') }}}$"
+                color_entry(BOARD_LOADERS[board].meminfo['FLASH']),
+                color_entry(BOARD_LOADERS[board].meminfo['RAM']),
+                f"${{{ BOARD_LOADERS[board].config.get('CONFIG_HEAP_MEM_POOL_SIZE', 0) }}}$",
+                f"${{{ BOARD_LOADERS[board].config['CONFIG_SRAM_SIZE']*1024 - BOARD_LOADERS[board].meminfo['RAM'][0] }}}$",
+                f"${{{ BOARD_LOADERS[board].config['CONFIG_LLEXT_HEAP_SIZE']*1024 }}}$",
+                f"${{{ BOARD_LOADERS[board].config.get('CONFIG_MBEDTLS_HEAP_SIZE', '-') }}}$"
               ]
 
         f_print("<tr>")
@@ -370,16 +383,16 @@ def print_mem_report(artifact, artifact_boards):
         for board in sorted(soc_boards):
             f_print(f"<tr><th><code>{board}</code></th>")
             for r in sorted_regions:
-                if r in BOARD_MEM_REPORTS[board]:
-                    f_print(f"<td>\n\n{color_entry(BOARD_MEM_REPORTS[board][r])}\n\n</td>")
+                if r in BOARD_LOADERS[board].meminfo:
+                    f_print(f"<td>\n\n{color_entry(BOARD_LOADERS[board].meminfo[r])}\n\n</td>")
                 else:
                     f_print(f"<td></td>")
             f_print("</tr>")
         f_print("</table>\n")
        # f_print()
        # for c in ('CONFIG_HEAP_MEM_POOL_SIZE', 'CONFIG_LLEXT_HEAP_SIZE', 'CONFIG_MBEDTLS_HEAP_SIZE'):
-       #     if c in BOARD_CONFIGS[board]:
-       #         f_print(f"{c:>25} {BOARD_CONFIGS[board][c]:8}")
+       #     if c in BOARD_LOADERS[board].config:
+       #         f_print(f"{c:>25} {BOARD_LOADERS[board].config[c]:8}")
        # f_print("</pre></td></tr>")
 
     if extra_data_present:
@@ -419,47 +432,14 @@ for board_data in ALL_BOARD_DATA.values():
     variant = board_data['variant']
     subarch = board_data['subarch']
 
-    # get board's config settings
-    report_file = f"zephyr-{variant}.config"
-    try:
-        with open(report_file, 'r') as f:
-            for line in f:
-                if line.startswith('#') or '=' not in line:
-                    continue
-                sym, val = line.strip().split('=', 1)
-                if val.startswith('"'):
-                    BOARD_CONFIGS[board][sym] = val.strip('"')
-                elif val=='y':
-                    BOARD_CONFIGS[board][sym] = 1
-                else:
-                    BOARD_CONFIGS[board][sym] = eval(val)
-    except Exception as e:
-        log_test(artifact, board, 'CI test', [], FAILURE, f"Error reading config file: {e}")
-        continue # Skip to the next board
+    BOARD_LOADERS[board] = LoaderEntry(artifact, board, variant)
+    if BOARD_LOADERS[board].status == FAILURE:
+        log_test(artifact, board, 'CI test', [], FAILURE, "Core data could not be read.")
+        continue
 
-    soc = BOARD_CONFIGS[board]['CONFIG_SOC']
+    soc = BOARD_LOADERS[board].config['CONFIG_SOC']
     board_data['soc'] = soc
-
-    # get board's core build warnings
-    report_file = f"zephyr-{variant}.warnings"
-    try:
-        with open(report_file, 'r') as f:
-            BOARD_WARNINGS[board] = f.readlines()
-    except Exception as e:
-        pass
-
-    # get board's memory report
-    report_file = f"zephyr-{variant}.meminfo"
-    try:
-        with open(report_file, 'r') as f:
-            report_data = json.load(f)
-    except Exception as e:
-        log_test(artifact, board, 'CI test', [], FAILURE, f"Error reading mem report file: {e}")
-        continue # Skip to the next board
-
-    BOARD_MEM_REPORTS[board] = { region.replace(':',''): [used, total] for region, used, total in report_data }
-    BOARD_MEM_REPORTS[board].pop('IDT_LIST', None)
-    REGIONS_BY_SOC[soc].update(BOARD_MEM_REPORTS[board].keys())
+    REGIONS_BY_SOC[soc].update(BOARD_LOADERS[board].meminfo.keys())
 
     # Get list of expected errors for this board/variant
     exceptions = []
