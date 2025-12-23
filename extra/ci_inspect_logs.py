@@ -40,6 +40,13 @@ BOARD_STATUS = [
     ":new_moon:" # -1
 ]
 
+class CoreEntry:
+    def __init__(self, artifact, board, variant):
+        self.artifact = artifact
+        self.board = board
+        self.status = status
+        self.warnings = warnings
+
 # Single test data structure
 class TestEntry:
     def __init__(self, artifact, board, sketch, status, issues):
@@ -76,6 +83,7 @@ class TestGroup:
         self.boards.add(test_entry.board)
         self.sketches.add(test_entry.sketch)
 
+BOARD_CORES = {}                      # { board: CoreEntry() }
 ARTIFACT_TESTS = defaultdict(TestGroup)            # { artifact: TestGroup() }
 BOARD_TESTS = defaultdict(TestGroup)               # { board: TestGroup() }
 SKETCH_TESTS = defaultdict(lambda: defaultdict(TestGroup)) # { artifact: { sketch: TestGroup() } }
@@ -110,7 +118,16 @@ def print_summary():
     f_print(title)
 
     # Print the recap table
-    f_print("<table>\n<tr><th>Artifact</th><th>Board</th><th>Status</th><th>RAM</th><th>Sketches</th><th>Warnings</th><th>Errors</th></tr>")
+    # 8 columns:
+    # - Artifact name
+    # - Board name
+    # - Core compilation status (ok, number of warnings)
+    # - Overall sketch compilation status for the core
+    # - Used RAM percent
+    # - Sketches tested
+    # - Sketches wiht warnings
+    # - Failed sketches
+    f_print("<table>\n<tr><th>Artifact</th><th>Board</th><th>Core</th><th>Tests</th><th>RAM</th><th>Sketches</th><th>Warnings</th><th>Errors</th></tr>")
 
     for artifact in ARTIFACTS:
         artifact_boards = sorted(ARTIFACT_TESTS[artifact].boards)
@@ -118,26 +135,43 @@ def print_summary():
 
         first_line = True
         for board in artifact_boards:
-            f_print(f"<tr>", f"<td rowspan='{len(artifact_boards)}'>{BOARD_STATUS[artifact_status]} <a href='#user-content-{artifact}'><code>{artifact}</code></a></td>" if first_line else "")
-            first_line = False
+            # Artifact name
+            if first_line:
+                f_print(f"<tr>", f"<td rowspan='{len(artifact_boards)}'>{BOARD_STATUS[artifact_status]} <a href='#user-content-{artifact}'><code>{artifact}</code></a></td>")
+                first_line = False
 
+            # Board name
+            f_print(f"<td><code>{board}</code>")
+
+            # Core build status + message on failure
+            if not os.path.exists(f"zephyr-{variant}.elf"):
+                f_print(f"<td align='center'>{BOARD_STATUS[FAILURE]}</td><td colspan='6'>Core build failed!</td></tr>")
+                continue
+
+            pin = f"{len(BOARD_WARNINGS[board])} :label:" if board in BOARD_WARNINGS else ":green_book:"
+            f_print(f"</td><td align='center'>{pin}</td>")
+
+            # Sketch build status + message on failure
             res = BOARD_TESTS[board]
-
-            f_print(f"<td><code>{board}</code></td><td align='center'>{BOARD_STATUS[res.status]}</td>")
+            f_print(f"<td align='center'>{BOARD_STATUS[res.status]}</td>")
             if res.status == FAILURE:
                 # only one test and one line in the issues array here
-                f_print(f"<td colspan='4'>{res.tests[0].issues[0]}</td></tr>")
-            else:
-                f_print(f"<td align='right'>\n\n{color_entry(BOARD_MEM_REPORTS[board]['RAM'], False)}\n\n</td>")
-                tests_str = len(res.tests) or "-"
-                warnings_str = res.counts[WARNING] or "-"
-                errors_str = f"<b>{res.counts[ERROR]}</b>" if res.counts[ERROR] else "-"
-                if res.counts[EXPECTED_ERROR]:
-                    if errors_str == "-": # only expected errors
-                        errors_str = f"<i>({res.counts[EXPECTED_ERROR]}*)</i>"
-                    else: # both actual and expected errors
-                        errors_str += f" <i>(+{res.counts[EXPECTED_ERROR]}*)</i>"
-                f_print(f"<td align='right'>{tests_str}</td><td align='right'>{warnings_str}</td><td align='right'>{errors_str}</td></tr>")
+                f_print(f"<td colspan='5'>{res.tests[0].issues[0]}</td></tr>")
+                continue
+
+            # Memory usage
+            f_print(f"<td align='right'>\n\n{color_entry(BOARD_MEM_REPORTS[board]['RAM'], False)}\n\n</td>")
+
+            # Test count summary
+            tests_str = len(res.tests) or "-"
+            warnings_str = res.counts[WARNING] or "-"
+            errors_str = f"<b>{res.counts[ERROR]}</b>" if res.counts[ERROR] else "-"
+            if res.counts[EXPECTED_ERROR]:
+                if errors_str == "-": # only expected errors
+                    errors_str = f"<i>({res.counts[EXPECTED_ERROR]}*)</i>"
+                else: # both actual and expected errors
+                    errors_str += f" <i>(+{res.counts[EXPECTED_ERROR]}*)</i>"
+            f_print(f"<td align='right'>{tests_str}</td><td align='right'>{warnings_str}</td><td align='right'>{errors_str}</td></tr>")
     f_print("</table>\n")
 
     # Print the legend
@@ -260,9 +294,10 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
 
             f_print("</table></blockquote></details>\n")
 
+BOARD_WARNINGS = {}                   # { board: [warning_strings] }
 BOARD_MEM_REPORTS = defaultdict(dict) # { board: { region: [used, total] } }
 BOARD_CONFIGS = defaultdict(dict)     # { board: { config_symbol: value } }
-REGIONS_BY_SOC = defaultdict(set)    # { soc: set(regions) }
+REGIONS_BY_SOC = defaultdict(set)     # { soc: set(regions) }
 
 BASE_COLOR = 0x20
 DELTA_COLOR = 0xff-2*BASE_COLOR
@@ -404,6 +439,14 @@ for board_data in ALL_BOARD_DATA.values():
 
     soc = BOARD_CONFIGS[board]['CONFIG_SOC']
     board_data['soc'] = soc
+
+    # get board's core build warnings
+    report_file = f"zephyr-{variant}.warnings"
+    try:
+        with open(report_file, 'r') as f:
+            BOARD_WARNINGS[board] = f.readlines()
+    except Exception as e:
+        pass
 
     # get board's memory report
     report_file = f"zephyr-{variant}.meminfo"
