@@ -143,7 +143,9 @@ jobs:
         run: |
           # Add job ID report
           echo ${{ steps.job_id.outputs.result }} > $REPORT.jobid
-          echo "REPORT_FILES=$(ls reports/*)" >> $GITHUB_ENV
+          echo "REPORT_FILES<<EOF" >> $GITHUB_ENV
+          ls reports/* >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
           # Archive built binaries (and build dir on failure)
           [ "${{ job.status }}" == "failure" ] && FULL_BUILD_DIR="build/${{ matrix.variant }}/"
