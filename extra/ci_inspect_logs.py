@@ -49,8 +49,9 @@ class LoaderEntry:
 
         self.config = self.read_config()
         self.meminfo = self.read_meminfo()
+        self.jobid = self.read_jobid()
 
-        self.status = PASS if self.config and self.meminfo else FAILURE
+        self.status = PASS if self.config and self.meminfo and self.jobid else FAILURE
 
     def read_config(self):
         # get board's config settings
@@ -83,6 +84,14 @@ class LoaderEntry:
                 return meminfo
         except Exception as e:
             return {}
+
+    def read_jobid(self):
+        # get build job ID
+        report_file = f"zephyr-{self.variant}.jobid"
+        try:
+            return open(report_file, 'r').read().strip()
+        except Exception as e:
+            return ""
 
 # Single test data structure
 class TestEntry:
@@ -178,10 +187,11 @@ def print_summary():
             first_line = False
 
             # Board name
-            f_print(f"<td><code>{board}</code>")
+            res = BOARD_LOADERS[board]
+            job_link = f"https://github.com/{GITHUB_REPOSITORY}/actions/runs/{GITHUB_RUN_ID}/job/{res.jobid}#step:5" if job_id else None
+            f_print(f"<td><code><a href='{job_link}'>{board}</a></code>")
 
             # Core build status + message on failure
-            res = BOARD_LOADERS[board]
             if res.status == FAILURE:
                 f_print(f"<td align='center'>{BOARD_STATUS[FAILURE]}</td><td colspan='6'>Core build failed!</td></tr>")
                 continue
@@ -201,15 +211,15 @@ def print_summary():
             f_print(f"<td align='right'>\n\n{color_entry(BOARD_MEM_REPORTS[board]['RAM'], False)}\n\n</td>")
 
             # Test count summary
-                tests_str = len(res.tests) or "-"
-                warnings_str = res.counts[WARNING] or "-"
-                errors_str = f"<b>{res.counts[ERROR]}</b>" if res.counts[ERROR] else "-"
-                if res.counts[EXPECTED_ERROR]:
-                    if errors_str == "-": # only expected errors
-                        errors_str = f"<i>({res.counts[EXPECTED_ERROR]}*)</i>"
-                    else: # both actual and expected errors
-                        errors_str += f" <i>(+{res.counts[EXPECTED_ERROR]}*)</i>"
-                f_print(f"<td align='right'>{tests_str}</td><td align='right'>{warnings_str}</td><td align='right'>{errors_str}</td></tr>")
+            tests_str = len(res.tests) or "-"
+            warnings_str = res.counts[WARNING] or "-"
+            errors_str = f"<b>{res.counts[ERROR]}</b>" if res.counts[ERROR] else "-"
+            if res.counts[EXPECTED_ERROR]:
+                if errors_str == "-": # only expected errors
+                    errors_str = f"<i>({res.counts[EXPECTED_ERROR]}*)</i>"
+                else: # both actual and expected errors
+                    errors_str += f" <i>(+{res.counts[EXPECTED_ERROR]}*)</i>"
+            f_print(f"<td align='right'>{tests_str}</td><td align='right'>{warnings_str}</td><td align='right'>{errors_str}</td></tr>")
     f_print("</table>\n")
 
     # Print the legend
