@@ -141,9 +141,9 @@ jobs:
       - name: Package board artifacts
         if: ${{ !cancelled() }}
         run: |
-          # Archive job ID, warnings and memory info as 'report' artifact
+          # Add job ID report
           echo ${{ steps.job_id.outputs.result }} > $REPORT.jobid
-          tar chf - $REPORT.* | zstd > build-report-${ARTIFACT_TAG}.tar.zstd
+          export REPORT_FILES=$(ls reports/*)
 
           # Archive built binaries (and build dir on failure)
           [ ${{ job.status }} == 'failure' ] && FULL_BUILD_DIR="build/${{ matrix.variant }}/"
@@ -165,7 +165,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-report-${{ env.ARTIFACT_TAG }}
-          path: build-report-${{ env.ARTIFACT_TAG }}.tar.zstd
+          path: ${{ env.REPORT_FILES }}
 
   package-core:
     name: Package ${{ matrix.artifact }}
