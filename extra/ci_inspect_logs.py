@@ -155,7 +155,16 @@ def print_summary():
     f_print(title)
 
     # Print the recap table
-    f_print("<table>\n<tr><th>Artifact</th><th>Board</th><th>Status</th><th>RAM</th><th>Sketches</th><th>Warnings</th><th>Errors</th></tr>")
+    # 8 columns:
+    # - Artifact name
+    # - Board name
+    # - Core compilation status (ok, number of warnings)
+    # - Overall sketch compilation status for the core
+    # - Used RAM percent
+    # - Sketches tested
+    # - Sketches wiht warnings
+    # - Failed sketches
+    f_print("<table>\n<tr><th>Artifact</th><th>Board</th><th>Core</th><th>Tests</th><th>RAM</th><th>Sketches</th><th>Warnings</th><th>Errors</th></tr>")
 
     for artifact in ARTIFACTS:
         artifact_boards = sorted(ARTIFACT_TESTS[artifact].boards)
@@ -163,17 +172,35 @@ def print_summary():
 
         first_line = True
         for board in artifact_boards:
-            f_print(f"<tr>", f"<td rowspan='{len(artifact_boards)}'>{BOARD_STATUS[artifact_status]} <a href='#user-content-{artifact}'><code>{artifact}</code></a></td>" if first_line else "")
+            # Artifact name
+            if first_line:
+                f_print(f"<tr>", f"<td rowspan='{len(artifact_boards)}'>{BOARD_STATUS[artifact_status]} <a href='#user-content-{artifact}'><code>{artifact}</code></a></td>")
             first_line = False
 
-            res = BOARD_TESTS[board]
+            # Board name
+            f_print(f"<td><code>{board}</code>")
 
-            f_print(f"<td><code>{board}</code></td><td align='center'>{BOARD_STATUS[res.status]}</td>")
+            # Core build status + message on failure
+            res = BOARD_LOADERS[board]
+            if res.status == FAILURE:
+                f_print(f"<td align='center'>{BOARD_STATUS[FAILURE]}</td><td colspan='6'>Core build failed!</td></tr>")
+                continue
+
+            pin = f"{len(res.warnings)} :label:" if res.status == WARNING else ":green_book:"
+            f_print(f"</td><td align='center'>{pin}</td>")
+
+            # Sketch build status + message on failure
+            res = BOARD_TESTS[board]
+            f_print(f"<td align='center'>{BOARD_STATUS[res.status]}</td>")
             if res.status == FAILURE:
                 # only one test and one line in the issues array here
-                f_print(f"<td colspan='4'>{res.tests[0].issues[0]}</td></tr>")
-            else:
-                f_print(f"<td align='right'>\n\n{color_entry(BOARD_LOADERS[board].meminfo['RAM'], False)}\n\n</td>")
+                f_print(f"<td colspan='5'>{res.tests[0].issues[0]}</td></tr>")
+                continue
+
+            # Memory usage
+            f_print(f"<td align='right'>\n\n{color_entry(BOARD_MEM_REPORTS[board]['RAM'], False)}\n\n</td>")
+
+            # Test count summary
                 tests_str = len(res.tests) or "-"
                 warnings_str = res.counts[WARNING] or "-"
                 errors_str = f"<b>{res.counts[ERROR]}</b>" if res.counts[ERROR] else "-"

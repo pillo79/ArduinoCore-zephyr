@@ -105,30 +105,52 @@ jobs:
       - name: Build loader
         shell: bash
         run: |
-          if ! ./extra/build.sh ${{ matrix.board }} 1> >(tee output.log) 2> >(tee error.log) ; then
+          REPORT=reports/zephyr-${{ matrix.variant }}
+          mkdir -p reports
+          if ! ./extra/build.sh ${{ matrix.board }} 1> >(tee $REPORT.stdout) 2> >(tee $REPORT.stderr) ; then
             echo "### :x: ${{ matrix.board }} (\`${{ matrix.variant }}\`) build errors" > $GITHUB_STEP_SUMMARY
             echo >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            cat error.log >> $GITHUB_STEP_SUMMARY
+            cat $REPORT.stderr >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
 
-          cp output.log firmwares/zephyr-${{ matrix.variant }}.stderr
-          cp error.log firmwares/zephyr-${{ matrix.variant }}.stderr
+          # look for warnings (errors are a happy path!)
+          grep -i "warning:" $REPORT.stdout > $REPORT.warnings || true
 
           # extract the memory usage table (from the header to the first non-% line)
-          cat output.log | sed -n '/^Memory region/,/^[^%]*$/p' | head -n -1 \
-                         | awk 'BEGIN {split("B KB MB GB", u); for(i in u) m[u[i]]=1024^(i-1)} /:/ {print "[\"" $1 "\"," $2*m[$3] "," $4*m[$5] "]"}' \
-                         | sort | jq -s > firmwares/zephyr-${{ matrix.variant }}.meminfo
+          cat $REPORT.stdout | sed -n '/^Memory region/,/^[^%]*$/p' | head -n -1 \
+                             | awk 'BEGIN {split("B KB MB GB", u); for(i in u) m[u[i]]=1024^(i-1)} /:/ {print "[\"" $1 "\"," $2*m[$3] "," $4*m[$5] "]"}' \
+                             | sort | jq -s > $REPORT.meminfo
 
-      - name: Package board binaries
+      - name: Get build job ID
+        id: job_id
+        if: ${{ success() || failure() }}
+        uses: actions/github-script@main
+        with:
+          script: |
+            const { data: workflow_run } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId
+            });
+            const job_name = `Build loader for ${{ matrix.board }}`
+            return workflow_run.jobs.find((job) => job.name === job_name).id;
+
+      - name: Package board artifacts
         if: ${{ !cancelled() }}
         run: |
+          # Archive job ID, warnings and memory info as 'report' artifact
+          echo ${{ steps.job_id.outputs.result }} > $REPORT.jobid
+          tar chf - $REPORT.* | zstd > build-report-${ARTIFACT_TAG}.tar.zstd
+
+          # Archive built binaries (and build dir on failure)
+          [ ${{ job.status }} == 'failure' ] && FULL_BUILD_DIR="build/${{ matrix.variant }}/"
           tar chf - \
             firmwares/*${{ matrix.variant }}* \
             variants/${{ matrix.variant }}/ \
-            ${{ (job.status == 'failure') && format('build/{0}/', matrix.variant) }} \
+            ${FULL_BUILD_DIR} \
           | zstd > binaries-${ARTIFACT_TAG}.tar.zstd
 
       - name: Archive board binaries
@@ -138,14 +160,12 @@ jobs:
           name: ${{ format('{0}binaries-{1}', (job.status == 'failure') && 'failed-' || '', env.ARTIFACT_TAG) }}
           path: binaries-${{ env.ARTIFACT_TAG }}.tar.zstd
 
-      - name: Archive board memory report
+      - name: Archive build reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: mem-report-${{ env.ARTIFACT_TAG }}
-          path: |
-            firmwares/zephyr-${{ matrix.variant }}.meminfo
-            firmwares/zephyr-${{ matrix.variant }}.config
+          name: build-report-${{ env.ARTIFACT_TAG }}
+          path: build-report-${{ env.ARTIFACT_TAG }}.tar.zstd
 
   package-core:
     name: Package ${{ matrix.artifact }}
@@ -273,7 +293,7 @@ jobs:
           enable-issues-report: 'true'
           always-succeed: 'true'
 
-      - name: Get job ID
+      - name: Get test job ID
         id: job_id
         if: ${{ success() || failure() }}
         uses: actions/github-script@main
@@ -324,6 +344,7 @@ jobs:
 
       # Collect and summarize logs
       - run: |
+          find
           extra/ci_inspect_logs.py result summary full_log
           echo "CI_RESULT=$(cat result)" > $GITHUB_OUTPUT
           if ${{ github.event_name != 'pull_request' && 'true' || 'false' }}; then
@@ -343,7 +364,7 @@ jobs:
         uses: geekyeggo/delete-artifact@v5.1.0
         with:
           name: |
-            mem-report-*
+            build-report-*
             test-report-*
           failOnError: false
 
