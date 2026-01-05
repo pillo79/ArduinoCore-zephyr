@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Create or update bot comment on PR
         if: ${{ github.event_name == 'pull_request' }}
+        permissions:
+          pull-requests: write
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
