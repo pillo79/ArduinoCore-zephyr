@@ -352,21 +352,20 @@ jobs:
 
       # Collect and summarize logs
       - run: |
-          find
-          extra/ci_inspect_logs.py result summary full_log
-          echo "CI_RESULT=$(cat result)" > $GITHUB_OUTPUT
+          mkdir -p reports
+          echo ${{ github.event.pull_request.number }} > pr_number
+          extra/ci_inspect_logs.py reports/result reports/summary reports/full_log
+          echo "CI_RESULT=$(cat reports/result)" > $GITHUB_OUTPUT
           if ${{ github.event_name != 'pull_request' && 'true' || 'false' }}; then
-            cat summary >> $GITHUB_STEP_SUMMARY
+            cat reports/summary >> $GITHUB_STEP_SUMMARY
           fi
-          cat full_log >> $GITHUB_STEP_SUMMARY
+          cat reports/full_log >> $GITHUB_STEP_SUMMARY
 
-      - name: Update bot comment with CI summary
-        if: ${{ github.event_name == 'pull_request' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-        run:
-          gh pr comment ${{ github.event.pull_request.number }} --edit-last --body-file summary
+      - name: Archive comment information
+        uses: actions/upload-artifact@v4
+        with:
+          name: summary
+          path: reports/
 
       - name: Clean up intermediate artifacts
         uses: geekyeggo/delete-artifact@v5.1.0

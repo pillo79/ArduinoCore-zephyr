@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: PR Comment update
+
+on:
+  workflow_run:
+    workflows: ["Package, test and upload core"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pr-comment-update:
+    name: Update bot comment on PR
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.event == 'pull_request' }}
+    steps:
+      - name: Download artifacts
+        id: download-artifacts
+        uses: dawidd6/action-download-artifact@ac66b43f0e6a346234dd65d4d0c8fbb31cb316e5 # v11
+        with:
+          workflow: package-core.yml
+          run_id: ${{ github.event.workflow_run.id }}
+          name: summary
+          
+      - name: Load PR number
+        run: [ -f reports/pr_number ] && echo "PR_NUM=$(cat reports/pr_number)" >> $GITHUB_ENV
+
+      - name: Check PR number
+        id: check-pr
+        uses: carpentries/actions/check-valid-pr@2e20fd5ee53b691e27455ce7ca3b16ea885140e8 # v0.15.0
+        with:
+          pr: ${{ env.PR_NUM }}
+          sha: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Validate PR number
+        if: |
+          steps.check-pr.outputs.VALID != 'true'
+        run: |
+          echo "ABORT: PR number validation failed!"
+          exit 1
+
+      - name: Update PR comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          BODY="$(cat reports/summary)"
+          if ! gh pr comment ${PR_NUM} --edit-last --body "${BODY}" ; then
+            gh pr comment ${PR_NUM} --body "${BODY}"
+          fi
+        
+      - name: Clean up intermediate artifacts
+        uses: geekyeggo/delete-artifact@v5.1.0
+        with:
+          name: summary
