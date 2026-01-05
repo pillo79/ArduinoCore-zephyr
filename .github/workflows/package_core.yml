@@ -23,7 +23,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           BODY: |
             ### :gear: CI started on this PR. Follow the progress here.
-        run:
+        run: |
           gh pr comment ${{ github.event.pull_request.number }} --edit-last --body "${BODY}"
           [ $? -ne 0 ] && gh pr comment ${{ github.event.pull_request.number }} --body "${BODY}"
 
