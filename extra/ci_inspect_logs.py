@@ -188,7 +188,7 @@ def print_summary():
 
             # Board name
             res = BOARD_LOADERS[board]
-            job_link = f"https://github.com/{GITHUB_REPOSITORY}/actions/runs/{GITHUB_RUN_ID}/job/{res.jobid}#step:5" if job_id else None
+            job_link = f"https://github.com/{GITHUB_REPOSITORY}/actions/runs/{GITHUB_RUN_ID}/job/{res.jobid}#step:5" if res.jobid else None
             f_print(f"<td><code><a href='{job_link}'>{board}</a></code>")
 
             # Core build status + message on failure
