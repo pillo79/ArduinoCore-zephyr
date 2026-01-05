@@ -24,8 +24,9 @@ jobs:
           BODY: |
             ### :gear: CI started on this PR. Follow the progress here.
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} --edit-last --body "${BODY}"
-          [ $? -ne 0 ] && gh pr comment ${{ github.event.pull_request.number }} --body "${BODY}"
+          if ! gh pr comment ${{ github.event.pull_request.number }} --edit-last --body "${BODY}" ; then
+            gh pr comment ${{ github.event.pull_request.number }} --body "${BODY}"
+          fi
 
       - name: Install OS dependencies
         working-directory: /opt
