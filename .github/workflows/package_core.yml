@@ -7,6 +7,7 @@ on:
 jobs:
   pr-comment-init:
     name: Create or update bot comment on PR
+    runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
