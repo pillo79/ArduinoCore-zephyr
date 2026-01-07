@@ -27,7 +27,8 @@ jobs:
           name: summary
           
       - name: Load PR number
-        run: [ -f reports/pr_number ] && echo "PR_NUM=$(cat reports/pr_number)" >> $GITHUB_ENV
+        run: |
+          [ -f reports/pr_number ] && echo "PR_NUM=$(cat reports/pr_number)" >> $GITHUB_ENV
 
       - name: Check PR number
         id: check-pr

@@ -5,23 +5,6 @@ on:
   - pull_request
 
 jobs:
-  pr-comment-init:
-    name: Create or update bot comment on PR
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' }}
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
-      BODY: |
-        ### :gear: CI started on this PR. Follow the progress here.
-    permissions:
-      pull-requests: write
-    steps:
-      - run: |
-          if ! gh pr comment ${{ github.event.pull_request.number }} --edit-last --body "${BODY}" ; then
-            gh pr comment ${{ github.event.pull_request.number }} --body "${BODY}"
-          fi
-
   build-env:
     name: Prepare build environment
     runs-on: ubuntu-latest
