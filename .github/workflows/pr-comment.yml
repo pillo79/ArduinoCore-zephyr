@@ -16,7 +16,6 @@ jobs:
   pr-comment-update:
     name: Update bot comment on PR
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.event == 'pull_request' }}
     steps:
       - name: Download artifacts
         id: download-artifacts
@@ -28,7 +27,8 @@ jobs:
           
       - name: Load PR number
         run: |
-          [ -f reports/pr_number ] && echo "PR_NUM=$(cat reports/pr_number)" >> $GITHUB_ENV
+        echo "${{ toJSON(github.event.workflow_run) }}"
+        [ -f reports/pr_number ] && echo "PR_NUM=$(cat reports/pr_number)" >> $GITHUB_ENV
 
       - name: Check PR number
         id: check-pr
