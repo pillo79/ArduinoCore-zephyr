@@ -62,7 +62,7 @@
 	};
 
 	/* used to overcome problems with _C analog pins */
-	gpioz: gpio@deadbeef {
+	gpio_invalid: gpio@deadbeef {
 		compatible = "vnd,gpio";
 		gpio-controller;
 		reg = <0xdeadbeef 0x1000>;
@@ -101,8 +101,8 @@
 						<&gpioh 11 0>,
 						<&gpioe 5 0>,
 						<&gpioe 4 0>,	/* User button */
-						<&gpioz 0 0>,	/* Inputs */
-						<&gpioz 1 0>,
+						<&gpio_invalid 0 0>,	/* Inputs */
+						<&gpio_invalid 1 0>,
 						<&gpiof 12 0>,
 						<&gpiob 0 0>,
 						<&gpiof 10 0>,
@@ -118,8 +118,8 @@
 						<&gpioh 12 0>,
                         <&gpioe 5 0>;
 
-		adc-pin-gpios =	<&gpioz 0 0>,
-					<&gpioz 1 0>,
+		adc-pin-gpios =	<&gpio_invalid 0 0>,
+					<&gpio_invalid 1 0>,
 					<&gpiof 12 0>,
 					<&gpiob 0 0>,
 					<&gpiof 10 0>,
