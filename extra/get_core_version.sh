@@ -26,9 +26,14 @@
 # If there are no tags at all (for example when run in a fork etc), it defaults
 # to "9.9.9-<date>+<commit-hash-dirty>".
 
-VERSION=$(git describe --tags --exact-match 2>/dev/null)
+# In CI, BRANCH_NAME points to the branch or tag ref that triggered the
+# workflow run (e.g., "refs/heads/main" or "refs/tags/v1.2.3"). Without this,
+# git describe would use HEAD, which is a temporary detachead commit.
+# If BRANCH_NAME is not set, the command falls back to using HEAD.
+
+VERSION=$(git describe --tags --exact-match ${BRANCH_NAME} 2>/dev/null)
 if [ -z "$VERSION" ]; then
-	VERSION=$(git describe --tags --dirty 2>/dev/null |
+	VERSION=$(git describe --tags --dirty ${BRANCH_NAME} 2>/dev/null |
 		sed 's/\.\([[:digit:]]\+\)\(-.*\)*-[[:digit:]]\+-g/ \1 \2 /' |
 		awk '{ if (NF==3) { print $1 "." ($2+1) "-0.dev+" $3 } else { print $1 "." $2 $3 "-0.dev+" $4 }}')
 	if [ -z "$VERSION" ]; then
