@@ -323,6 +323,22 @@ jobs:
           cat full_log >> $GITHUB_STEP_SUMMARY
           echo "CI_RESULT=$(cat result)" > $GITHUB_OUTPUT
 
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            mkdir -p comment-request
+            echo "${{ github.event.pull_request.number }}" > comment-request/pr_number
+            echo -e "## Built \`$(extra/get_core_version.sh)\`\n" > comment-request/comment_body
+            echo >> comment-request/comment_body
+            cat summary | sed -e 's!\${\\color{\S*}\(.*\)}\$!\1!g' -e 's!\\%!%!g' >> comment-request/comment_body
+          fi
+
+      - name: Archive comment information
+        uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          name: comment-request
+          path: comment-request/
+          retention-days: 1
+
       - name: Clean up intermediate artifacts
         uses: geekyeggo/delete-artifact@v5.1.0
         with:
