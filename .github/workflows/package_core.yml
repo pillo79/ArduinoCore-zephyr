@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
 
+env:
+  BRANCH_NAME: origin/${{ github.head_ref || github.ref_name }}
+
 jobs:
 
   build-env:
@@ -35,14 +38,14 @@ jobs:
       - name: Initialize Zephyr environment
         run: |
           yes | ./extra/bootstrap.sh -o=--filter=tree:0
-          echo "CORE_HASH=$(git describe --always)" >> "$GITHUB_ENV"
+          echo "CORE_HASH=$(git describe --always $BRANCH_NAME)" >> "$GITHUB_ENV"
           echo "ALL_BOARD_DATA=$(extra/get_board_details.sh | jq -c 'sort_by(.variant)')" >> "$GITHUB_ENV"
           echo "## Building \`$(extra/get_core_version.sh)\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Map output packages
         # needs the above env vars to be usable
         run: |
-          echo "CORE_TAG=$(git describe --tags --exact-match 2>/dev/null || echo $CORE_HASH)" >> "$GITHUB_ENV"
+          echo "CORE_TAG=$(git describe --tags --exact-match $BRANCH_NAME 2>/dev/null || echo $CORE_HASH)" >> "$GITHUB_ENV"
           echo "ARTIFACTS=$(jq -c '["zephyr"] + (map(.artifact) | unique)' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "SUB_ARCHES=$(jq -c 'map(.subarch) | unique' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
 
