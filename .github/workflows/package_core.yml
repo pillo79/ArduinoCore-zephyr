@@ -160,12 +160,19 @@ jobs:
             tar --use-compress-program=unzstd -xpf $f
           done
           ./extra/package_core.sh ${{ matrix.artifact }} ${CORE_TAG} distrib/${CORE_ARTIFACT}.tar.bz2
+          [ ${{ matrix.artifact }} == "zephyr" ] && tar jcf distrib/${CORE_ARTIFACT}-spdx.tar.bz2 variants/*/spdx/ || true
 
       - uses: actions/upload-artifact@v4
         if: ${{ success() || failure() }}
         with:
           name: ${{ env.CORE_ARTIFACT }}
           path: distrib/${{ env.CORE_ARTIFACT }}.tar.bz2
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ matrix.artifact == 'zephyr' }}
+        with:
+          name: ${{ env.CORE_ARTIFACT }}-spdx
+          path: distrib/${{ env.CORE_ARTIFACT }}-spdx.tar.bz2
 
   cleanup-build:
     name: Clean up intermediates
