@@ -9,12 +9,14 @@ import sys
 SKIP = -1           # Test was not performed
 PASS = 0            # (PASS)  Compiled successfully
 WARNING = 1         # (PASS)  Compiled with warnings
-ERROR = 2           # (FAIL)  Compilation failed with errors
-FAILURE = 3         # Test run failed to complete
+EXPECTED_ERROR = 2  # (PASS*) Compilation failed with expected errors
+ERROR = 3           # (FAIL)  Compilation failed with errors
+FAILURE = 4         # Test run failed to complete
 
 TEST_LEGEND = [
         "Test passed successfully, with no warnings or errors.",
         "Test completed with some warnings; no errors detected.",
+        "Test completed with errors, but all are known/expected.",
         "Test completed with unexpected errors.",
         "Test run failed to complete.",
         "Test was skipped." # -1
@@ -23,6 +25,7 @@ TEST_LEGEND = [
 TEST_STATUS = [
     ":green_circle:",
     ":yellow_circle:",
+    ":no_entry_sign:",
     ":red_circle:",
     ":fire:",
     ":new_moon:" # -1
@@ -31,6 +34,7 @@ TEST_STATUS = [
 BOARD_STATUS = [
     ":white_check_mark:",
     ":white_check_mark:*",
+    ":heavy_check_mark:*",
     ":x:",
     ":fire:",
     ":new_moon:" # -1
@@ -63,7 +67,7 @@ class TestGroup:
         self.boards = set()
         self.sketches = set()
         # Counts of test results by status
-        self.counts = { status : 0 for status in [PASS, WARNING, ERROR, FAILURE] }
+        self.counts = { status : 0 for status in [PASS, WARNING, EXPECTED_ERROR, ERROR, FAILURE] }
         # Overall status of the group
         self.status = SKIP
         # List of individual TestEntry objects (all, only with issues)
@@ -95,7 +99,7 @@ ARTIFACT_TESTS = defaultdict(TestGroup)                     # { artifact: TestGr
 BOARD_TESTS = defaultdict(TestGroup)                        # { board: TestGroup() }
 SKETCH_TESTS = defaultdict(lambda: defaultdict(TestGroup))  # { artifact: { sketch: TestGroup() } }
 
-def log_test(artifact, board, sketch, status, issues, job_link=None):
+def log_test(artifact, board, sketch, exceptions, status, issues, job_link=None):
     """
     Logs individual test results into the global test tracking structures.
     """
@@ -103,6 +107,10 @@ def log_test(artifact, board, sketch, status, issues, job_link=None):
     # Ensure issues is a list
     if isinstance(issues, str):
         issues = [ issues ]
+
+    # Adjust the status for expected errors
+    if status == ERROR and any(pattern.match(sketch) for pattern in exceptions):
+        status = EXPECTED_ERROR
 
     # Create the test entry
     test_entry = TestEntry(artifact, board, sketch, status, issues, job_link)
@@ -176,13 +184,18 @@ def print_summary():
             tests_str = len(res.tests) or "-"
             warnings_str = res.counts[WARNING] or "-"
             errors_str = f"<b>{res.counts[ERROR]}</b>" if res.counts[ERROR] else "-"
+            if res.counts[EXPECTED_ERROR]:
+                if errors_str == "-": # only expected errors
+                    errors_str = f"<i>({res.counts[EXPECTED_ERROR]}*)</i>"
+                else: # both actual and expected errors
+                    errors_str += f" <i>(+{res.counts[EXPECTED_ERROR]}*)</i>"
             f_print(f"<td align='right'>{tests_str}</td><td align='right'>{warnings_str}</td><td align='right'>{errors_str}</td></tr>")
     f_print("</table>\n")
 
     # Print the legend
     f_print("<details><summary>Legend</summary>")
     f_print("<blockquote><br><table><tr><th align='center'>Board</th><th align='center'>Test</th><th>Status description</th></tr>")
-    for status in FAILURE, ERROR, WARNING, PASS, SKIP:
+    for status in FAILURE, ERROR, EXPECTED_ERROR, WARNING, PASS, SKIP:
         f_print(f"<tr><td align='center'>{BOARD_STATUS[status]}</td>")
         f_print(f"<td align='center'>{TEST_STATUS[status]}</td>")
         f_print(f"<td>{TEST_LEGEND[status]}</td></tr>")
@@ -345,6 +358,15 @@ for board_data in ALL_BOARD_DATA.values():
         log_test(artifact, board, 'CI test', '', [], FAILURE, "Core data could not be read.")
         continue
 
+    # Get list of expected errors for this board/variant
+    exceptions = []
+    if os.path.exists(f"variants/{variant}/known_example_issues.txt"):
+        with open(f"variants/{variant}/known_example_issues.txt", 'r') as f:
+            for line in f:
+                sketch_pattern = line.split('#')[0].strip()
+                if sketch_pattern:
+                    exceptions.append(re.compile(f"^(ArduinoCore-zephyr/)?{sketch_pattern}"))
+
     # Get job link for this test
     job_link = JOB_URLS.get(f"Test {board}")
     if job_link:
@@ -384,7 +406,7 @@ for board_data in ALL_BOARD_DATA.values():
         else:
             status = PASS
 
-        log_test(artifact, board, sketch, status, sketch_issues, job_link)
+        log_test(artifact, board, sketch, exceptions, status, sketch_issues, job_link)
 
 ARTIFACTS = sorted(ARTIFACT_TESTS.keys())
 
@@ -392,7 +414,7 @@ ARTIFACTS = sorted(ARTIFACT_TESTS.keys())
 # --------------------------
 
 ci_run_status = max(res.status for res in ARTIFACT_TESTS.values())
-ci_run_passed = ci_run_status in (PASS, WARNING)
+ci_run_passed = ci_run_status in (PASS, WARNING, EXPECTED_ERROR)
 
 with open(summary_file, 'w') as f:
     f_print = lambda *args, **kwargs: print(*args, file=f, **kwargs)
@@ -411,7 +433,23 @@ with open(full_report_file, 'w') as f:
 
         f_print(f"<a name='{artifact}'></a>")
         f_print("\n---\n")
-        print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status == ERROR)
+
+        if any(BOARD_LOADERS[board].status != PASS for board in artifact_boards):
+            summary = f"<code>{artifact}</code> loader build warnings"
+            f_print(f"<details><summary>{summary}</summary><blockquote><br>\n")
+            f_print("<table>")
+            f_print("<tr><th>Board</th><th>Warnings</th></tr>")
+            for board in artifact_boards:
+                if BOARD_LOADERS[board].status == PASS:
+                    continue
+                f_print(f"<tr><td><code>{board}</code></td><td><pre>")
+                for warning in BOARD_LOADERS[board].warnings:
+                    f_print(warning)
+                f_print("</pre></td></tr>")
+            f_print("</table>\n")
+            f_print("</blockquote></details>\n")
+
+        print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status in (ERROR, EXPECTED_ERROR))
 
         successful_tests = ARTIFACT_TESTS[artifact].counts[PASS] + ARTIFACT_TESTS[artifact].counts[WARNING]
         warning_tests = ARTIFACT_TESTS[artifact].counts[WARNING]
