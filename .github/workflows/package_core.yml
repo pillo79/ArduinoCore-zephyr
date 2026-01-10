@@ -119,7 +119,7 @@ jobs:
           cat $REPORT.stdout | sed -n '/^Memory region/,/^[^%]*$/p' | head -n -1 \
                              | awk 'BEGIN {split("B KB MB GB", u); for(i in u) m[u[i]]=1024^(i-1)} /:/ {print "[\"" $1 "\"," $2*m[$3] "," $4*m[$5] "]"}' \
                              | sort \
-                             | jq -s "map(if .[0] == \"FLASH:\" then .[2] == ${LOADER_SIZE} else . end)" > $REPORT.meminfo
+                             | jq -s "map(if .[0] == \"FLASH:\" then .[2] = ${LOADER_SIZE} else . end)" > $REPORT.meminfo
           jq
 
       - name: Package board artifacts
