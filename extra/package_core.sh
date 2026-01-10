@@ -54,7 +54,7 @@ for variant in $INCLUDED_VARIANTS ; do
 	board=$(echo ${BOARD_DETAILS} | jq -cr "map(select(.variant == \"${variant}\")) | .[0].board")
 	# maximum sketch size: size of sketch partition (exact limit)
 	# maximum data size: configured LLEXT heap size (larger bound, real limit is smaller)
-	CODE_SIZE=$(cat variants/${variant}/syms-static.ld | grep '_sketch_max_size' | cut -d '=' -f 2 | tr -d ') ;')
+	CODE_SIZE=$(( $(cat variants/${variant}/syms-static.ld | grep '_sketch_max_size' | cut -d '=' -f 2 | tr -d ');') ))
 	DATA_SIZE=$(( 1024*$(cat firmwares/zephyr-${variant}.config | grep 'LLEXT_HEAP_SIZE' | cut -d '=' -f 2) ))
 	sed -i -e "s/^${board}\.upload\.maximum_size=.*/${board}.upload.maximum_size=${CODE_SIZE}/" $TEMP_BOARDS
 	sed -i -e "s/^${board}\.upload\.maximum_data_size=.*/${board}.upload.maximum_data_size=${DATA_SIZE}/" $TEMP_BOARDS
