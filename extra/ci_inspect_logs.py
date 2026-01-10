@@ -586,6 +586,22 @@ with open(full_report_file, 'w') as f:
 
         f_print(f"<a name='{artifact}'></a>")
         f_print("\n---\n")
+
+        if any(BOARD_LOADERS[board].status != PASS for board in artifact_boards):
+            summary = f"<code>{artifact}</code> loader build warnings"
+            f_print(f"<details><summary>{summary}</summary><blockquote><br>\n")
+            f_print("<table>")
+            f_print("<tr><th>Board</th><th>Warnings</th></tr>")
+            for board in artifact_boards:
+                if BOARD_LOADERS[board].status == PASS:
+                    continue
+                f_print(f"<tr><td><code>{board}</code></td><td><pre>")
+                for warning in BOARD_LOADERS[board].warnings:
+                    f_print(warning)
+                f_print("</pre></td></tr>")
+            f_print("</table>\n")
+            f_print("</blockquote></details>\n")
+
         print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status in (ERROR, EXPECTED_ERROR))
 
         successful_tests = ARTIFACT_TESTS[artifact].counts[PASS] + ARTIFACT_TESTS[artifact].counts[WARNING]
