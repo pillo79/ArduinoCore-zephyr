@@ -23,6 +23,8 @@ LOG_MODULE_REGISTER(sketch);
 #include <zephyr/drivers/uart.h>
 #include <zephyr/usb/usb_device.h>
 
+#include <zephyr/devicetree/fixed-partitions.h>
+
 #define HEADER_LEN 16
 
 struct sketch_header_v1 {
@@ -89,9 +91,11 @@ void llext_entry(void *arg0, void *arg1, void *arg2) {
 }
 #endif /* CONFIG_USERSPACE */
 
+/* Export Flash parameters for use by core building scripts */
 __attribute__((retain)) const uintptr_t sketch_base_addr =
 	DT_REG_ADDR(DT_GPARENT(DT_NODELABEL(user_sketch))) + DT_REG_ADDR(DT_NODELABEL(user_sketch));
 __attribute__((retain)) const uintptr_t sketch_max_size = DT_REG_SIZE(DT_NODELABEL(user_sketch));
+__attribute__((retain)) const uintptr_t loader_max_size = DT_REG_SIZE(DT_NODE_BY_FIXED_PARTITION_LABEL(image_0));
 
 static int loader(const struct shell *sh) {
 	const struct flash_area *fa;
