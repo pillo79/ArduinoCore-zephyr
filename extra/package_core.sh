@@ -54,6 +54,16 @@ for board in $EXCLUDED_BOARDS ; do
 	# remove (even commented) lines for excluded boards
 	sed -i "/^\(\s*#\s*\)\?${board}\./d" $TEMP_BOARDS
 done
+# set proper maximum sizes for included variants
+for variant in $INCLUDED_VARIANTS ; do
+	board=$(echo ${BOARD_DETAILS} | jq -cr "map(select(.variant == \"${variant}\")) | .[0].board")
+	# maximum sketch size: size of sketch partition (exact limit)
+	# maximum data size: configured LLEXT heap size (larger bound, real limit is smaller)
+	CODE_SIZE=$(( $(cat variants/${variant}/syms-static.ld | grep '_sketch_max_size' | cut -d '=' -f 2 | tr -d ');') ))
+	DATA_SIZE=$(( 1024*$(cat firmwares/zephyr-${variant}.config | grep 'LLEXT_HEAP_SIZE' | cut -d '=' -f 2) ))
+	sed -i -e "s/^${board}\.upload\.maximum_size=.*/${board}.upload.maximum_size=${CODE_SIZE}/" $TEMP_BOARDS
+	sed -i -e "s/^${board}\.upload\.maximum_data_size=.*/${board}.upload.maximum_data_size=${DATA_SIZE}/" $TEMP_BOARDS
+done
 # remove multiple empty lines
 sed -i '/^$/N;/^\n$/D' $TEMP_BOARDS
 
@@ -61,7 +71,7 @@ sed -i '/^$/N;/^\n$/D' $TEMP_BOARDS
 TEMP_PLATFORM=$(mktemp -p . | sed 's/\.\///')
 cat platform.txt > ${TEMP_PLATFORM}
 [ -z "$ARTIFACT_NAME" ] || sed -ie "s/^name=.*/name=${ARTIFACT_NAME}/" ${TEMP_PLATFORM}
-sed -ie "s/^version=.*/version=$(extra/get_core_version.sh)/" ${TEMP_PLATFORM}
+sed -i -e "s/^version=.*/version=$(extra/get_core_version.sh)/" ${TEMP_PLATFORM}
 
 declutter_file() {
 	# remove comments, whitespace at EOL, '/' dir terminators and empty lines
