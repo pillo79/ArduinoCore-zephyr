@@ -102,28 +102,42 @@ class LoaderEntry:
 
 # Single test data structure
 class TestEntry:
-    def __init__(self, artifact, board, sketch, link_mode, status, issues, job_link):
+    def __init__(self, artifact, board, sketch, link_mode, excepted, status, issues, job_link):
         self.artifact = artifact
         self.board = board
         self.sketch = sketch
         self.link_mode = link_mode
-        self.status = status
+        self.excepted = excepted
+        self.status = EXPECTED_ERROR if excepted and status == ERROR else status
         self.issues = issues
         self.job_link = job_link
+        self.invalid_exception = excepted and status in (PASS, WARNING)
+
+        #                   (1.................) (2....) (3................) (4.)
+        match = re.search(r'(libraries|examples)/([^/]+)/(examples/|extras/)?(.*)', sketch)
+        if match:
+            self.group = match.group(2)
+            self.name = match.group(4)
+        else:
+            self.group = ""
+            self.name = sketch
 
 # Summary data structure
 class TestGroup:
     def __init__(self):
-        # Sets to track unique board and sketch names
+        # Sets to track unique board, sketch and group names
         self.boards = set()
         self.sketches = set()
         # Counts of test results by status
         self.counts = { status : 0 for status in [PASS, WARNING, EXPECTED_ERROR, ERROR, FAILURE] }
         # Overall status of the group
         self.status = SKIP
-        # List of individual TestEntry objects (all, only with issues)
+        # List of individual TestEntry objects by feature
         self.tests = []
         self.tests_with_issues = []
+        self.tests_with_invalid_exceptions = []
+        # Tests grouped by result
+        self.tests_by_group = defaultdict(set)  # { group: set(name, res) }
 
     def track(self, test_entry):
         """
@@ -132,11 +146,14 @@ class TestGroup:
         self.tests.append(test_entry)
         if test_entry.issues:
             self.tests_with_issues.append(test_entry)
+        if test_entry.invalid_exception:
+            self.tests_with_invalid_exceptions.append(test_entry)
 
         self.counts[test_entry.status] += 1
         self.status = max(self.status, test_entry.status)
         self.boards.add(test_entry.board)
         self.sketches.add(test_entry.sketch)
+        self.tests_by_group[test_entry.group].add((test_entry.name, test_entry))
 
 # Global Data Structures
 # ----------------------
@@ -159,12 +176,9 @@ def log_test(artifact, board, sketch, link_mode, exceptions, status, issues, job
     if isinstance(issues, str):
         issues = [ issues ]
 
-    # Adjust the status for expected errors
-    if status == ERROR and any(pattern.match(sketch) for pattern in exceptions):
-        status = EXPECTED_ERROR
-
     # Create the test entry
-    test_entry = TestEntry(artifact, board, sketch, link_mode, status, issues, job_link)
+    excepted = any(pattern.match(sketch) for pattern in exceptions)
+    test_entry = TestEntry(artifact, board, sketch, link_mode, excepted, status, issues, job_link)
 
     # Track in global structures
     ARTIFACT_TESTS[artifact].track(test_entry)
@@ -287,18 +301,10 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
         if not sketch_filter(res):
             continue
 
-        #                   (1.................) (2....) (3................) (4.)
-        match = re.search(r'(libraries|examples)/([^/]+)/(examples/|extras/)?(.*)', sketch)
-        if match:
-            group = match.group(2)
-            sample = match.group(4)
-        else:
-            group = ""
-            sample = sketch
-
-        if group not in sketch_groups:
-            sketch_groups[group] = []
-        sketch_groups[group].append((sample, res))
+        for group in res.groups:
+            if group not in sketch_groups:
+                sketch_groups[group] = []
+            sketch_groups[group].append((sample, res))
 
     # Build the data rows, grouping libraries together. Each row corresponds to
     # a sketch, each cell to the test result icon of that sketch on that board.
@@ -605,6 +611,9 @@ with open(full_report_file, 'w') as f:
             f_print("</blockquote></details>\n")
 
         print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status in (ERROR, EXPECTED_ERROR))
+
+        for test in ARTIFACT_TESTS[artifact].tests_with_invalid_exceptions:
+            f_print(":warning: Invalid exception for <code>{test.sketch}</code> on <code>{test.board}</code>")
 
         successful_tests = ARTIFACT_TESTS[artifact].counts[PASS] + ARTIFACT_TESTS[artifact].counts[WARNING]
         warning_tests = ARTIFACT_TESTS[artifact].counts[WARNING]
