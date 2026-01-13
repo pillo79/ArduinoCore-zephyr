@@ -57,7 +57,7 @@ build.ldscript.path={runtime.platform.path}/variants/_ldscripts
 build.link_command="{compiler.path}{compiler.c.elf.cmd}" "-L{build.path}" "-L{build.variant.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {build.extra_flags} {build.extra_ldflags} {compiler.zephyr.common_ldflags} --specs=picolibc.specs --specs=nosys.specs {compiler.ldflags} {object_files} -Wl,--start-group "{build.path}/{archive_file}" {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags} -Wl,--end-group {build.link_args.{build.link_mode}}
 
 build.check_command-dynamic={build.link_command} {build.link_args.check-dynamic} -o "{build.path}/{build.project_name}_check.tmp"
-build.check_command-static=/bin/true
+build.check_command-static=true
 build.check_command-static.windows=cmd /C cd .
 build.combine_command={build.link_command} {build.link_args.build-{build.link_mode}} {build.link_args.build-common}
 
