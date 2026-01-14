@@ -1,8 +1,13 @@
 name: Package, test and upload core
 
 on:
-  - push
-  - pull_request
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
 
@@ -13,6 +18,7 @@ jobs:
       CORE_TAG: ${{ env.CORE_TAG }}
       CORE_HASH: ${{ env.CORE_HASH }}
       ALL_BOARD_DATA: ${{ env.ALL_BOARD_DATA }}
+      ALL_BOARD_FQBNS: ${{ env.ALL_BOARD_FQBNS }}
       ARTIFACTS: ${{ env.ARTIFACTS }}
       SUB_ARCHES: ${{ env.SUB_ARCHES }}
     steps:
@@ -21,7 +27,7 @@ jobs:
         run: |
           sudo apt-get remove --purge man-db -y # skips the mandb triggers
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build ccache
+          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build
 
       - uses: actions/checkout@v4
         with:
@@ -41,6 +47,7 @@ jobs:
         # needs the above env vars to be usable
         run: |
           echo "CORE_TAG=$(git describe --tags --exact-match 2>/dev/null || echo $CORE_HASH)" >> "$GITHUB_ENV"
+          echo "ALL_BOARD_FQBNS=$(jq -c 'map((. + {link_mode: "static"}), (. + {link_mode: "dynamic"}))' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "ARTIFACTS=$(jq -c '["zephyr"] + (map(.artifact) | unique)' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "SUB_ARCHES=$(jq -c 'map(.subarch) | unique' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
 
@@ -60,13 +67,15 @@ jobs:
           path: arduino-api.tar.zstd
 
   build-board:
-    name: Build loader for ${{ matrix.board }}
+    # NOTE: this name is hardcoded in ci_inspect_logs.py
+    name: Build for ${{ matrix.board }}
     runs-on: ubuntu-latest
     needs:
       - build-env
     env:
       CCACHE_IGNOREOPTIONS: -specs=*
-      OUTPUT_ARTIFACT: binaries-${{ matrix.board }}-${{ needs.build-env.outputs.CORE_HASH }}
+      ARTIFACT_TAG: ${{ needs.build-env.outputs.CORE_HASH }}-${{ matrix.board }}
+      REPORT: reports/zephyr-${{ matrix.variant }}
     strategy:
       matrix:
         include:
@@ -80,40 +89,73 @@ jobs:
 
       - name: Restore build environment
         run: |
+          sudo apt-get remove --purge man-db -y # skips the mandb triggers
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build ccache
           (cd ~ && tar --use-compress-program=unzstd -xpf build-env.tar.zstd && rm build-env.tar.zstd)
 
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           verbose: 1
+          key: ${{ github.job }}-${{ matrix.board }}
 
       - name: Build loader
         shell: bash
         run: |
-          if ! ./extra/build.sh ${{ matrix.board }} 2> >(tee error.log) ; then
+          mkdir -p reports
+          if ! ./extra/build.sh ${{ matrix.board }} 1> >(tee $REPORT.stdout) 2> >(tee $REPORT.stderr) ; then
             echo "### :x: ${{ matrix.board }} (\`${{ matrix.variant }}\`) build errors" > $GITHUB_STEP_SUMMARY
             echo >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            cat error.log >> $GITHUB_STEP_SUMMARY
+            cat $REPORT.stderr >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
 
-      - name: Package board binaries
+          # look for warnings (errors are a happy path!)
+          grep -i "warning:" $REPORT.stdout > $REPORT.warnings || true
+
+          # extract the memory usage table (from the header to the first non-% line)
+          # override the size of the Flash with the size of the loader partition
+          # and add the size of the sketch partition (not reported by Zephyr)
+          LOADER_SIZE=$(( $(cat variants/${{ matrix.variant }}/syms-static.ld | grep '_loader_max_size' | cut -d '=' -f 2 | tr -d ') ;') ))
+          SKETCH_SIZE=$(( $(cat variants/${{ matrix.variant }}/syms-static.ld | grep '_sketch_max_size' | cut -d '=' -f 2 | tr -d ') ;') ))
+          cat $REPORT.stdout | sed -n '/^Memory region/,/^[^%]*$/p' | head -n -1 \
+                             | awk 'BEGIN {split("B KB MB GB", u); for(i in u) m[u[i]]=1024^(i-1)} /:/ {print "[\"" $1 "\"," $2*m[$3] "," $4*m[$5] "]"}' \
+                             | sort \
+                             | jq -s "map((select(.[0] == \"FLASH:\") | .[2]) |= ${LOADER_SIZE}) + [ [ \"SKETCH:\", 0, ${SKETCH_SIZE} ] ]" > $REPORT.meminfo
+          jq
+
+      - name: Package board artifacts
         if: ${{ !cancelled() }}
         run: |
+          cp firmwares/zephyr-${{ matrix.variant }}.config $REPORT.config
+          echo "REPORT_FILES<<EOF" >> $GITHUB_ENV
+          ls reports/* >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          # Archive built binaries (and build dir on failure)
+          [ "${{ job.status }}" == "failure" ] && FULL_BUILD_DIR="build/${{ matrix.variant }}/"
           tar chf - \
             firmwares/*${{ matrix.variant }}* \
             variants/${{ matrix.variant }}/ \
-            ${{ (job.status == 'failure') && format('build/{0}/', matrix.variant) }} \
-          | zstd > ${OUTPUT_ARTIFACT}.tar.zstd
+            ${FULL_BUILD_DIR} \
+          | zstd > binaries-${ARTIFACT_TAG}.tar.zstd
 
       - name: Archive board binaries
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ format('{0}{1}', (job.status == 'failure') && 'failed-' || '', env.OUTPUT_ARTIFACT) }}
-          path: ${{ env.OUTPUT_ARTIFACT }}.tar.zstd
+          name: ${{ format('{0}binaries-{1}', (job.status == 'failure') && 'failed-' || '', env.ARTIFACT_TAG) }}
+          path: binaries-${{ env.ARTIFACT_TAG }}.tar.zstd
+
+      - name: Archive build reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-report-${{ env.ARTIFACT_TAG }}
+          path: ${{ env.REPORT_FILES }}
 
   package-core:
     name: Package ${{ matrix.artifact }}
@@ -122,6 +164,7 @@ jobs:
       - build-env
       - build-board
     env:
+      ALL_BOARD_DATA: ${{ needs.build-env.outputs.ALL_BOARD_DATA }}
       CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}
       CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
     strategy:
@@ -168,7 +211,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - package-core
-    if: always()
     steps:
       - uses: geekyeggo/delete-artifact@v5.1.0
         with:
@@ -179,7 +221,8 @@ jobs:
           failOnError: false
 
   test-core:
-    name: Test ${{ matrix.subarch }}:${{ matrix.board }}
+    # NOTE: this name is hardcoded in ci_inspect_logs.py
+    name: Test ${{ matrix.board }}:${{ matrix.link_mode }}
     runs-on: ubuntu-latest
     needs:
       - build-env
@@ -187,14 +230,23 @@ jobs:
     strategy:
       matrix:
         include:
-          ${{ fromJSON( needs.build-env.outputs.ALL_BOARD_DATA ) }}
+          ${{ fromJSON( needs.build-env.outputs.ALL_BOARD_FQBNS ) }}
       fail-fast: false
     env:
       PLAT: arduino:${{ matrix.subarch }}
-      FQBN: arduino:${{ matrix.subarch }}:${{ matrix.board }}
+      FQBN: arduino:${{ matrix.subarch }}:${{ matrix.board }}:link_mode=${{ matrix.link_mode }}
       CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}
+      ARTIFACT_TAG: ${{ needs.build-env.outputs.CORE_HASH }}-${{ matrix.board }}-${{ matrix.link_mode }}
     if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout: |
+            extra/ci_test_list.sh
+            extra/artifacts/
+
       - uses: actions/download-artifact@v4
         with:
           name: ${{ env.CORE_ARTIFACT }}
@@ -204,22 +256,24 @@ jobs:
           tar xf ${CORE_ARTIFACT}.tar.bz2 # will create ArduinoCore-zephyr/
           echo "REPORT_FILE=$(echo ${FQBN} | tr ':' '-').json" >> $GITHUB_ENV
 
-      - name: Create Blink sketch
+      - name: Get test sketches
         run: |
-          mkdir Blink/
-          wget -nv https://raw.githubusercontent.com/arduino/arduino-examples/refs/heads/main/examples/01.Basics/Blink/Blink.ino -P Blink/
+          # sets ALL_TESTS and ALL_LIBRARIES env vars
+          extra/ci_test_list.sh ${{ matrix.artifact }} ${{ matrix.variant }}
 
-      - name: Compile Blink for ${{ matrix.board }}
-        uses: pillo79/compile-sketches@main
+      - name: Compile tests for ${{ matrix.board }}
+        uses: pillo79/compile-sketches@f4cb4ece9506b38c953a7da543b9ec12d0082e23 # next
         with:
           fqbn: ${{ env.FQBN }}
           platforms: |
-            # Use Board Manager to install the latest release of Arduino Zephyr Boards to get the toolchain
-            - name: "arduino:zephyr"
-              source-url: "https://downloads.arduino.cc/packages/package_zephyr_index.json"
+            # Use Board Manager version first, to install the toolchain
+            - name: ${{ env.PLAT }}
             - name: ${{ env.PLAT }}
               source-path: "ArduinoCore-zephyr"
-          sketch-paths: Blink
+          sketch-paths: |
+            ${{ env.ALL_TESTS }}
+          libraries: |
+            ${{ env.ALL_LIBRARIES }}
           cli-compile-flags: |
             - '--build-property'
             - 'compiler.c.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
@@ -227,37 +281,23 @@ jobs:
             - 'compiler.cpp.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
           verbose: 'false'
           enable-deltas-report: 'false'
-          enable-warnings-report: 'true'
-          enable-warnings-log: 'true'
-
-      - name: Get job ID
-        id: job_id
-        if: ${{ success() || failure() }}
-        uses: actions/github-script@main
-        with:
-          script: |
-            const { data: workflow_run } = await github.rest.actions.listJobsForWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: context.runId
-            });
-            const job_name = `Test ${{ matrix.subarch }}:${{ matrix.board }}`
-            return workflow_run.jobs.find((job) => job.name === job_name).id;
+          enable-issues-report: 'true'
+          always-succeed: 'true'
 
       - name: Prepare log
         if: ${{ success() || failure() }}
         run: |
+          [ ! -f sketches-reports/${REPORT_FILE} ] && mkdir -p sketches-reports && echo "{}" > sketches-reports/${REPORT_FILE}
           sed -i -e 's!/home/runner/.arduino15/packages/arduino/hardware/zephyr/[^/]*/!!g' sketches-reports/${REPORT_FILE}
-          cat sketches-reports/${REPORT_FILE} | jq -cr ".boards[0].sketches[0] += { job_id: ${{ steps.job_id.outputs.result }} }" > ${REPORT_FILE} && mv ${REPORT_FILE} sketches-reports/
 
       - uses: actions/upload-artifact@v4
         if: ${{ success() || failure() }}
         with:
-          name: test-report-${{ needs.build-env.outputs.CORE_TAG }}-${{ matrix.board }}
+          name: test-report-${{ env.ARTIFACT_TAG }}
           path: sketches-reports/*
 
-  collect-logs:
-    name: Collect logs
+  inspect-logs:
+    name: Analyze logs
     runs-on: ubuntu-latest
     needs:
       - build-env
@@ -266,67 +306,65 @@ jobs:
     if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     env:
       ALL_BOARD_DATA: ${{ needs.build-env.outputs.ALL_BOARD_DATA }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          fetch-tags: true
+
       - uses: actions/download-artifact@v4
         with:
           path: .
-          pattern: test-report-*
+          pattern: "*-report-*"
           merge-multiple: true
 
       - run: |
-          ARTIFACTS=$(jq -cr 'map(.artifact) | unique | .[]' <<< ${ALL_BOARD_DATA}) # this avoids the 'zephyr' artifact
-          for artifact in $ARTIFACTS ; do
-            echo "### \`$artifact\` test results:" >> "$GITHUB_STEP_SUMMARY"
-            jq -c "map(select(.artifact == \"$artifact\")) | .[]" <<< ${ALL_BOARD_DATA} | while read -r BOARD_DATA; do
-              BOARD=$(echo $BOARD_DATA | jq -cr '.board')
-              VARIANT=$(echo $BOARD_DATA | jq -cr '.variant')
-              SUBARCH=$(echo $BOARD_DATA | jq -cr '.subarch')
-              FQBN="arduino:$SUBARCH:$BOARD"
-              REPORT_FILE="$(echo $FQBN | tr ':' '-').json"
-              if [ ! -f $REPORT_FILE ]; then
-                echo "* :x: $BOARD (\`$VARIANT\`) - No report found?" >> "$GITHUB_STEP_SUMMARY"
-              else
-                REPORT=$(jq -cr '.boards[0].sketches[0]' $REPORT_FILE)
-                JOB_ID=$(echo $REPORT | jq -cr '.job_id')
-                JOB_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${JOB_ID}#step:5:2"
-                if ! $(echo $REPORT | jq -cr '.compilation_success') ; then
-                  echo "* :x: [$BOARD]($JOB_URL) (\`$VARIANT\`) - Build failed" >> "$GITHUB_STEP_SUMMARY"
-                else
-                  WARNINGS=$(echo $REPORT | jq -cr '.warnings.current.absolute // 0')
-                  if [ $WARNINGS -eq 0 ]; then
-                    echo "* :white_check_mark: $BOARD (\`$VARIANT\`) - Build successful" >> "$GITHUB_STEP_SUMMARY"
-                  else
-                    echo >> "$GITHUB_STEP_SUMMARY"
-                    echo "<details><summary>&nbsp;&nbsp; :warning: <a href=\"$JOB_URL\">$BOARD</a> (<tt>$VARIANT</tt>) - $WARNINGS warnings:</summary>" >> "$GITHUB_STEP_SUMMARY"
-                    echo >> "$GITHUB_STEP_SUMMARY"
-                    echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
-                    echo $REPORT | jq -cr '.warnings_log[]' >> "$GITHUB_STEP_SUMMARY"
-                    echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
-                    echo >> "$GITHUB_STEP_SUMMARY"
-                    echo "</details>" >> "$GITHUB_STEP_SUMMARY"
-                    echo >> "$GITHUB_STEP_SUMMARY"
-                  fi
-                fi
-              fi
-            done
-          done
+          export WORKFLOW_JOBS=$(gh run view ${{ github.run_id }} --attempt ${{ github.run_attempt }} --json jobs --jq '.jobs')
+          extra/ci_inspect_logs.py result summary full_log
+
+          cat summary >> $GITHUB_STEP_SUMMARY
+          cat full_log >> $GITHUB_STEP_SUMMARY
+          echo "CI_RESULT=$(cat result)" > $GITHUB_OUTPUT
+
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            mkdir -p comment-request
+            echo "${{ github.event.pull_request.number }}" > comment-request/pr_number
+            echo -e "## Built \`$(extra/get_core_version.sh)\`\n" > comment-request/comment_body
+            echo >> comment-request/comment_body
+            cat summary | sed -e 's!\${\\color{\S*}\(.*\)}\$!\1!g' -e 's!\\%!%!g' >> comment-request/comment_body
+          fi
+
+      - name: Archive comment information
+        uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          name: comment-request
+          path: comment-request/
+          retention-days: 1
 
       - name: Clean up intermediate artifacts
         uses: geekyeggo/delete-artifact@v5.1.0
         with:
-          name: test-report-*
+          name: |
+            build-report-*
+            test-report-*
           failOnError: false
 
   verify-core:
     runs-on: ubuntu-latest
-    if: cancelled() || contains(needs.*.result, 'failure')
     needs:
       - build-env
       - package-core
-      - test-core
+      - inspect-logs
+    if: ${{ !cancelled() }}
     steps:
-      - name: Notify failure
-        run: exit 1
+      - name: CI run result
+        run: |
+          echo ${{ needs.inspect-logs.outputs.CI_RESULT }}
+          exit ${{ ((needs.inspect-logs.outputs.CI_RESULT == 'PASSED') && !contains(needs.*.result, 'failure')) && '0' || '1' }}
 
   publish-core:
     name: Publish core
@@ -335,7 +373,7 @@ jobs:
     needs:
       - build-env
       - package-core
-      - test-core
+      - inspect-logs
     environment: production
     permissions:
       id-token: write
@@ -365,7 +403,7 @@ jobs:
     needs:
       - build-env
       - package-core
-      - test-core
+      - inspect-logs
     env:
       CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
       CORE_HASH: ${{ needs.build-env.outputs.CORE_HASH }}
