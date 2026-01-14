@@ -324,11 +324,15 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
             row_data += f"<td>{name_link}</td>"
 
             for board in artifact_boards:
-                test = next((test for test in res.tests if test.board == board), None)
-                status = test.status if test else SKIP
-                issues = test.issues if test else ""
-
-                row_data += f"<td align='center'>{TEST_STATUS[status]}</td>"
+                # there are multiple tests per sketch&board due to FQBN variations
+                # display the worst status, and flag invalid exceptions
+                status = max( [ t.status for t in res.tests if test.board == board ], SKIP)
+                invalid = any( [ t.invalid_exception for t in res.tests if test.board == board ] )
+                if invalid and status in (PASS, WARNING):
+                    status_icon = ":interrobang:"
+                else:
+                    status_icon = TEST_STATUS[status]
+                row_data += f"<td align='center'>{status_icon}</td>"
 
             row_data += "</tr>"
             data_rows.append(row_data)
@@ -613,7 +617,7 @@ with open(full_report_file, 'w') as f:
         print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status in (ERROR, EXPECTED_ERROR))
 
         for test in ARTIFACT_TESTS[artifact].tests_with_invalid_exceptions:
-            f_print(":warning: Invalid exception for <code>{test.sketch}</code> on <code>{test.board}</code>")
+            f_print(":interrobang: Unnecessary exception for <code>{test.group}</code> <code>{test.name}</code> on <code>{test.board}</code>")
 
         successful_tests = ARTIFACT_TESTS[artifact].counts[PASS] + ARTIFACT_TESTS[artifact].counts[WARNING]
         warning_tests = ARTIFACT_TESTS[artifact].counts[WARNING]
