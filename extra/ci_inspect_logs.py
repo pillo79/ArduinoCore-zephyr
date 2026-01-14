@@ -323,7 +323,7 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
             for board in artifact_boards:
                 # there are multiple tests per sketch&board due to FQBN variations
                 # display the worst status, and flag invalid exceptions
-                status = max( [ t.status for t in res.tests if t.board == board ], SKIP)
+                status = max( [ t.status for t in res.tests if t.board == board ], default=SKIP)
                 invalid = any( [ t.invalid_exception for t in res.tests if t.board == board ] )
                 if invalid and status in (PASS, WARNING):
                     status_icon = ":interrobang:"
