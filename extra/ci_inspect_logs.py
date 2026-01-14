@@ -125,9 +125,10 @@ class TestEntry:
 # Summary data structure
 class TestGroup:
     def __init__(self):
-        # Sets to track unique board, sketch and group names
+        # Sets to track unique board, sketch and (group,name) tuples
         self.boards = set()
         self.sketches = set()
+        self.group_names = set()
         # Counts of test results by status
         self.counts = { status : 0 for status in [PASS, WARNING, EXPECTED_ERROR, ERROR, FAILURE] }
         # Overall status of the group
@@ -136,8 +137,6 @@ class TestGroup:
         self.tests = []
         self.tests_with_issues = []
         self.tests_with_invalid_exceptions = []
-        # Tests grouped by result
-        self.tests_by_group = defaultdict(set)  # { group: set(name, res) }
 
     def track(self, test_entry):
         """
@@ -153,7 +152,7 @@ class TestGroup:
         self.status = max(self.status, test_entry.status)
         self.boards.add(test_entry.board)
         self.sketches.add(test_entry.sketch)
-        self.tests_by_group[test_entry.group].add((test_entry.name, test_entry))
+        self.group_names.add((test_entry.group, test_entry.name))
 
 # Global Data Structures
 # ----------------------
@@ -295,16 +294,14 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
     header_row += "</tr>"
 
     # Group sketches by library
-    sketch_groups = {}
+    sketch_groups = defaultdict(list)
     for sketch in ARTIFACT_TESTS[artifact].sketches:
         res = SKETCH_TESTS[artifact][sketch]
         if not sketch_filter(res):
             continue
 
-        for group in res.groups:
-            if group not in sketch_groups:
-                sketch_groups[group] = []
-            sketch_groups[group].append((sample, res))
+        for group, name in res.group_names:
+            sketch_groups[group].append((name, res))
 
     # Build the data rows, grouping libraries together. Each row corresponds to
     # a sketch, each cell to the test result icon of that sketch on that board.
@@ -616,8 +613,11 @@ with open(full_report_file, 'w') as f:
 
         print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status in (ERROR, EXPECTED_ERROR))
 
-        for test in ARTIFACT_TESTS[artifact].tests_with_invalid_exceptions:
-            f_print(":interrobang: Unnecessary exception for <code>{test.group}</code> <code>{test.name}</code> on <code>{test.board}</code>")
+        for sketch in SKETCH_TESTS[artifact]:
+            res = SKETCH_TESTS[artifact][sketch]
+            if res.status in (PASS, WARNING):
+                for test in res.tests_with_invalid_exceptions:
+                    f_print(":interrobang: Unnecessary exception for <code>{test.group}</code> <code>{test.name}</code> on <code>{test.board}</code>")
 
         successful_tests = ARTIFACT_TESTS[artifact].counts[PASS] + ARTIFACT_TESTS[artifact].counts[WARNING]
         warning_tests = ARTIFACT_TESTS[artifact].counts[WARNING]
