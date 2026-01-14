@@ -342,7 +342,7 @@
 
 &flash0 {
 	partitions {
-		/delete-node/ slot0_partition;
+		/delete-node/ &slot0_partition;
 
 		slot0_partition: partition@40000 {
 			label = "image-0";
