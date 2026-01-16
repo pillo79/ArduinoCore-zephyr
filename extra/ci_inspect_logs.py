@@ -102,10 +102,11 @@ class LoaderEntry:
 
 # Single test data structure
 class TestEntry:
-    def __init__(self, artifact, board, sketch, excepted, status, issues, job_link):
+    def __init__(self, artifact, board, sketch, link_mode, excepted, status, issues, job_link):
         self.artifact = artifact
         self.board = board
         self.sketch = sketch
+        self.link_mode = link_mode
         self.excepted = excepted
         self.status = EXPECTED_ERROR if excepted and status == ERROR else status
         self.issues = issues
@@ -165,7 +166,7 @@ ARTIFACT_TESTS = defaultdict(TestGroup)                     # { artifact: TestGr
 BOARD_TESTS = defaultdict(TestGroup)                        # { board: TestGroup() }
 SKETCH_TESTS = defaultdict(lambda: defaultdict(TestGroup))  # { artifact: { sketch: TestGroup() } }
 
-def log_test(artifact, board, sketch, exceptions, status, issues, job_link=None):
+def log_test(artifact, board, sketch, link_mode, exceptions, status, issues, job_link=None):
     """
     Logs individual test results into the global test tracking structures.
     """
@@ -176,7 +177,7 @@ def log_test(artifact, board, sketch, exceptions, status, issues, job_link=None)
 
     # Create the test entry
     excepted = any(pattern.match(sketch) for pattern in exceptions)
-    test_entry = TestEntry(artifact, board, sketch, excepted, status, issues, job_link)
+    test_entry = TestEntry(artifact, board, sketch, link_mode, excepted, status, issues, job_link)
 
     # Track in global structures
     ARTIFACT_TESTS[artifact].track(test_entry)
@@ -320,9 +321,9 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
             row_data += f"<td>{name_link}</td>"
 
             for board in artifact_boards:
-                test = next((test for test in res.tests if test.board == board), None)
-                status = test.status if test else SKIP
-                invalid = test.invalid_exception if test else False
+                # there are multiple tests per sketch&board due to FQBN variations
+                status = max( [ t.status for t in res.tests if t.board == board ], default=SKIP)
+                invalid = any( [ t.invalid_exception for t in res.tests if t.board == board ] )
                 if invalid and status in (PASS, WARNING):
                     status_icon = ":interrobang:"
                     invalid_exceptions[board].add(sketch)
@@ -369,7 +370,7 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
 
             # Test logs by board
             for test in sorted(res.tests_with_issues, key=lambda x: x.status, reverse=True):
-                test_text = f"<code>{test.board}</code>"
+                test_text = f"<code>{test.board}:{test.link_mode}</code>"
                 if test.job_link:
                     test_text += f" (<a href='{test.job_link}'>full log</a>)"
                 f_print(f"<tr><td>{TEST_STATUS[test.status]} {test_text}<br>\n\n```")
@@ -535,46 +536,48 @@ for board_data in ALL_BOARD_DATA.values():
                 if sketch_pattern:
                     exceptions.append(re.compile(f"^(ArduinoCore-zephyr/)?{sketch_pattern}"))
 
-    # Get job link for this test
-    job_link = JOB_URLS.get(f"Test {board}")
-    if job_link:
-        job_link += "#step:6:1"
+    # Get raw data from report file
+    for link_mode in ("static", "dynamic"):
+        # Get job link for this test
+        job_link = JOB_URLS.get(f"Test {board}:{link_mode}")
+        if job_link:
+            job_link += "#step:6:1"
 
-    # Extract data from the report file
-    report_file = f"arduino-{subarch}-{board}.json"
-    if not os.path.exists(report_file):
-        log_test(artifact, board, 'CI test', '', [], FAILURE, f"Report file not found.", job_link)
-        continue # Skip to the next board
+        # Extract data from the report file
+        report_file = f"arduino-{subarch}-{board}-link_mode={link_mode}.json"
+        if not os.path.exists(report_file):
+            log_test(artifact, board, 'CI test', '', [], FAILURE, f"Report file for {link_mode} not found.", job_link)
+            continue # Skip to the next board
 
-    try:
-        with open(report_file, 'r') as f:
-            report_data = json.load(f)
-    except Exception as e:
-        log_test(artifact, board, 'CI test', '', [], FAILURE, f"Error reading report file: {e}", job_link)
-        continue # Skip to the next board
+        try:
+            with open(report_file, 'r') as f:
+                report_data = json.load(f)
+        except Exception as e:
+            log_test(artifact, board, 'CI test', '', [], FAILURE, f"Error reading {link_mode} report file: {e}", job_link)
+            continue # Skip to the next board
 
-    reports = report_data.get('boards', [{}])[0].get('sketches', [])
-    if not reports:
-        log_test(artifact, board, 'CI test', '', [], FAILURE, "Test report is empty, check CI log.", job_link)
-        continue # Skip to the next board
+        reports = report_data.get('boards', [{}])[0].get('sketches', [])
+        if not reports:
+            log_test(artifact, board, 'CI test', '', [], FAILURE, "Test report for {link_mode} is empty, check CI log.", job_link)
+            continue # Skip to the next board
 
-    # Iterate through individual sketch reports
-    for report in reports:
-        sketch = report.get('name', 'unknown_sketch')
-        success = report.get('compilation_success', False)
-        issues = report.get('issues', [])
+        # Iterate through individual sketch reports
+        for report in reports:
+            sketch = report.get('name', 'unknown_sketch')
+            success = report.get('compilation_success', False)
+            issues = report.get('issues', [])
 
-        # Replace long absolute paths with '...' for brevity.
-        sketch_issues = [ re.sub(r'(/.+?)((/[^/]+){3}):', r'...\2:', issue) for issue in issues ]
+            # Replace long absolute paths with '...' for brevity.
+            sketch_issues = [ re.sub(r'(/.+?)((/[^/]+){3}):', r'...\2:', issue) for issue in issues ]
 
-        if not success:
-            status = ERROR
-        elif len(sketch_issues): # Implies warnings/non-critical issues
-            status = WARNING
-        else:
-            status = PASS
+            if not success:
+                status = ERROR
+            elif len(sketch_issues): # Implies warnings/non-critical issues
+                status = WARNING
+            else:
+                status = PASS
 
-        log_test(artifact, board, sketch, exceptions, status, sketch_issues, job_link)
+            log_test(artifact, board, sketch, link_mode, exceptions, status, sketch_issues, job_link)
 
 ARTIFACTS = sorted(ARTIFACT_TESTS.keys())
 
