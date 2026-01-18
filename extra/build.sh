@@ -73,6 +73,7 @@ fi
 BUILD_DIR=build/${variant}
 VARIANT_DIR=variants/${variant}
 rm -rf ${BUILD_DIR}
+west spdx --init -d ${BUILD_DIR}
 west build -d ${BUILD_DIR} -b ${target} loader -t llext-edk ${args}
 
 # Extract the generated EDK tarball and copy it to the variant directory
@@ -105,6 +106,7 @@ extra/gen_provides.py "${BUILD_DIR}/zephyr/zephyr.elf" -LF \
 	"+kheap__system_heap" \
 	"*sketch_base_addr=_sketch_start" \
 	"*sketch_max_size=_sketch_max_size" \
+	"*loader_max_size=_loader_max_size" \
 	"malloc=__wrap_malloc" \
 	"free=__wrap_free" \
 	"realloc=__wrap_realloc" \
