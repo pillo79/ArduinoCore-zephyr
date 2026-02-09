@@ -53,12 +53,26 @@ build.link_mode=dynamic
 build.boot_mode=wait
 upload.extension=elf-zsk.bin
 
+# Nothing-to-do stub for unneeded multi-command link steps 
+build.nop_command=true
+build.nop_command.windows=cmd /C cd .
+
+# Shared one-command link pattern
 build.ldscript.path={runtime.platform.path}/variants/_ldscripts
 build.link_command="{compiler.path}{compiler.c.elf.cmd}" "-L{build.path}" "-L{build.variant.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {build.extra_flags} {build.extra_ldflags} {compiler.zephyr.common_ldflags} --specs=picolibc.specs --specs=nosys.specs {compiler.ldflags} {object_files} -Wl,--start-group "{build.path}/{archive_file}" {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags} -Wl,--end-group {build.link_args.{build.link_mode}}
+build.combine_command={build.link_command} {build.link_args.build-{build.link_mode}} {build.link_args.build-common}
 
+# Multi command link, dynamic mode: check syntax, generate first ELF, run gen_rodata_ld, link with generated mapping
 build.check_command-dynamic={build.link_command} {build.link_args.check-dynamic} -o "{build.path}/{build.project_name}_check.tmp"
-build.check_command-static=true
-build.check_command-static.windows=cmd /C cd .
+build.rodata_prep_command-dynamic={build.link_command} {build.link_args.build-{build.link_mode}} "-Wl,-Map,{build.path}/{build.project_name}_temp.map" -o "{build.path}/{build.project_name}_temp.elf"
+build.rodata_gen_command-dynamic="{runtime.tools.gen-rodata-ld.path}/gen-rodata-ld" "{build.path}/{build.project_name}_temp.elf" "{build.path}/rodata_split.ld" "{build.link_mode}"
+build.rodata_combine_command-dynamic={build.combine_command} "-T{build.path}/rodata_split.ld"
+
+# Multi command link, static mode: no extra processing, only call the final link command
+build.check_command-static={build.nop_command}
+build.rodata_prep_command-static={build.nop_command}
+build.rodata_gen_command-static={build.nop_command}
+build.rodata_combine_command-static={build.combine_command}
 
 # link_args.* are included by any link_command depending on the link_mode
 build.link_args.dynamic=-e main
@@ -120,12 +134,12 @@ recipe.ar.pattern="{compiler.path}{compiler.ar.cmd}" {compiler.ar.flags} {compil
 
 ## Combine gc-sections, archives, and objects - Multi-pass linking
 recipe.c.combine.1.pattern={build.check_command-{build.link_mode}}
-recipe.c.combine.2.pattern={build.link_command} {build.link_args.build-{build.link_mode}} "-Wl,-Map,{build.path}/{build.project_name}_temp.map" -o "{build.path}/{build.project_name}_temp.elf"
-recipe.c.combine.3.pattern="{runtime.tools.gen-rodata-ld.path}/gen-rodata-ld" "{build.path}/{build.project_name}_temp.elf" "{build.path}/rodata_split.ld" "{build.link_mode}"
-recipe.c.combine.4.pattern={build.link_command} "-T{build.path}/rodata_split.ld" {build.link_args.build-{build.link_mode}} {build.link_args.build-common}
+recipe.c.combine.2.pattern={build.rodata_prep_command-{build.link_mode}}
+recipe.c.combine.3.pattern={build.rodata_gen_command-{build.link_mode}}
+recipe.c.combine.4.pattern={build.rodata_combine_command-{build.link_mode}}
 
 ## Combine gc-sections, archives, and objects - Single-pass linking (older IDEs)
-recipe.c.combine.pattern={build.link_command} {build.link_args.build-{build.link_mode}} {build.link_args.build-common}
+recipe.c.combine.pattern={build.combine_command}
 
 recipe.hooks.linking.postlink.1.pattern="{compiler.path}{build.crossprefix}strip" --strip-debug "{build.path}/{build.project_name}_debug.elf" -o "{build.path}/{build.project_name}.elf"
 
