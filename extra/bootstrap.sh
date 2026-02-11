@@ -18,7 +18,14 @@ if [ ! -f platform.txt ]; then
   exit 2
 fi
 
-NEEDED_HALS=$(grep 'build.zephyr_hals=' boards.txt | cut -d '=' -f 2 | xargs -n 1 echo | sort -u | xargs echo)
+get_unique_field_values() {
+  local field="$1"
+  local file="$2"
+  grep "$field=" $file | cut -d '=' -f 2 | xargs -n 1 echo | sort -u | xargs echo
+}
+
+NEEDED_HALS=$(get_unique_field_values 'build.zephyr_hals' boards.txt)
+NEEDED_TOOLCHAINS=$(get_unique_field_values 'build.zephyr_toolchain' boards.txt)
 
 HAL_FILTER="-hal_.*"
 for hal in $NEEDED_HALS; do
@@ -36,11 +43,11 @@ west init -l .
 west config manifest.project-filter -- "$HAL_FILTER"
 west update "$@"
 west zephyr-export
-pip install -r ../zephyr/scripts/requirements-base.txt
+west packages pip --install
 log_msg "endgroup"
 
-log_msg "group" "Installing Zephyr SDK 0.16.8"
-west sdk install --version 0.16.8 -t arm-zephyr-eabi
+log_msg "group" "Installing Zephyr SDK 0.16.8: $NEEDED_TOOLCHAINS"
+west sdk install --version 0.16.8 -t $NEEDED_TOOLCHAINS
 log_msg "endgroup"
 
 log_msg "group" "Fetching blobs for: $NEEDED_HALS"
