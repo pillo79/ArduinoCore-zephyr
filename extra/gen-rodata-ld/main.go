@@ -1,3 +1,6 @@
+# Copyright (c) Arduino SRL
+# SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (

@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025 Arduino SA
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 // TODO: correctly handle these legacy defines
 #define MOSI    0
 #define MISO    0

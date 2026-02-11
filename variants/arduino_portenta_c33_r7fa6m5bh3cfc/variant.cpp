@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025 Arduino SA
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <zephyr/kernel.h>
 
 #define BSP_PRV_PRCR_KEY	              (0xA500U)

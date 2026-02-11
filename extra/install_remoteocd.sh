@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Copyright (c) 2025 Arduino SA
+# SPDX-License-Identifier: Apache-2.0
+
 REPO_URL="https://github.com/bcmi-labs/orchestrator.git"
 BRANCH_NAME="main"
 

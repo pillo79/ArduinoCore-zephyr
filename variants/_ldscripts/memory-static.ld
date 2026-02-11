@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025 Arduino SA
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 MEMORY
 {
     /* 16 below compensates for the zsk header that is added before the .bin */

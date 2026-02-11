@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Arduino SA
+ * Copyright (c) 2024 Arduino SA
  *
  * SPDX-License-Identifier: Apache-2.0
  */

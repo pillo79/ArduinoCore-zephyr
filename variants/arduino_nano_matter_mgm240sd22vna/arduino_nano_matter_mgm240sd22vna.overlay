@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025 Arduino SA
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /* Arduino user sketch partition */
 user_sketch: &slot1_partition {};
 

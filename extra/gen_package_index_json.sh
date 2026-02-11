@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Copyright (c) 2025 Arduino SA
+# SPDX-License-Identifier: Apache-2.0
+
 set -e
 
 if [ $# -lt 2 ] || [ $# -gt 3 ] ; then
