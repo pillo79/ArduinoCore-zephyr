@@ -166,8 +166,6 @@ There are pros and cons to both strategies:
 1) Builds on the native Windows file system are relatively very slow, but once done, you can use the results directly within the Arduino IDE. 
 2) Builds on WSL's file system are a lot faster, however, you need to copy the resulting build back to somewhere in your Windows directory structure. Use this location in the Arduino IDE as mentioned below in the [Using the Core in Arduino IDE/CLI](#using-the-core-in-arduino-idecli) section.
 
-After `bootstrap.sh` has completed, you may also have to update the `cores\arduino\api` link to the path of the ArduinoCore-API's `api` folder.
-
 ### Run the ```bootstrap``` script
 ```bash
 cd ArduinoCore-zephyr

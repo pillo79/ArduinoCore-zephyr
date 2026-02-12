@@ -50,6 +50,7 @@ log_msg "group" "Installing Zephyr SDK 0.16.8: $NEEDED_TOOLCHAINS"
 west sdk install --version 0.16.8 -t $NEEDED_TOOLCHAINS
 log_msg "endgroup"
 
+NEEDED_HALS="arduino-api $NEEDED_HALS"
 log_msg "group" "Fetching blobs for: $NEEDED_HALS"
 west blobs fetch $NEEDED_HALS
 log_msg "endgroup"

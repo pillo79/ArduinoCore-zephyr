@@ -5,3 +5,13 @@ build:
   kconfig: Kconfig
 samples:
   - samples
+blobs:
+  - path: ArduinoCore-API/ArduinoCore-API-1.5.2.tar.gz
+    sha256: 2c76d4dcea29d1d093d821804dcc1ccd83d172ef0d359d7c651cdbba6e6bfa57
+    type: lib
+    version: '1.5.2'
+    license-path: zephyr/blobs/ArduinoCore-API/LICENSE
+    click-through: true
+    url: https://github.com/arduino/ArduinoCore-API/archive/refs/tags/1.5.2.tar.gz
+    description: "Arduino API archive"
+    doc-url: https://raw.githubusercontent.com/arduino/ArduinoCore-API/refs/tags/1.5.2/README.md
