@@ -1,31 +1,21 @@
 #!/bin/bash
-#
+
 # Copyright (c) Arduino s.r.l. and/or its affiliated companies
 # SPDX-License-Identifier: Apache-2.0
 
-set -e
+# Initialize the Zephyr workspace from a cleanly cloned ArduinoCore-zephyr
+# repository, fetching only the necessary modules and blobs for the supported
+# boards.
 
-log_msg() {
-	if [ -n $GITHUB_WORKSPACE ] ; then
-		echo "::$1::$2"
-	else
-		echo " - $2"
-	fi
-}
+. $(dirname $0)/functions
 
 if [ ! -f platform.txt ]; then
   echo Launch this script from the root core folder as ./extra/bootstrap.sh
   exit 2
 fi
 
-get_unique_field_values() {
-  local field="$1"
-  local file="$2"
-  grep "$field=" $file | cut -d '=' -f 2 | xargs -n 1 echo | sort -u | xargs echo
-}
-
-NEEDED_HALS=$(get_unique_field_values 'build.zephyr_hals' boards.txt)
-NEEDED_TOOLCHAINS=$(get_unique_field_values 'build.zephyr_toolchain' boards.txt)
+NEEDED_HALS=$(get_unique_values_from_text_file boards.txt 'build.zephyr_hals')
+NEEDED_TOOLCHAINS=$(get_unique_values_from_text_file boards.txt 'build.zephyr_toolchain')
 
 HAL_FILTER="-hal_.*"
 for hal in $NEEDED_HALS; do

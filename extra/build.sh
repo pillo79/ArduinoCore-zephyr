@@ -3,7 +3,11 @@
 # Copyright (c) Arduino s.r.l. and/or its affiliated companies
 # SPDX-License-Identifier: Apache-2.0
 
-set -e
+# Build the loader for the given target, extract the generated EDK files to the
+# variants/ directory, and update Arduino-specific files. Once the process is
+# complete, the board can be properly used in the Arduino IDE by choosing this
+
+. $(dirname $0)/functions
 
 source venv/bin/activate
 
@@ -124,26 +128,6 @@ extra/gen_provides.py "${BUILD_DIR}/zephyr/zephyr.elf" -LF \
 
 cmake -P extra/gen_arduino_files.cmake $variant
 
-get_value_from_text_file() {
-	local file=$1
-	local field=$2
-
-	grep -E "\<${field//./\\./}\>\s*=" $file | tail -n 1 | cut -d '=' -f 2- | tr -d '); '
-}
-
-update_local_field() {
-	local field=$1
-	local value=$2
-	local full_field_name="${board}.${field}"
-	local match_regexp="^${full_field_name//./\\.}" # escape dots, match start of line
-
-	if grep -qE "${match_regexp}" boards.local.txt; then
-		sed -i -e "s/${match_regexp}=.*/${full_field_name}=${value}/" boards.local.txt
-	else
-		echo "${full_field_name}=${value}" >> boards.local.txt
-	fi
-}
-
 # update properties on boards.local.txt from the generated files
 if [ ! -z "$board" ]; then
 
@@ -161,25 +145,25 @@ EOF
 
 	# sketch load address: start of sketch partition, hex (exact)
 	CODE_ADDR=$(get_value_from_text_file variants/${variant}/syms-static.ld '_sketch_start')
-	update_local_field "upload.address" $CODE_ADDR
+	update_text_file_field boards.local.txt "upload.address" $CODE_ADDR
 
 	# maximum sketch size: size of sketch partition, decimal (exact limit)
-	CODE_SIZE=$(( $(get_value_from_text_file variants/${variant}/syms-static.ld '_sketch_max_size') ))
-	update_local_field "upload.maximum_size" $CODE_SIZE
+	CODE_SIZE=$(( $(get_value_from_text_file variants/${variant}/syms-static.ld boards.local.txt '_sketch_max_size') ))
+	update_text_file_field boards.local.txt "upload.maximum_size" $CODE_SIZE
 
 	# maximum data size: configured LLEXT heap size, decimal (larger bound, real limit is smaller)
 	DATA_SIZE=$(( 1024*$(get_value_from_text_file firmwares/zephyr-${variant}.config 'CONFIG_LLEXT_HEAP_SIZE') ))
-	update_local_field "upload.maximum_data_size" $DATA_SIZE
+	update_text_file_field boards.local.txt "upload.maximum_data_size" $DATA_SIZE
 
-	# machine fields
+	# machine fields (do not specifiy leading -)
 	MACH_CPU=$(get_value_from_text_file variants/${variant}/machine_flags.txt 'mcpu')
 	[ -z "$MACH_CPU" ] && MACH_CPU=$(get_value_from_text_file variants/${variant}/machine_flags.txt 'march')
-	[ -z "$MACH_CPU" ] || update_local_field "build.architecture" $MACH_CPU
-	[ -z "$MACH_CPU" ] || update_local_field "build.mcu" $MACH_CPU
+	[ -z "$MACH_CPU" ] || update_text_file_field boards.local.txt "build.architecture" $MACH_CPU
+	[ -z "$MACH_CPU" ] || update_text_file_field boards.local.txt "build.mcu" $MACH_CPU
 
 	MACH_FPU=$(get_value_from_text_file variants/${variant}/machine_flags.txt 'mfpu')
-	[ -z "$MACH_FPU" ] || update_local_field "build.fpu" $MACH_FPU
+	[ -z "$MACH_FPU" ] || update_text_file_field boards.local.txt "build.fpu" $MACH_FPU
 
 	MACH_FABI=$(get_value_from_text_file variants/${variant}/machine_flags.txt 'mfloat-abi')
-	[ -z "$MACH_FABI" ] || update_local_field "build.float-abi" $MACH_FABI
+	[ -z "$MACH_FABI" ] || update_text_file_field boards.local.txt "build.float-abi" $MACH_FABI
 fi

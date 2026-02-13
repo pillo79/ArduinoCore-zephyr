@@ -1,0 +1,62 @@
+# Copyright ARDUINO SRL (https://www.arduino.cc)
+# SPDX-License-Identifier: Apache-2.0
+
+# Sourced common preamble for bash scripts in this folder
+
+set -e
+
+# Log messages in a format suitable for both GitHub Actions and local execution
+# Usage: log_msg <actions-level> <message>
+log_msg() {
+	local level="$1"
+	local msg="$2"
+
+	if [ -z "$GITHUB_WORKSPACE" ] ; then
+		case "$level" in
+			error) echo "ERROR: $msg" ; echo ;;
+			warning) echo "WARNING: $msg" ;;
+			notice) echo "INFO: $msg" ;;
+			group) echo ; echo "$msg" ; echo $(echo "$msg" | sed -e 's/./-/g') ; echo ;;
+			endgroup) ;;
+		esac
+	else
+		echo "::$1::$2"
+	fi
+}
+
+# Get the value of a field from a text file with lines in the rough format "field=value";
+# also handles lines such as "PROVIDE(field=value);" in linker script files
+# Usage: get_value_from_text_file <file> <field>
+get_value_from_text_file() {
+	local file=$1
+	local field=$2
+
+	grep -E "^[^#]*\<${field//./\\./}\>\s*=" $file | tail -n 1 | cut -d '=' -f 2- | tr -d '); '
+}
+
+# Get all unique values for a field from a text file with lines in the rough format "field=value".
+# Useful to extract all values for a property across multiple boards from a file like boards.txt.
+# Usage: get_unique_values_from_text_file <file> <field>
+get_unique_values_from_text_file() {
+	local file="$1"
+	local field="$2"
+
+	grep -E "^[^#]*\<${field//./\\./}\>\s*=" $file | cut -d '=' -f 2- | xargs -n 1 echo | sort -u | xargs echo
+}
+
+# Update a field in a text file with "field=value" lines; if the field is not present,
+# it is added at the end of the file.
+# Usage: update_text_file_field <file> <field> <value>
+update_text_file_field() {
+	local file=$1
+	local field=$2
+	local value=$3
+	local full_field_name="${board}.${field}"
+	local match_regexp="^${full_field_name//./\\.}" # escape dots, match start of line
+
+	if grep -qE "${match_regexp}" boards.local.txt; then
+		sed -i -e "s/${match_regexp}=.*/${full_field_name}=${value}/" boards.local.txt
+	else
+		echo "${full_field_name}=${value}" >> boards.local.txt
+	fi
+}
