@@ -3,7 +3,7 @@
 # Copyright (c) Arduino s.r.l. and/or its affiliated companies
 # SPDX-License-Identifier: Apache-2.0
 
-set -e
+. $(dirname $0)/functions
 
 TOOL_DIR=$(readlink -f ${1:-.})
 TOOL_NAME=$(basename $TOOL_DIR)
@@ -55,20 +55,25 @@ build_for_arch() {
 	local build_file="$TOOL_NAME$app_ext"
 	local package_file="$tool_stem-$plat$pkg_ext"
 
-	echo "Building $TOOL_NAME for $os/$arch ($plat)"
+	log_msg group "Building $TOOL_NAME for $os/$arch ($plat)"
+
 	mkdir -p "$build_dir"
 	(cd $BASE_DIR/extra/$TOOL_NAME && GOOS="$os" GOARCH="$arch" go build -o "$build_dir/$build_file")
 	(cd "$tool_stem" && $pkg_cmd "$package_file" $plat/)
 	hash_file $plat "$package_file" > $build_dir.json
+
+	log_msg endgroup
 }
 
 build_json() {
+	log_msg group "Building JSON manifest for $TOOL_NAME $VERSION"
 	temp_file=$(mktemp)
 	echo "{ \"packages\": [ { \"tools\": [ { \"name\": \"$TOOL_NAME\", \"version\": \"$VERSION\", \"systems\":" > $temp_file
 	ls $DIR/$TOOL_NAME-$VERSION/*.json | sort | xargs cat | jq -s . >> $temp_file
 	echo "} ] } ] }" >> $temp_file
 	jq . $temp_file > $DIR/$TOOL_NAME-$VERSION.json
 	rm -f $temp_file $DIR/$TOOL_NAME-$VERSION/*.json
+	log_msg endgroup
 }
 
 build_for_arch "linux" "amd64" "x86_64-linux-gnu"

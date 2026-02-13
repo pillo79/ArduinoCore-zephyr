@@ -3,6 +3,8 @@
 # Copyright (c) Arduino s.r.l. and/or its affiliated companies
 # SPDX-License-Identifier: Apache-2.0
 
+. $(dirname "$0")/functions
+
 FORCE=false
 
 while getopts "hf" opt; do
@@ -35,17 +37,12 @@ while read -r item; do
 	target=$(jq -cr '.target' <<< "$item")
 	args=$(jq -cr '.args // ""' <<< "$item")
 
-	if [ -z "$GITHUB_STEP_SUMMARY" ] ; then
-		echo && echo
-		echo "${board} (${variant})"
-		echo "${board} (${variant})" | sed -e 's/./=/g'
-	else
-		echo "::group::=== ${subarch}:${board} (${variant}) ==="
-	fi
-
+	log_msg group "=== ${subarch}:${board} (${variant}) ==="
 	./extra/build.sh $board
 	result=$?
 	final_result=$((final_result | result))
+
+	log_msg endgroup
 
 	if [ -z "$GITHUB_STEP_SUMMARY" ] ; then
 		echo
