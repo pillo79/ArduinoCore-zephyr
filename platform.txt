@@ -139,7 +139,7 @@ recipe.c.combine.3.pattern={build.rodata_gen_command-{build.link_mode}}
 recipe.c.combine.4.pattern={build.rodata_combine_command-{build.link_mode}}
 
 ## Combine gc-sections, archives, and objects - Single-pass linking (older IDEs)
-recipe.c.combine.pattern={build.combine_command}
+recipe.c.combine.pattern={build.combine_command} -T{build.ldscript.path}/build-rodata.ld
 
 recipe.hooks.linking.postlink.1.pattern="{compiler.path}{build.crossprefix}strip" --strip-debug "{build.path}/{build.project_name}_debug.elf" -o "{build.path}/{build.project_name}.elf"
 
