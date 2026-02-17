@@ -5,7 +5,7 @@
 #include "RTC.h"
 #include <stdio.h>
 
-ArduinoRTC rtc;
+Rtc rtc;
 
 char printBuffer[30]; // declare a buffer of large enough size for the message we want to display
 int year, month, day, hour, minute, second;
@@ -17,7 +17,7 @@ void onAlarm(const struct device *dev, uint8_t chan_id, uint32_t ticks, void *us
     sprintf(printBuffer, "Alarm went off! Message: %s\n", (char *)user_data);
     Serial.println(printBuffer);
 }
-#elif
+#else
 void onAlarm(void *user_data) {
     char printBuffer[40];
     sprintf(printBuffer, "Alarm went off! Message: %s\n", (char *)user_data);

@@ -4,7 +4,7 @@
 // Doesn't work on the Opta for some reason.
 
 
-ArduinoRTC rtc;
+Rtc rtc;
 
 void setup() {
     char printBuffer[30];

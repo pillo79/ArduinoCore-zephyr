@@ -1,6 +1,6 @@
 /**
  * @file RTC.h
- * @brief ArduinoRTC library header for Zephyr-based Arduino boards.
+ * @brief RTC library header for Zephyr-based Arduino boards.
  *
  * This class provides a unified interface for accessing and configuring
  * real-time clock (RTC) peripherals across multiple Arduino platforms,
@@ -21,26 +21,26 @@
 #include <time.h>
 
 /**
- * @typedef RTCAlarmCallback
+ * @typedef RtcAlarmCallback
  * @brief Function pointer type for RTC alarm callbacks.
  *
  * @param user_data User-defined data passed to the callback when the alarm triggers.
  */
-typedef void (*RTCAlarmCallback)(void *user_data);
+typedef void (*RtcAlarmCallback)(void *user_data);
 
 /**
- * @typedef RTCUpdateCallback
+ * @typedef RtcUpdateCallback
  * @brief Function pointer type for RTC update event callbacks.
  *
  * @param user_data User-defined data passed to the callback when the RTC updates.
  */
-typedef void (*RTCUpdateCallback)(void *user_data);
+typedef void (*RtcUpdateCallback)(void *user_data);
 
 /**
- * @class ArduinoRTC
+ * @class Rtc
  * @brief Cross-platform RTC abstraction for Arduino boards running Zephyr.
  *
- * The ArduinoRTC class provides an object-oriented interface for interacting with
+ * The Rtc class provides an object-oriented interface for interacting with
  * the hardware real-time clock. It supports time management, alarm scheduling,
  * calibration, and update event callbacks.
  *
@@ -48,15 +48,15 @@ typedef void (*RTCUpdateCallback)(void *user_data);
  * or the Zephyr counter driver for boards without a dedicated RTC peripheral.
  *
  */
-class ArduinoRTC {
+class Rtc {
 public:
     /**
-     * @brief Constructs a new ArduinoRTC object.
+     * @brief Constructs a new Rtc object.
      *
      * Initializes internal pointers and prepares the instance
      * for communication with the underlying RTC or counter driver.
      */
-    ArduinoRTC();
+    Rtc();
 
     /**
      * @brief Initializes the RTC hardware.
@@ -68,9 +68,9 @@ public:
     bool begin();
 
     /**
-     * @brief Destroys the ArduinoRTC object.
+     * @brief Destroys the Rtc object.
      */
-    ~ArduinoRTC();
+    ~Rtc();
 
 	/**
 	 * @brief Sets the current day of the month in the RTC.
@@ -231,7 +231,7 @@ public:
      * @return 0 on success, negative error code otherwise.
      */
     int setAlarm(int year, int month, int day, int hour, int minute, int second,
-                 RTCAlarmCallback cb = nullptr, void *user_data = nullptr);
+                 RtcAlarmCallback cb = nullptr, void *user_data = nullptr);
 
     /**
      * @brief Cancels the currently active alarm.
@@ -293,7 +293,7 @@ public:
      * @param user_data Optional user data passed to the callback.
      * @return 0 on success, negative error code otherwise.
      */
-    int setUpdateCallback(RTCUpdateCallback cb, void *user_data);
+    int setUpdateCallback(RtcUpdateCallback cb, void *user_data);
 
     /**
      * @brief Applies a calibration correction to the RTC.
@@ -323,10 +323,10 @@ private:
     /** @brief Internal static wrapper for update callbacks. */
     static void updateCallbackWrapper(const struct device *dev, void *user_data);
 
-    RTCAlarmCallback userAlarmCallback = nullptr;   /**< User-registered alarm callback. */
+    RtcAlarmCallback userAlarmCallback = nullptr;   /**< User-registered alarm callback. */
     void *userAlarmCallbackData = nullptr;          /**< User data for alarm callback. */
 
-    RTCUpdateCallback userUpdateCallback = nullptr; /**< User-registered update callback. */
+    RtcUpdateCallback userUpdateCallback = nullptr; /**< User-registered update callback. */
     void *userUpdateCallbackData = nullptr;         /**< User data for update callback. */
 
     uint16_t alarmId = 0; /**< Default alarm identifier. */

@@ -1,6 +1,6 @@
 #include "RTC.h"
 
-ArduinoRTC rtc;
+Rtc rtc;
 
 int year, month, day, hour, minute, second;
 int previousSecond = 0;

@@ -1,6 +1,6 @@
 #include "RTC.h"
 
-ArduinoRTC rtc;
+Rtc rtc;
 
 // 7-segment style representation for digits 0–9 and colon ":"
 const char* bigDigits[11][3] = {
