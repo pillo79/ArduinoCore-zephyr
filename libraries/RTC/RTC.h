@@ -16,6 +16,7 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/counter.h>
 #include <zephyr/drivers/rtc.h>
 #include <time.h>
@@ -216,7 +217,7 @@ public:
      */
     int getTime(int &year, int &month, int &day, int &hour, int &minute, int &second);
 
-#if defined(ARDUINO_GIGA) || defined(ARDUINO_PORTENTA_H7) || defined(ARDUINO_OPTA)
+#if DT_NODE_EXISTS(DT_NODELABEL(rtc))
     /**
      * @brief Schedules an alarm for a specific time.
      *
@@ -239,7 +240,7 @@ public:
      */
     int cancelAlarm();
 
-#elif defined(ARDUINO_NANO33BLE) || defined(ARDUINO_NICLA_SENSE_ME)
+#elif DT_NODE_EXISTS(DT_NODELABEL(rtc2))
     /**
      * @brief Sets an RTC alarm for boards using the Zephyr counter driver.
      *
@@ -259,11 +260,12 @@ public:
 
     /**
      * @brief Cancels an active alarm.
+     * @return 0 on success, negative error code otherwise.
      */
-    void cancelAlarm();
+    int cancelAlarm();
 #endif
 
-#if defined(ARDUINO_GIGA) || defined(ARDUINO_PORTENTA_H7) || defined(ARDUINO_OPTA)
+#if DT_NODE_EXISTS(DT_NODELABEL(rtc))
     /**
      * @brief Retrieves the currently configured alarm time.
      *
@@ -313,7 +315,7 @@ public:
 #endif
 
 private:
-#if defined(ARDUINO_GIGA) || defined(ARDUINO_PORTENTA_H7) || defined(ARDUINO_OPTA)
+#if DT_NODE_EXISTS(DT_NODELABEL(rtc))
     /** @brief Pointer to the Zephyr RTC device. */
     const struct device *rtc_dev;
 
@@ -331,7 +333,7 @@ private:
 
     uint16_t alarmId = 0; /**< Default alarm identifier. */
 
-#elif defined(ARDUINO_NANO33BLE) || defined(ARDUINO_NICLA_SENSE_ME)
+#elif DT_NODE_EXISTS(DT_NODELABEL(rtc2))
     /** @brief Pointer to the Zephyr counter device used as RTC backend. */
     const struct device *counter_dev;
 

@@ -9,6 +9,9 @@ Rtc::~Rtc(){}
 
 bool Rtc::setYear(int year)
 {
+    if (year < 1970 || year > 2100) {
+        return false;
+    }
     int currentYear, month, day, hour, minute, second;
     int retVal = getTime(currentYear, month, day, hour, minute, second);
     if(retVal == 0)
@@ -25,6 +28,9 @@ bool Rtc::setYear(int year)
 
 bool Rtc::setMonthOfYear(int month)
 {
+    if (month < 1 || month > 12) {
+        return false;
+    }
     int year, currentMonth, day, hour, minute, second;
     int retVal = getTime(year, currentMonth, day, hour, minute, second);
     if(retVal == 0)
@@ -40,6 +46,9 @@ bool Rtc::setMonthOfYear(int month)
 
 bool Rtc::setDayOfMonth(int day)
 {
+    if (day < 1 || day > 31) {
+        return false;
+    }
     int year, month, currentDay, hour, minute, second;
     int retVal = getTime(year, month, currentDay, hour, minute, second);
     if(retVal == 0)
@@ -55,6 +64,9 @@ bool Rtc::setDayOfMonth(int day)
 
 bool Rtc::setHour(int hour)
 {
+    if (hour < 0 || hour > 23) {
+        return false;
+    }
     int year, month, day, currentHour, minute, second;
     int retVal = getTime(year, month, day, currentHour, minute, second);
     if(retVal == 0)
@@ -70,6 +82,9 @@ bool Rtc::setHour(int hour)
 
 bool Rtc::setMinute(int minute)
 {
+    if (minute < 0 || minute > 59) {
+        return false;
+    }
     int year, month, day, hour, currentMinute, second;
     int retVal = getTime(year, month, day, hour, currentMinute, second);
     if(retVal == 0)
@@ -85,6 +100,9 @@ bool Rtc::setMinute(int minute)
 
 bool Rtc::setSecond(int second)
 {
+    if (second < 0 || second > 59) {
+        return false;
+    }
     int year, month, day, hour, minute, currentSecond;
     int retVal = getTime(year, month, day, hour, minute, currentSecond);
     if(retVal == 0)
@@ -164,7 +182,7 @@ int Rtc::getSeconds()
     return -1;
 }
 
-#if defined(ARDUINO_GIGA) || defined(ARDUINO_PORTENTA_H7) || defined(ARDUINO_OPTA)
+#if DT_NODE_EXISTS(DT_NODELABEL(rtc))
 #define RTC_NODE DT_NODELABEL(rtc)
 
 /**
@@ -176,6 +194,9 @@ int Rtc::getSeconds()
 Rtc::Rtc()
 {
     rtc_dev = DEVICE_DT_GET(RTC_NODE);
+    if (!rtc_dev) {
+        printk("RTC device not found in device tree\n");
+    }
 }
 
 /**
@@ -366,7 +387,7 @@ bool Rtc::isAlarmPending()
 /**
  * @brief Rtc callback function
  *
- * This alarm callback wrapper is needed to make the connection between C-style low level driver function callabacks
+ * This alarm callback wrapper is needed to make the connection between C-style low level driver function callbacks
  * which need to be static and the objects derived from the RTC class;
  * You do not need to call this directly in the app
  *
@@ -444,10 +465,22 @@ int Rtc::getCalibration(int32_t &calibration)
     return rtc_get_calibration(rtc_dev, &calibration);
 }
 
-#elif defined(ARDUINO_NANO33BLE) || defined(ARDUINO_NICLA_SENSE_ME)
+#elif DT_NODE_EXISTS(DT_NODELABEL(rtc2))
 
 #define COUNTER_NODE DT_NODELABEL(rtc2)
 LOG_MODULE_REGISTER(Rtc);
+
+// Utility functions - local scope only
+namespace {
+static const int days_in_month[] = {
+    31, 28, 31, 30, 31, 30,
+    31, 31, 30, 31, 30, 31
+};
+
+static bool is_leap(int year) {
+    return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+}
+} // namespace
 
 /**
  * @brief Static alarm handler for the RTC driver.
@@ -526,6 +559,7 @@ int Rtc::setTime(int year, int month, int day, int hour, int minute, int second)
 
     uint32_t freq = counter_get_frequency(counter_dev);
     if (freq == 0) {
+        LOG_ERR("Counter frequency is zero");
         return -1;
     }
 
@@ -608,6 +642,8 @@ int Rtc::setAlarm(int year, int month, int day, int hour, int minute, int second
     int ret = counter_set_channel_alarm(counter_dev, 0, &alarm_cfg);
     if (ret != 0) {
         LOG_WRN("Failed to set alarm: %d", ret);
+        user_callback = nullptr;
+        user_data = nullptr;
         return ret;
     }
 
@@ -619,22 +655,17 @@ int Rtc::setAlarm(int year, int month, int day, int hour, int minute, int second
  *
  * This function stops any active alarm and clears the registered callback
  * and user data.
+ * @return 0 on success, negative error code otherwise.
  */
-void Rtc::cancelAlarm()
+int Rtc::cancelAlarm()
 {
-    counter_cancel_channel_alarm(counter_dev, 0);
+    int ret = counter_cancel_channel_alarm(counter_dev, 0);
+    if (ret != 0) {
+        LOG_WRN("Failed to cancel alarm: %d", ret);
+    }
     user_callback = nullptr;
     user_data = nullptr;
-}
-
-// Utility functions
-static const int days_in_month[] = {
-    31, 28, 31, 30, 31, 30,
-    31, 31, 30, 31, 30, 31
-};
-
-static bool is_leap(int year) {
-    return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+    return ret;
 }
 
 /**
