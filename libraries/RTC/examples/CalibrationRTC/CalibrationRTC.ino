@@ -1,13 +1,10 @@
 #include "RTC.h"
 #include <stdio.h>
 
-// Doesn't work on the Opta for some reason.
-
-
 Rtc rtc;
 
 void setup() {
-    char printBuffer[30];
+    char printBuffer[64];
     delay(1000);
     Serial.begin(115200);
     if (!rtc.begin()) {
@@ -17,7 +14,7 @@ void setup() {
 
     int calib = 0;
     if (rtc.getCalibration(calib) == 0) {
-        sprintf(printBuffer, "Current calibration: %d\n", calib);
+        snprintf(printBuffer, sizeof(printBuffer), "Current calibration: %d\n", calib);
         Serial.println(printBuffer);
     } else {
         Serial.println("Failed to get calibration");
@@ -28,7 +25,7 @@ void setup() {
     int32_t new_calib = calib + 1;
 
     if (rtc.setCalibration(new_calib) == 0) {
-        sprintf(printBuffer, "Calibration updated to: %d\n", new_calib);
+        snprintf(printBuffer, sizeof(printBuffer), "Calibration updated to: %d\n", new_calib);
         Serial.println(printBuffer);
     } else {
         Serial.println("Failed to set calibration");

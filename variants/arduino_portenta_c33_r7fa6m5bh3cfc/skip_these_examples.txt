@@ -9,3 +9,4 @@
 # relative to the root of the repository.
 
 libraries/Camera
+libraries/RTC

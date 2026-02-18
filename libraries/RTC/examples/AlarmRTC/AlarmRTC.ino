@@ -68,7 +68,7 @@ void setup() {
 void loop() {
     char printBuffer[30]; // declare a buffer of large enough size for the message we want to display
     int y, m, d, h, min, s;
-    int status = rtc.getTime(y, m, d, h, min, s);
+    rtc.getTime(y, m, d, h, min, s);
     // Because the print() and println() functions do not support formatted output directly, we can use this trick to prepare a buffer with the string we want to show
     sprintf(printBuffer, "Time is: %04d-%02d-%02d %02d:%02d:%02d", y, m, d, h, min, s);
     Serial.println(printBuffer);

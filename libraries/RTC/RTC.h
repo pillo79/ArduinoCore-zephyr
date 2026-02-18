@@ -217,7 +217,7 @@ public:
      */
     int getTime(int &year, int &month, int &day, int &hour, int &minute, int &second);
 
-#if DT_NODE_EXISTS(DT_NODELABEL(rtc))
+#ifdef CONFIG_RTC_STM32
     /**
      * @brief Schedules an alarm for a specific time.
      *
@@ -240,7 +240,7 @@ public:
      */
     int cancelAlarm();
 
-#elif DT_NODE_EXISTS(DT_NODELABEL(rtc2))
+#else
     /**
      * @brief Sets an RTC alarm for boards using the Zephyr counter driver.
      *
@@ -260,12 +260,53 @@ public:
 
     /**
      * @brief Cancels an active alarm.
+     * 
      * @return 0 on success, negative error code otherwise.
      */
     int cancelAlarm();
+
+    /**
+     * @brief Retrieves the currently configured alarm time.
+     * 
+     * @return -1 to indicate not supported.
+     */
+    int getAlarm([[maybe_unused]] int &year, [[maybe_unused]] int &month, [[maybe_unused]] int &day,
+                 [[maybe_unused]] int &hour, [[maybe_unused]] int &minute, [[maybe_unused]] int &second);
+
+    /**
+     * @brief Checks whether an alarm is currently pending.
+     * This function is not supported and will return -1 to indicate this.
+     * 
+     * @return false to indicate not supported.
+     */
+    bool isAlarmPending();
+
+    /**
+     * @brief Registers an update callback function.
+     * This function is not supported and will return -1 to indicate this.
+     * 
+     * @return -1 to indicate not supported.
+     */
+    int setUpdateCallback([[maybe_unused]] RtcUpdateCallback cb, [[maybe_unused]] void *user_data);
+
+    /**
+     * @brief Sets the Rtc calibration value.
+     * This function is not supported and will return -1 to indicate this.
+     * 
+     * @return -1 to indicate not supported.
+     */
+    int setCalibration([[maybe_unused]] int32_t calibration);
+
+    /**
+     * @brief Retrieves the current Rtc calibration value.
+     * This function is not supported and will return -1 to indicate this.
+     * 
+     * @return -1 to indicate not supported.
+     */
+    int getCalibration([[maybe_unused]] int32_t &calibration);
 #endif
 
-#if DT_NODE_EXISTS(DT_NODELABEL(rtc))
+#ifdef CONFIG_RTC_STM32
     /**
      * @brief Retrieves the currently configured alarm time.
      *
@@ -315,15 +356,15 @@ public:
 #endif
 
 private:
-#if DT_NODE_EXISTS(DT_NODELABEL(rtc))
+#ifdef CONFIG_RTC_STM32
     /** @brief Pointer to the Zephyr RTC device. */
     const struct device *rtc_dev;
 
     /** @brief Internal static wrapper for alarm callbacks. */
-    static void alarmCallbackWrapper(const struct device *dev, uint16_t id, void *user_data);
+    static void alarmCallbackWrapper([[maybe_unused]] const struct device *dev, [[maybe_unused]] uint16_t id, void *user_data);
 
     /** @brief Internal static wrapper for update callbacks. */
-    static void updateCallbackWrapper(const struct device *dev, void *user_data);
+    static void updateCallbackWrapper([[maybe_unused]] const struct device *dev, void *user_data);
 
     RtcAlarmCallback userAlarmCallback = nullptr;   /**< User-registered alarm callback. */
     void *userAlarmCallbackData = nullptr;          /**< User data for alarm callback. */
@@ -333,7 +374,7 @@ private:
 
     uint16_t alarmId = 0; /**< Default alarm identifier. */
 
-#elif DT_NODE_EXISTS(DT_NODELABEL(rtc2))
+#else
     /** @brief Pointer to the Zephyr counter device used as RTC backend. */
     const struct device *counter_dev;
 
