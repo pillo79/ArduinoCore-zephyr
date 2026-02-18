@@ -45,7 +45,6 @@ fi
 
 cd "$GITHUB_WORKSPACE" || exit 2
 
-exit_code=0
 if [[ -f "$CHECK_FILES_FROM" ]]; then
 	# Use the provided list of files to check.
 	src_files=$(grep -E "$INCLUDE_REGEX" "$CHECK_FILES_FROM")
@@ -54,38 +53,36 @@ else
 	src_files=$(find "$CHECK_PATH" -name .git -prune -o -regextype posix-egrep -regex "$INCLUDE_REGEX" -print)
 fi
 
-HEAD_SHA=$(git rev-parse $GITHUB_HEAD_REF)
-
-intro_out=false
+exit_code=0
 IFS=$'\n' # Loop below should separate on new lines, not spaces.
 for file in $src_files; do
 	# Only check formatting if the path doesn't match the regex
-	if ! [[ ${file} =~ $EXCLUDE_REGEX ]]; then
-		clang-format -i -style=file "${file}" 2>&1
-		changes=$(git diff -U0 --color=always ${file})
-		[ -z "$changes" ] && continue
+	[[ ${file} =~ $EXCLUDE_REGEX ]] && continue
 
-		exit_code=1
+	clang-format -i -style=file "${file}" 2>&1
+	changes=$(git diff -U0 --color=always ${file})
+	[ -z "$changes" ] && continue
 
-		warn_msg="" ; echo "$changes" | tail -n +5 | while IFS= read -r line ; do
-			# match file and line numbers in the diff output and provide Github Actions annotations
-			if [[ $line =~ @@\ -([0-9]+),?([0-9]*)\ \+([0-9]+),?([0-9]*)\ @@ ]]; then
-				# Extract the line numbers from the diff output
-				git_start_line=${BASH_REMATCH[1]}
-				git_line_count=${BASH_REMATCH[2]:-1}
-				fix_start_line=${BASH_REMATCH[3]}
-				fix_line_count=${BASH_REMATCH[4]:-1}
+	exit_code=1
+	echo "$changes" | tail -n +5 | while IFS= read -r line ; do
+		if [[ $line =~ @@\ -([0-9]+),?([0-9]*)\ \+([0-9]+),?([0-9]*)\ @@ ]]; then
+			# Extract the line numbers from the diff output
+			git_start_line=${BASH_REMATCH[1]}
+			git_line_count=${BASH_REMATCH[2]:-1}
+			# fixed_start_line=${BASH_REMATCH[3]}
+			# fixed_line_count=${BASH_REMATCH[4]:-1}
 
-				git_end_line=$((git_start_line + git_line_count - 1))
+			git_end_line=$((git_start_line + git_line_count - 1))
 
-				echo "---"
-				echo "::error file=${file},line=${git_start_line},endLine=${git_end_line},title=Fix this formatting::${file}, lines\\n ${git_start_line}-${git_end_line}:"
-				continue
-			fi
+			echo "---"
+			echo "::error file=${file},line=${git_start_line},endLine=${git_end_line},title=Fix this formatting::${file}, lines ${git_start_line}-${git_end_line}:"
+		else
+			# diff line, print it as is (with color)
 			echo "$line"
-		done
-	fi
+		fi
+	done
 done
 
 [ "$exit_code" -ne 0 ] && echo "---"
+
 exit $exit_code
