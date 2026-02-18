@@ -198,6 +198,12 @@
 	};
 };
 
+&rtc {
+    status = "okay";
+    clocks = <&rcc STM32_CLOCK(APB3, 21)>,
+             <&rcc STM32_SRC_LSE RTC_SEL(1)>;
+};
+
 / {
 	zephyr,user {
 		digital-pin-gpios = <&gpiob 7 GPIO_ACTIVE_HIGH>, /* D0 - PB7 */
