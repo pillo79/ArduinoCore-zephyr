@@ -79,7 +79,7 @@ for file in $src_files; do
 				git_end_line=$((git_start_line + git_line_count - 1))
 
 				echo "---"
-				echo "::error file=${file},line=${git_start_line},endLine=${git_end_line},title=Fix this formatting::${file}, lines ${git_start_line}-${git_end_line}:"
+				echo "::error file=${file},line=${git_start_line},endLine=${git_end_line},title=Fix this formatting::${file}, lines\\n ${git_start_line}-${git_end_line}:"
 				continue
 			fi
 			echo "$line"
@@ -87,4 +87,5 @@ for file in $src_files; do
 	fi
 done
 
+[ "$exit_code" -ne 0 ] && echo "---"
 exit $exit_code
