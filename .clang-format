@@ -104,6 +104,7 @@ AccessModifierOffset: -4
 IndentWidth: 4
 InsertBraces: true
 InsertNewlineAtEOF: true
+DerivePointerAlignment: true
 SpaceBeforeInheritanceColon: true
 SpaceBeforeParens: ControlStatements
 SortIncludes: Never

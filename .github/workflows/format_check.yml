@@ -1,23 +1,23 @@
+# Copyright ARDUINO SRL (https://www.arduino.cc)
+# SPDX-License-Identifier: Apache-2.0
+
+# CI workflow to check formatting
 name: 'Format Check'
 
 on:
   push:
-    branches:
-      - 'main'
-
   pull_request:
-    types:
-      - opened
-      - edited
-      - reopened
-      - synchronize
-    branches:
-      - 'main'
 
 jobs:
   verify-format:
     runs-on: ubuntu-latest
     steps:
+      - name: Install clang
+        working-directory: /opt
+        run: |
+          sudo apt-get remove --purge man-db -y # skips the mandb triggers
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-19
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -33,21 +33,17 @@ jobs:
             libraries/**/*.{c,cpp,h,hpp}
           files_ignore: |
             cores/arduino/api/**
-            loader/llext_exports.c
             loader/blobs/4343WA1_*.c
             loader/blobs/wifi_nvram_image.h
             libraries/examples/**
             libraries/extras/**
             libraries/ea_malloc/**
           json: true
-      - name: Export changed files in a text file, one per line
+      - name: Run clang-format checks
         if: steps.changed-files.outputs.any_changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           echo ${{ steps.changed-files.outputs.all_changed_files }} | jq -r '.[]' > all_changed_files.txt
-          cat all_changed_files.txt
-      - name: Run clang-format check
-        if: steps.changed-files.outputs.any_changed == 'true'
-        uses: pillo79/clang-format-action@05f671e71f0758aba4d3c9dbb0ee81bc5f0137c6
-        with:
-          clang-format-version: '19'
-          check-files-from: all_changed_files.txt
+          ./extra/ci_clang_check.sh -f all_changed_files.txt
