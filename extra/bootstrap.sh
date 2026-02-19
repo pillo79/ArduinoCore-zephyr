@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright ARDUINO SRL (https://www.arduino.cc)
+# Copyright (c) Arduino SRL
 # SPDX-License-Identifier: Apache-2.0
 
 set -e
