@@ -35,7 +35,6 @@ giga.menu.debug.true.build.zsk_args.debug=-debug
 giga.menu.link_mode.dynamic=Dynamic
 giga.menu.link_mode.static=Static
 giga.menu.link_mode.static.build.link_mode=static
-giga.menu.link_mode.static.upload.extension=bin-zsk.bin
 
 giga.build.zephyr_target=arduino_giga_r1//m7
 giga.build.zephyr_args=--shield arduino_giga_display_shield
@@ -92,7 +91,6 @@ nano33ble.menu.debug.true.build.zsk_args.debug=-debug
 nano33ble.menu.link_mode.dynamic=Dynamic
 nano33ble.menu.link_mode.static=Static
 nano33ble.menu.link_mode.static.build.link_mode=static
-nano33ble.menu.link_mode.static.upload.extension=bin-zsk.bin
 
 nano33ble.build.zephyr_target=arduino_nano_33_ble//sense
 nano33ble.build.zephyr_args=
@@ -148,7 +146,6 @@ ek_ra8d1.menu.debug.true.build.zsk_args.debug=-debug
 ek_ra8d1.menu.link_mode.dynamic=Dynamic
 ek_ra8d1.menu.link_mode.static=Static
 ek_ra8d1.menu.link_mode.static.build.link_mode=static
-ek_ra8d1.menu.link_mode.static.upload.extension=bin-zsk.bin
 
 ek_ra8d1.build.zephyr_target=ek_ra8d1
 ek_ra8d1.build.zephyr_args=
@@ -200,7 +197,6 @@ frdm_mcxn947.menu.debug.true.build.zsk_args.debug=-debug
 frdm_mcxn947.menu.link_mode.dynamic=Dynamic
 frdm_mcxn947.menu.link_mode.static=Static
 frdm_mcxn947.menu.link_mode.static.build.link_mode=static
-frdm_mcxn947.menu.link_mode.static.upload.extension=bin-zsk.bin
 
 frdm_mcxn947.build.zephyr_target=frdm_mcxn947//cpu0
 frdm_mcxn947.build.zephyr_args=
@@ -248,7 +244,6 @@ portentah7.menu.debug.true.build.zsk_args.debug=-debug
 portentah7.menu.link_mode.dynamic=Dynamic
 portentah7.menu.link_mode.static=Static
 portentah7.menu.link_mode.static.build.link_mode=static
-portentah7.menu.link_mode.static.upload.extension=bin-zsk.bin
 
 portentah7.build.zephyr_target=arduino_portenta_h7@1.0.0//m7
 portentah7.build.zephyr_args=
@@ -305,7 +300,6 @@ frdm_rw612.menu.debug.true.build.zsk_args.debug=-debug
 frdm_rw612.menu.link_mode.dynamic=Dynamic
 frdm_rw612.menu.link_mode.static=Static
 frdm_rw612.menu.link_mode.static.build.link_mode=static
-frdm_rw612.menu.link_mode.static.upload.extension=bin-zsk.bin
 
 frdm_rw612.build.zephyr_target=frdm_rw612
 frdm_rw612.build.zephyr_args=
@@ -348,7 +342,6 @@ niclasense.build.compiler_path={runtime.tools.arm-zephyr-eabi-0.16.8.path}/bin/
 niclasense.menu.link_mode.dynamic=Dynamic
 niclasense.menu.link_mode.static=Static
 niclasense.menu.link_mode.static.build.link_mode=static
-niclasense.menu.link_mode.static.upload.extension=bin-zsk.bin
 
 niclasense.build.zephyr_target=arduino_nicla_sense_me
 niclasense.build.zephyr_args=
@@ -407,7 +400,6 @@ portentac33.menu.debug.true.build.zsk_args.debug=-debug
 portentac33.menu.link_mode.dynamic=Dynamic
 portentac33.menu.link_mode.static=Static
 portentac33.menu.link_mode.static.build.link_mode=static
-portentac33.menu.link_mode.static.upload.extension=bin-zsk.bin
 
 portentac33.build.zephyr_target=arduino_portenta_c33
 portentac33.build.zephyr_args=
@@ -458,7 +450,6 @@ opta.menu.debug.true.build.zsk_args.debug=-debug
 opta.menu.link_mode.dynamic=Dynamic
 opta.menu.link_mode.static=Static
 opta.menu.link_mode.static.build.link_mode=static
-opta.menu.link_mode.static.upload.extension=bin-zsk.bin
 
 opta.build.zephyr_target=arduino_opta//m7
 opta.build.zephyr_args=
@@ -511,7 +502,6 @@ nano_matter.build.compiler_path={runtime.tools.arm-zephyr-eabi-0.16.8.path}/bin/
 nano_matter.menu.link_mode.dynamic=Dynamic
 nano_matter.menu.link_mode.static=Static
 nano_matter.menu.link_mode.static.build.link_mode=static
-nano_matter.menu.link_mode.static.upload.extension=bin-zsk.bin
 
 nano_matter.build.zephyr_target=arduino_nano_matter
 nano_matter.build.zephyr_args=
@@ -569,7 +559,6 @@ unoq.build.compiler_path={runtime.tools.arm-zephyr-eabi-0.16.8.path}/bin/
 unoq.menu.link_mode.dynamic=Dynamic
 unoq.menu.link_mode.static=Static
 unoq.menu.link_mode.static.build.link_mode=static
-unoq.menu.link_mode.static.upload.extension=bin-zsk.bin
 
 unoq.menu.flash_mode.flash=Flash
 unoq.menu.flash_mode.flash.openocd_cfg=flash_sketch.cfg

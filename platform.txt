@@ -52,7 +52,9 @@ build.extra_flags=
 build.extra_ldflags=
 build.link_mode=dynamic
 build.boot_mode=wait
-upload.extension=elf-zsk.bin
+upload.extension-dynamic=elf-zsk.bin
+upload.extension-static=bin-zsk.bin
+upload.extension={upload.extension-{build.link_mode}}
 
 build.ldscript.path={runtime.platform.path}/variants/_ldscripts
 build.link_command="{compiler.path}{compiler.c.elf.cmd}" "-L{build.path}" "-L{build.variant.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {build.extra_flags} {build.extra_ldflags} {compiler.zephyr.common_ldflags} --specs=nano.specs --specs=nosys.specs {compiler.ldflags} {object_files} -Wl,--start-group "{build.path}/{archive_file}" {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags} -Wl,--end-group {build.link_args.{build.link_mode}}
