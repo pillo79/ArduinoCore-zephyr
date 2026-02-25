@@ -1,6 +1,7 @@
 /*
- * Arduino Nicla Vision Overlay
- * Configures peripherals for Arduino Core compatibility
+ * Copyright (c) Arduino s.r.l. and/or its affiliated companies
+ *
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /* USB CDC-ACM UART for console */
@@ -31,6 +32,13 @@
 
 &spi5 {
     status = "okay";
+};
+
+&rtc {
+    status = "okay";
+
+    clocks = <&rcc STM32_CLOCK(APB4, 16U)>,
+             <&rcc STM32_SRC_LSE RTC_SEL(1)>;
 };
 
 /* PWM Timers */

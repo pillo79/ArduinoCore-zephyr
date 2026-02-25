@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 #include "pure_analog_pins.h"
 
 #define LEDR    (4u) /* D4 - Red LED PE_3 */
