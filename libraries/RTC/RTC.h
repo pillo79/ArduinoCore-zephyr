@@ -217,7 +217,7 @@ public:
 	 */
 	int getTime(int &year, int &month, int &day, int &hour, int &minute, int &second);
 
-#ifdef CONFIG_RTC_STM32
+#if defined(CONFIG_RTC_STM32) || defined(CONFIG_RTC_RPI_PICO)
 	/**
 	 * @brief Schedules an alarm for a specific time.
 	 *
@@ -308,7 +308,7 @@ public:
 	int getCalibration([[maybe_unused]] int32_t &calibration);
 #endif
 
-#ifdef CONFIG_RTC_STM32
+#if defined(CONFIG_RTC_STM32) || defined(CONFIG_RTC_RPI_PICO)
 	/**
 	 * @brief Retrieves the currently configured alarm time.
 	 *
@@ -358,7 +358,7 @@ public:
 #endif
 
 private:
-#ifdef CONFIG_RTC_STM32
+#if defined(CONFIG_RTC_STM32) || defined(CONFIG_RTC_RPI_PICO)
 	/** @brief Pointer to the Zephyr RTC device. */
 	const struct device *rtc_dev;
 
@@ -377,7 +377,7 @@ private:
 
 	uint16_t alarmId = 0; /**< Default alarm identifier. */
 
-#else
+#else // For boards without a dedicated RTC, we use the counter API to implement RTC functionality
 	/** @brief Pointer to the Zephyr counter device used as RTC backend. */
 	const struct device *counter_dev;
 

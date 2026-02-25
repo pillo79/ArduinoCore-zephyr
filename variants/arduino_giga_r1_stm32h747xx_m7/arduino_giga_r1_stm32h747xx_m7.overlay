@@ -37,7 +37,7 @@
     status = "okay";
 
 	clocks = <&rcc STM32_CLOCK(APB4, 16U)>,
-             <&rcc STM32_SRC_LSE RTC_SEL(0)>;
+             <&rcc STM32_SRC_LSE RTC_SEL(1)>;
 };
 
 &i2c4 {

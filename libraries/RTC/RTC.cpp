@@ -153,7 +153,7 @@ int Rtc::getSeconds() {
 	return -1;
 }
 
-#ifdef CONFIG_RTC_STM32
+#if defined(CONFIG_RTC_STM32) || defined(CONFIG_RTC_RPI_PICO)
 
 #if DT_NODE_EXISTS(DT_NODELABEL(rtc))
 #define RTC_NODE DT_NODELABEL(rtc)
@@ -165,7 +165,7 @@ int Rtc::getSeconds() {
 /**
  * @brief Rtc library constructor
  *
- * Constructor used with the STM32 microcontroller based boards (OPTA, PORTENTA H7, GIGA R1)
+ * Constructor used with STM32 and RP2040-based boards using Zephyr RTC drivers
  *
  */
 Rtc::Rtc() {
@@ -401,10 +401,14 @@ void Rtc::alarmCallbackWrapper([[maybe_unused]] const struct device *dev,
  * @param void *user_data is a void pointer the user can set when registering the callback
  */
 int Rtc::setUpdateCallback(RtcUpdateCallback cb, void *user_data) {
+#if defined(CONFIG_RTC_RPI_PICO)
+	return -1;
+#else
 	userUpdateCallback = cb;
 	userUpdateCallbackData = user_data;
 
 	return rtc_update_set_callback(rtc_dev, Rtc::updateCallbackWrapper, this);
+#endif
 }
 
 /**
@@ -434,7 +438,11 @@ void Rtc::updateCallbackWrapper([[maybe_unused]] const struct device *dev, void 
  * @return 0 if successful, or a negative error code on failure.
  */
 int Rtc::setCalibration(int32_t calibration) {
+#if defined(CONFIG_RTC_RPI_PICO)
+	return -1;
+#else
 	return rtc_set_calibration(rtc_dev, calibration);
+#endif
 }
 
 /**
@@ -447,13 +455,19 @@ int Rtc::setCalibration(int32_t calibration) {
  * @return 0 if successful, or a negative error code on failure.
  */
 int Rtc::getCalibration(int32_t &calibration) {
+#if defined(CONFIG_RTC_RPI_PICO)
+	return -1;
+#else
 	return rtc_get_calibration(rtc_dev, &calibration);
+#endif
 }
 
-#else // For non-STM32 platforms (nordic), we must use the generic counter API to implement RTC
-	  // functionality
+#elif defined(CONFIG_COUNTER_NRF_RTC) // For other platforms (nordic), we must use the counter API
+									  // to implement RTC functionality
 
-#if DT_NODE_EXISTS(DT_NODELABEL(rtc2))
+#if DT_NODE_EXISTS(DT_NODELABEL(rtc1))
+#define COUNTER_NODE DT_NODELABEL(rtc1)
+#elif DT_NODE_EXISTS(DT_NODELABEL(rtc2))
 #define COUNTER_NODE DT_NODELABEL(rtc2)
 #else
 #warning "RTC node not found in devicetree"
@@ -796,4 +810,6 @@ void Rtc::epochToDatetime(time_t t, int &year, int &month, int &day, int &hour, 
 	month = m + 1;
 	day = days + 1;
 }
-#endif /* CONFIG_RTC_STM32*/
+#else
+#error "Unsupported RTC configuration"
+#endif /* CONFIG_RTC_STM32 || CONFIG_RTC_RPI_PICO */
