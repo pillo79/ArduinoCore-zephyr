@@ -43,7 +43,6 @@ giga.build.zephyr_toolchain=arm-zephyr-eabi
 giga.build.variant=arduino_giga_r1_stm32h747xx_m7
 giga.build.artifact=zephyr_main
 
-giga.build.extra_flags=
 giga.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 giga.build.board=GIGA
 giga.vid.0=0x2341
@@ -99,7 +98,6 @@ nano33ble.build.zephyr_toolchain=arm-zephyr-eabi
 nano33ble.build.artifact=zephyr_main
 nano33ble.build.variant=arduino_nano_33_ble_nrf52840_sense
 
-nano33ble.build.extra_flags=
 nano33ble.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 nano33ble.build.board=NANO33BLE
 nano33ble.vid.0=0x2341
@@ -153,7 +151,6 @@ ek_ra8d1.build.zephyr_hals=hal_renesas
 ek_ra8d1.build.zephyr_toolchain=arm-zephyr-eabi
 ek_ra8d1.build.variant=ek_ra8d1_r7fa8d1bhecbd
 
-ek_ra8d1.build.extra_flags=
 ek_ra8d1.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 ek_ra8d1.build.board=EK_RA8D1
 
@@ -204,7 +201,6 @@ frdm_mcxn947.build.zephyr_hals=hal_nxp
 frdm_mcxn947.build.zephyr_toolchain=arm-zephyr-eabi
 frdm_mcxn947.build.variant=frdm_mcxn947_mcxn947_cpu0
 
-frdm_mcxn947.build.extra_flags=
 frdm_mcxn947.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 frdm_mcxn947.build.board=FRDM_MCXN947
 frdm_mcxn947.vid.0=0x1fc9
@@ -252,7 +248,6 @@ portentah7.build.zephyr_toolchain=arm-zephyr-eabi
 portentah7.build.artifact=zephyr_main
 portentah7.build.variant=arduino_portenta_h7_stm32h747xx_m7
 
-portentah7.build.extra_flags=
 portentah7.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 portentah7.build.board=PORTENTA_H7_M7
 portentah7.vid.0=0x2341
@@ -307,7 +302,6 @@ frdm_rw612.build.zephyr_hals=hal_stm32
 frdm_rw612.build.zephyr_toolchain=arm-zephyr-eabi
 frdm_rw612.build.variant=frdm_rw612_rw612
 
-frdm_rw612.build.extra_flags=
 frdm_rw612.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 frdm_rw612.build.board=FRDM_RW612
 frdm_rw612.vid.0=0x1fc9
@@ -350,7 +344,6 @@ niclasense.build.zephyr_toolchain=arm-zephyr-eabi
 niclasense.build.artifact=zephyr_main
 niclasense.build.variant=arduino_nicla_sense_me_nrf52832
 
-niclasense.build.extra_flags=
 niclasense.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 niclasense.build.board=NICLA_SENSE_ME
 niclasense.vid.0=0x2341
@@ -408,7 +401,6 @@ portentac33.build.zephyr_toolchain=arm-zephyr-eabi
 portentac33.build.artifact=zephyr_main
 portentac33.build.variant=arduino_portenta_c33_r7fa6m5bh3cfc
 
-portentac33.build.extra_flags=
 portentac33.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 portentac33.build.board=PORTENTA_C33
 portentac33.vid.0=0x2341
@@ -458,7 +450,6 @@ opta.build.zephyr_toolchain=arm-zephyr-eabi
 opta.build.artifact=zephyr_main
 opta.build.variant=arduino_opta_stm32h747xx_m7
 
-opta.build.extra_flags=
 opta.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 opta.build.board=OPTA
 opta.vid.0=0x2341
@@ -510,7 +501,6 @@ nano_matter.build.zephyr_toolchain=arm-zephyr-eabi
 nano_matter.build.artifact=zephyr_main
 nano_matter.build.variant=arduino_nano_matter_mgm240sd22vna
 
-nano_matter.build.extra_flags=
 nano_matter.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 nano_matter.build.board=ARDUINO_NANO_MATTER
 nano_matter.vid.0=0x2341
@@ -574,7 +564,6 @@ unoq.build.variant=arduino_uno_q_stm32u585xx
 unoq.build.artifact=zephyr_unoq
 unoq.build.subarch=zephyr
 
-unoq.build.extra_flags=
 unoq.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 unoq.build.board=UNO_Q
 unoq.build.zephyr_hals=hal_stm32
