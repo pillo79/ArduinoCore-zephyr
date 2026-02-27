@@ -50,8 +50,8 @@ foreach(variant ${VARIANTS})
 
 	# get machine flags (-msomething) in a separate list
 	set(LLEXT_MACHINE_FLAGS ${LLEXT_BASE_CFLAGS})
-	list(FILTER LLEXT_MACHINE_FLAGS INCLUDE REGEX "-m.*")
-	list(FILTER LLEXT_BASE_CFLAGS EXCLUDE REGEX "-m.*")
+	list(FILTER LLEXT_MACHINE_FLAGS INCLUDE REGEX "^-m.*")
+	list(FILTER LLEXT_BASE_CFLAGS EXCLUDE REGEX "^-m.*")
 
 	# (temp) generate C++ flags from C flags
 	set(LLEXT_BASE_CXXFLAGS ${LLEXT_BASE_CFLAGS})

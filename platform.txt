@@ -17,7 +17,7 @@ compiler.warning_flags.all=-Wall -Wextra
 
 compiler.path={build.compiler_path}
 compiler.c.cmd={build.crossprefix}gcc
-compiler.c.flags=-g -Os -c {compiler.define} {compiler.warning_flags} {compiler.zephyr.macros} "@{compiler.zephyr.machine_flags_file}" "@{compiler.zephyr.cflags_file}" {compile.zephyr.common_flags} -MMD
+compiler.c.flags=-g -Os -c {compiler.define} {compiler.warning_flags} {compiler.zephyr.macros} "@{compiler.zephyr.machine_flags_file}" "@{compiler.zephyr.cflags_file}" {compiler.zephyr.common_flags} -MMD
 compiler.c.elf.cmd={build.crossprefix}g++
 compiler.c.elf.flags=-Wl,--gc-sections "@{compiler.zephyr.machine_flags_file}" -std=gnu++17
 compiler.S.cmd={build.crossprefix}g++
@@ -54,7 +54,7 @@ upload.extension-static=bin-zsk.bin
 upload.extension={upload.extension-{build.link_mode}}
 
 build.ldscript.path={runtime.platform.path}/variants/_ldscripts
-build.link_command="{compiler.path}{compiler.c.elf.cmd}" "-L{build.path}" "-L{build.variant.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {compiler.zephyr.common_ldflags} --specs=nano.specs --specs=nosys.specs {compiler.ldflags} {object_files} -Wl,--start-group "{build.path}/{archive_file}" {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags} -Wl,--end-group {build.link_args.{build.link_mode}}
+build.link_command="{compiler.path}{compiler.c.elf.cmd}" "-L{build.path}" "-L{build.variant.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {compiler.zephyr.common_ldflags} --specs=nano.specs --specs=nosys.specs {compiler.ldflags} {object_files} -Wl,--start-group "{build.path}/{archive_file}" {compiler.libraries.ldflags} -Wl,--end-group {build.link_args.{build.link_mode}}
 
 build.check_command-dynamic={build.link_command} {build.link_args.check-dynamic} -o "{build.path}/{build.project_name}_check.tmp"
 build.check_command-static=true
@@ -85,8 +85,15 @@ compiler.c.elf.extra_flags=
 compiler.S.extra_flags=
 compiler.cpp.extra_flags=
 compiler.ar.extra_flags=
-compiler.objcopy.eep.extra_flags=
 compiler.elf2hex.extra_flags=
+
+# These can be overridden in platform.local.txt
+compiler.c.board_flags=
+compiler.c.elf.board_flags=
+compiler.S.board_flags=
+compiler.cpp.board_flags=
+compiler.ar.board_flags=
+compiler.elf2hex.board_flags=
 
 # {build.library_discovery_phase} is set to 1 by the builder during library discovery.
 # (this is available since arduino-builder>=1.5.5, keeping the default here for backward compatiblity)
