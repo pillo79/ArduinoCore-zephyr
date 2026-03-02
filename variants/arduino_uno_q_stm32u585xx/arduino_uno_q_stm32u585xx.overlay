@@ -190,6 +190,14 @@
 	};
 };
 
+&spi3 {
+	device0: device@0 {
+        compatible = "zephyr,spi-slave";
+        reg = <0>;
+		zephyr,deferred-init;
+	};
+};
+
 / {
 	zephyr,user {
 		digital-pin-gpios = <&gpiob 7 GPIO_ACTIVE_HIGH>, /* D0 - PB7 */
