@@ -1,4 +1,10 @@
 /*
+ * Copyright (c) Arduino s.r.l. and/or its affiliated companies
+ *
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/*
 * This sketch sets an alarm 10 seconds in the future and handles it via a callback.
 */
 

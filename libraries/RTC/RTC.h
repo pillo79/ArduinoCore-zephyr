@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) Arduino s.r.l. and/or its affiliated companies
+ *
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /**
  * @file RTC.h
  * @brief RTC library header for Zephyr-based Arduino boards.
