@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
+#pragma once
+
 #include <Arduino.h>
 #include "SocketHelpers.h"
 #include "utility/wl_definitions.h"
