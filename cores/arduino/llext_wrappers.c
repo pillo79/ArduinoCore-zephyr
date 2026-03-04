@@ -76,8 +76,8 @@ W2(int, strcasecmp, const char *, const char *)
 W3(char *, strncpy, char *, const char *, size_t)
 W2(char *, strcat, char *, const char *)
 W2(char *, strcpy, char *, const char *)
-W3(int, memcmp, const void *, const void *, int)
-W2(void *, memset, void *, int)
+W3(int, memcmp, const void *, const void *, unsigned int)
+W3(void *, memset, void *, int, unsigned int)
 
 /* stdlib.h - conversion */
 W2(double, strtod, const char *, char **)
@@ -111,37 +111,33 @@ W1(int, isupper, int)
 W1(int, islower, int)
 W1(int, isxdigit, int)
 
-/* math.h - double(double) */
+/* math.h - double */
 W1(double, acos, double)
 W1(double, asin, double)
 W1(double, atan, double)
+W2(double, atan2, double, double)
 W1(double, cos, double)
 W1(double, exp, double)
 W1(double, exp2, double)
-W1(double, log, double)
-W1(double, log2, double)
+W2(double, ldexp, double, int)
 W1(double, log10, double)
+W1(double, log2, double)
+W1(double, log, double)
+W2(double, pow, double, double)
 W1(double, sin, double)
 W1(double, sqrt, double)
 W1(double, tan, double)
 
-/* math.h - float(float) */
+/* math.h - float */
 W1(float, acosf, float)
 W1(float, asinf, float)
 W1(float, atanf, float)
+W2(float, atan2f, float, float)
 W1(float, cosf, float)
 W1(float, logf, float)
 W1(float, sinf, float)
 W1(float, sqrtf, float)
 W1(float, tanf, float)
-
-/* math.h - double(double, double) */
-W2(double, atan2, double, double)
-W2(double, pow, double, double)
-W2(double, ldexp, double, double)
-
-/* math.h - float(float, float) */
-W2(float, atan2f, float, float)
 
 /* stdio.h */
 W1(int, puts, const char *)
