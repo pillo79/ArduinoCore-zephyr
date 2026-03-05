@@ -3,7 +3,11 @@
 # Copyright (c) Arduino s.r.l. and/or its affiliated companies
 # SPDX-License-Identifier: Apache-2.0
 
-set -e
+# Build the loader for the given target, extract the generated EDK files to the
+# variants/ directory, and update Arduino-specific files. Once the process is
+# complete, the board can be properly used in the Arduino IDE by choosing this
+
+. $(dirname $0)/functions
 
 source venv/bin/activate
 
@@ -45,18 +49,25 @@ fi
 chosen_board=$(extra/get_board_details.sh | jq -cr ".[] | select(.board == \"$1\") // empty")
 if ! [ -z "$chosen_board" ]; then
 	# found, use the target and args from there
+	board=$(jq -cr '.board' <<< "$chosen_board")
 	target=$(jq -cr '.target' <<< "$chosen_board")
 	args=$(jq -cr '.args' <<< "$chosen_board")
+
+	# Check for debug flag and append
+	if [ x$2 == x"--debug" ]; then
+		args="$args -- -DEXTRA_CONF_FILE=../extra/debug.conf"
+	fi
 else
 	# expect Zephyr-compatible target and args
 	target=$1
 	shift
 	args="$*"
-fi
-
-# Check for debug flag and append
-if [ x$2 == x"--debug" ]; then
-	args="$args -- -DEXTRA_CONF_FILE=../extra/debug.conf"
+	chosen_board=$(extra/get_board_details.sh | jq -cr ".[] | select(.target == \"$target\") // empty")
+	if [ ! -z "$chosen_board" ]; then
+		board=$(jq -cr '.board' <<< "$chosen_board")
+	else
+		log_msg warning "No board for '$target' defined in 'boards.txt'. A proper definition is required to use the core."
+	fi
 fi
 
 echo
@@ -116,3 +127,43 @@ extra/gen_provides.py "${BUILD_DIR}/zephyr/zephyr.elf" -LF \
 	"random=__wrap_random" > ${VARIANT_DIR}/syms-static.ld
 
 cmake -P extra/gen_arduino_files.cmake $variant
+
+# update properties on boards.local.txt from the generated files
+if [ ! -z "$board" ]; then
+
+	if [ ! -f boards.local.txt ] ; then
+		cat << EOF > boards.local.txt
+#########################################################################################
+#
+# AUTO GENERATED FILE - DO NOT EDIT
+# This file is manipulated by extra/build.sh; manual changes may be overwritten.
+#
+#########################################################################################
+
+EOF
+	fi
+
+	# sketch load address: start of sketch partition, hex (exact)
+	CODE_ADDR=$(get_value_from_text_file variants/${variant}/syms-static.ld '_sketch_start')
+	update_text_file_field boards.local.txt "upload.address" $CODE_ADDR
+
+	# maximum sketch size: size of sketch partition, decimal (exact limit)
+	CODE_SIZE=$(( $(get_value_from_text_file variants/${variant}/syms-static.ld boards.local.txt '_sketch_max_size') ))
+	update_text_file_field boards.local.txt "upload.maximum_size" $CODE_SIZE
+
+	# maximum data size: configured LLEXT heap size, decimal (larger bound, real limit is smaller)
+	DATA_SIZE=$(( 1024*$(get_value_from_text_file firmwares/zephyr-${variant}.config 'CONFIG_LLEXT_HEAP_SIZE') ))
+	update_text_file_field boards.local.txt "upload.maximum_data_size" $DATA_SIZE
+
+	# machine fields (do not specifiy leading -)
+	MACH_CPU=$(get_value_from_text_file variants/${variant}/machine_flags.txt 'mcpu')
+	[ -z "$MACH_CPU" ] && MACH_CPU=$(get_value_from_text_file variants/${variant}/machine_flags.txt 'march')
+	[ -z "$MACH_CPU" ] || update_text_file_field boards.local.txt "build.architecture" $MACH_CPU
+	[ -z "$MACH_CPU" ] || update_text_file_field boards.local.txt "build.mcu" $MACH_CPU
+
+	MACH_FPU=$(get_value_from_text_file variants/${variant}/machine_flags.txt 'mfpu')
+	[ -z "$MACH_FPU" ] || update_text_file_field boards.local.txt "build.fpu" $MACH_FPU
+
+	MACH_FABI=$(get_value_from_text_file variants/${variant}/machine_flags.txt 'mfloat-abi')
+	[ -z "$MACH_FABI" ] || update_text_file_field boards.local.txt "build.float-abi" $MACH_FABI
+fi

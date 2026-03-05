@@ -1,24 +1,21 @@
 #!/bin/bash
-#
+
 # Copyright (c) Arduino s.r.l. and/or its affiliated companies
 # SPDX-License-Identifier: Apache-2.0
 
-set -e
+# Initialize the Zephyr workspace from a cleanly cloned ArduinoCore-zephyr
+# repository, fetching only the necessary modules and blobs for the supported
+# boards.
 
-log_msg() {
-	if [ -n $GITHUB_WORKSPACE ] ; then
-		echo "::$1::$2"
-	else
-		echo " - $2"
-	fi
-}
+. $(dirname $0)/functions
 
 if [ ! -f platform.txt ]; then
   echo Launch this script from the root core folder as ./extra/bootstrap.sh
   exit 2
 fi
 
-NEEDED_HALS=$(grep 'build.zephyr_hals=' boards.txt | cut -d '=' -f 2 | xargs -n 1 echo | sort -u | xargs echo)
+NEEDED_HALS=$(get_unique_values_from_text_file boards.txt 'build.zephyr_hals')
+NEEDED_TOOLCHAINS=$(get_unique_values_from_text_file boards.txt 'build.zephyr_toolchain')
 
 HAL_FILTER="-hal_.*"
 for hal in $NEEDED_HALS; do
@@ -36,13 +33,14 @@ west init -l .
 west config manifest.project-filter -- "$HAL_FILTER"
 west update "$@"
 west zephyr-export
-pip install -r ../zephyr/scripts/requirements-base.txt
+west packages pip --install
 log_msg "endgroup"
 
-log_msg "group" "Installing Zephyr SDK 0.16.8"
-west sdk install --version 0.16.8 -t arm-zephyr-eabi
+log_msg "group" "Installing Zephyr SDK 0.16.8: $NEEDED_TOOLCHAINS"
+west sdk install --version 0.16.8 -t $NEEDED_TOOLCHAINS
 log_msg "endgroup"
 
+NEEDED_HALS="arduino-api $NEEDED_HALS"
 log_msg "group" "Fetching blobs for: $NEEDED_HALS"
 west blobs fetch $NEEDED_HALS
 log_msg "endgroup"

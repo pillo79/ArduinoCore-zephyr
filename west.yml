@@ -42,8 +42,3 @@ manifest:
         # the 'manifest.project-filter' config. Enable all Zephyr HALs with:
         #
         #   west config -d manifest.project-filter
-
-    - name: ArduinoCore-API
-      path: modules/lib/ArduinoCore-API
-      revision: master
-      url: https://github.com/arduino/ArduinoCore-API
