@@ -426,6 +426,11 @@ jobs:
             cat summary | sed -e 's!\${\\color{\S*}\(.*\)}\$!\1!g' -e 's!\\%!%!g' >> comment-request/comment_body
           fi
 
+          # Prepare latest size artifact file on push events
+          if [ "${{ github.event_name }}" == "push" ]; then
+            tar jchf size-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2 arduino-*.json
+          fi
+
       # upload comment request artifact (will be retrieved by leave_pr_comment.yml)
       - name: Archive comment information
         uses: actions/upload-artifact@v4
@@ -433,6 +438,15 @@ jobs:
         with:
           name: comment-request
           path: comment-request/
+          retention-days: 1
+
+      # upload new official test size artifact (for AWS storage)
+      - name: Archive sketch report information
+        uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'push' }}
+        with:
+          name: size-reports
+          path: size-reports-${{ needs.build-env.outputs.CORE_TAG }}.tar.bz2
           retention-days: 1
 
       # The last line makes the job fail if the 'result' file does not contain "PASSED".
@@ -488,6 +502,11 @@ jobs:
           pattern: ArduinoCore-*
           merge-multiple: true
 
+      - uses: actions/download-artifact@v4
+        with:
+          path: .
+          name: size-reports
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -499,6 +518,7 @@ jobs:
           for f in ArduinoCore-*.tar.bz2 ; do
             aws s3 cp $f s3://${{ secrets.S3_BUCKET }}/
           done
+          aws s3 cp size-reports-*.tar.bz2 s3://${{ secrets.S3_BUCKET }}/size-reports/
 
   # Prepare the package index JSON snippets for the newly built core packages.
 
