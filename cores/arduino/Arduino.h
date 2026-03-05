@@ -143,6 +143,8 @@ void analogWriteResolution(int bits);
 #define LED_BUILTIN ZARD_LED_BUILTIN
 #endif // LED_BUILTIN
 
+#include <inlines.h>
+
 #ifdef __cplusplus
 #include <SerialUSB.h>
 #include <zephyrSerial.h>
