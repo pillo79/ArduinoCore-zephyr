@@ -1,0 +1,3 @@
+[submodule "libraries/DebugLog"]
+	path = libraries/DebugLog
+	url = https://github.com/pillo79/DebugLog.git

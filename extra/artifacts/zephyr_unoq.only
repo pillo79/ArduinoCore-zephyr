@@ -5,3 +5,4 @@
 # excluded by all other artifacts.
 
 libraries/Arduino_LED_Matrix/
+libraries/DebugLog/

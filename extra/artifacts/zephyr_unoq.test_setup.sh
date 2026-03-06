@@ -16,4 +16,5 @@
 get_branch_tip libraries arduino-libraries/ArduinoBLE master
 
 # Arduino_RouterBridge
-get_branch_tip libraries arduino-libraries/Arduino_RouterBridge main
+get_branch_tip libraries pillo79/Arduino_RPClite redirect-debug
+get_branch_tip libraries pillo79/Arduino_RouterBridge singleton_in_cpp
