@@ -431,6 +431,12 @@ jobs:
             tar jchf size-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2 arduino-*.json
           fi
 
+          # Calculate size deltas for PRs, using the base commit of the PR as reference.
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            export GITHUB_BASE_SHA=$(git rev-parse origin/${GITHUB_BASE_REF})
+            extra/ci_calc_size_reports.py ${GITHUB_BASE_SHA} sketches-reports/
+          fi
+
       # upload comment request artifact (will be retrieved by leave_pr_comment.yml)
       - name: Archive comment information
         uses: actions/upload-artifact@v4
@@ -438,6 +444,15 @@ jobs:
         with:
           name: comment-request
           path: comment-request/
+          retention-days: 1
+
+      # upload size delta report artifact (will be retrieved by report_size_deltas.yml)
+      - name: Archive size deltas report information
+        uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          name: sketches-reports
+          path: sketches-reports/
           retention-days: 1
 
       # upload new official test size artifact (for AWS storage)
