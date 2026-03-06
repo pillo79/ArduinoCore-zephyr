@@ -407,11 +407,13 @@ jobs:
           pattern: "*-report-*"
           merge-multiple: true
 
-      - run: |
+      - name: Generate workflow summary
+        run: |
           # gather the array of job metadata (especially name and ID) for the current workflow run
           export WORKFLOW_JOBS=$(gh run view ${{ github.run_id }} --attempt ${{ github.run_attempt }} --json jobs --jq '.jobs')
           # Run the log inspection script
           extra/ci_inspect_logs.py result summary full_log
+          cat result
 
           # Display the summary and full log in the step summary
           cat summary >> $GITHUB_STEP_SUMMARY
@@ -431,6 +433,12 @@ jobs:
             tar jchf size-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2 arduino-*.json
           fi
 
+      - name: Compute code size changes
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          export GITHUB_BASE_SHA=$(git describe --always origin/${GITHUB_BASE_REF})
+          extra/ci_calc_size_reports.py ${GITHUB_BASE_SHA} sketches-reports/
+
       # upload comment request artifact (will be retrieved by leave_pr_comment.yml)
       - name: Archive comment information
         uses: actions/upload-artifact@v4
@@ -438,6 +446,15 @@ jobs:
         with:
           name: comment-request
           path: comment-request/
+          retention-days: 1
+
+      # upload size delta report artifact (will be retrieved by report_size_deltas.yml)
+      - name: Archive size deltas report information
+        uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          name: sketches-reports
+          path: sketches-reports/
           retention-days: 1
 
       # upload new official test size artifact (for AWS storage)
