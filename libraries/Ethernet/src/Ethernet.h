@@ -4,11 +4,15 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
-#include "SocketHelpers.h"
+#pragma once
 
+#include <Arduino.h>
+#include "SocketHelpers.h"
 #include <zephyr/net/ethernet.h>
+#include "ZephyrClient.h"
 
 #if DT_HAS_COMPAT_STATUS_OKAY(ethernet_phy)
+using EthernetClient = ZephyrClient;
 
 enum EthernetLinkStatus {
 	Unknown,

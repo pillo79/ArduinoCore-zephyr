@@ -4,10 +4,15 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
-#include "SocketHelpers.h"
+#pragma once
 
+#include <Arduino.h>
+#include "SocketHelpers.h"
 #include "utility/wl_definitions.h"
 #include <zephyr/net/wifi_mgmt.h>
+#include "ZephyrClient.h"
+
+using WiFiClient = ZephyrClient;
 
 #define NET_EVENT_WIFI_MASK                                                                        \
 	(NET_EVENT_WIFI_CONNECT_RESULT | NET_EVENT_WIFI_DISCONNECT_RESULT |                            \
