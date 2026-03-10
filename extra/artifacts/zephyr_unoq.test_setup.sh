@@ -13,4 +13,9 @@
 # copy artifacts under the provided paths.
 
 # ArduinoBLE
-get_branch_tip libraries arduino-libraries/ArduinoBLE master
+get_branch_tip libraries arduino-libraries/ArduinoBLE master \
+	examples/Central/LedControl \
+	examples/Central/Scan \
+	examples/Peripheral/Advertising/EnhancedAdvertising \
+	examples/Peripheral/ButtonLED \
+
