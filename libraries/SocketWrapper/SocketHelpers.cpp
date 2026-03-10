@@ -154,9 +154,12 @@ void NetworkInterface::setMACAddress(const uint8_t *mac) {
 
 int NetworkInterface::begin(bool blocking, uint64_t additional_event_mask) {
 	dhcp();
+
 	// FIXME: additional_event_mask cannot be ORed here due to how Zephyr
 	// events are handled internally. Must be reworked to wait on a sem
 	// and register multiple event masks with event_handler instead.
+	ARG_UNUSED(additional_event_mask);
+
 	int ret = net_mgmt_event_wait_on_iface(netif, NET_EVENT_IPV4_ADDR_ADD, NULL, NULL, NULL,
 										   blocking ? K_FOREVER : K_SECONDS(1));
 	return (ret == 0) ? 1 : 0;
