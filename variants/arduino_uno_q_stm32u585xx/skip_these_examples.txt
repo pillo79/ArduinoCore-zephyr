@@ -8,5 +8,4 @@
 # Each line in this file should contain the path to an example to exclude,
 # relative to the root of the repository.
 
-libraries/ArduinoBLE
 libraries/Arduino_RPClite/extras/integration_test
