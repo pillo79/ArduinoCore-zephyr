@@ -16,6 +16,8 @@ concurrency:
 env:
   # use the head SHA for PR hashes, instead of the merge commit
   HEAD_REF: ${{ github.event.pull_request.head.sha || github.ref }}
+  # ccache-action@1.2.20 is compatible with Node 24 but doesn't require it
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
 
@@ -55,7 +57,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: 'recursive'
           fetch-depth: 0
@@ -85,14 +87,14 @@ jobs:
           tar cphf - cores/arduino/api | zstd > arduino-api.tar.zstd
 
       - name: Archive build environment
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-env
           path: ~/build-env.tar.zstd
           retention-days: 1
 
       - name: Archive API snapshot
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: arduino-api
           path: arduino-api.tar.zstd
@@ -124,7 +126,7 @@ jobs:
       fail-fast: false
     steps:
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: /home/runner
           name: build-env
@@ -137,7 +139,7 @@ jobs:
           (cd ~ && tar --use-compress-program=unzstd -xpf build-env.tar.zstd && rm build-env.tar.zstd)
 
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: hendrikmuhs/ccache-action@v1.2.20
         with:
           verbose: 1
           key: ${{ github.job }}-${{ matrix.board }} # independent caches
@@ -191,7 +193,7 @@ jobs:
 
       - name: Archive board binaries
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           # prefix the name with 'failed-' if the build failed, so that it is not removed
           name: ${{ format('{0}binaries-{1}', (job.status == 'failure') && 'failed-' || '', env.ARTIFACT_TAG) }}
@@ -200,7 +202,7 @@ jobs:
 
       - name: Archive build reports
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-report-${{ env.ARTIFACT_TAG }}
           path: ${{ env.REPORT_FILES }}
@@ -230,7 +232,7 @@ jobs:
     if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     steps:
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: 'recursive'
           fetch-depth: 0
@@ -238,13 +240,13 @@ jobs:
           fetch-tags: true
 
       # Get the API snapshot
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: .
           name: arduino-api
 
       # Get all built binaries
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: .
           pattern: binaries-*
@@ -261,7 +263,7 @@ jobs:
           # Create the core artifact for this set of boards
           ./extra/package_core.sh ${{ matrix.artifact }} ${CORE_TAG} distrib/${CORE_ARTIFACT}.tar.bz2
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ success() || failure() }}
         with:
           name: ${{ env.CORE_ARTIFACT }}
@@ -314,7 +316,7 @@ jobs:
     steps:
 
       # only needs the test list generator and artifact information
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -322,7 +324,7 @@ jobs:
             extra/ci_test_list.sh
             extra/artifacts/
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ env.CORE_ARTIFACT }}
 
@@ -337,7 +339,7 @@ jobs:
           extra/ci_test_list.sh ${{ matrix.artifact }} ${{ matrix.variant }}
 
       - name: Compile tests for ${{ matrix.board }}
-        uses: pillo79/compile-sketches@4a1dead03155c17ddedc373699d7aa80a78a6c7d # next
+        uses: pillo79/compile-sketches@next
         with:
           fqbn: ${{ env.FQBN }}
           platforms: |
@@ -369,7 +371,7 @@ jobs:
           sed -i -e 's!/home/runner/.arduino15/packages/arduino/hardware/zephyr/[^/]*/!!g' sketches-reports/${REPORT_FILE}
 
       # archive the compile report for later
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ success() || failure() }}
         with:
           name: test-report-${{ env.ARTIFACT_TAG }}
@@ -395,13 +397,13 @@ jobs:
       GH_REPO: ${{ github.repository }}
     steps:
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
           fetch-tags: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: .
           pattern: "*-report-*"
@@ -433,7 +435,7 @@ jobs:
 
       # upload comment request artifact (will be retrieved by leave_pr_comment.yml)
       - name: Archive comment information
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: ${{ github.event_name == 'pull_request' }}
         with:
           name: comment-request
@@ -442,7 +444,7 @@ jobs:
 
       # upload new official test size artifact (for AWS storage)
       - name: Archive sketch report information
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: ${{ github.event_name == 'push' }}
         with:
           name: size-reports
@@ -496,13 +498,13 @@ jobs:
       contents: read
     steps:
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: .
           pattern: ArduinoCore-*
           merge-multiple: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: .
           name: size-reports
@@ -535,13 +537,13 @@ jobs:
       ARTIFACTS: ${{ needs.build-env.outputs.ARTIFACTS }}
     steps:
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
           fetch-tags: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: .
           pattern: ArduinoCore-*
@@ -558,7 +560,7 @@ jobs:
           done
 
       - name: Archive package index snippets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ArduinoCore-zephyr-${{ env.CORE_TAG }}-jsons
           path: ArduinoCore-*-${{ env.CORE_TAG }}.json
