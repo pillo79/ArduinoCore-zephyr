@@ -92,6 +92,7 @@ jobs:
           name: build-env
           path: ~/build-env.tar.zstd
           retention-days: 1
+          archive: false
 
       - name: Archive API snapshot
         uses: actions/upload-artifact@v7
@@ -99,6 +100,7 @@ jobs:
           name: arduino-api
           path: arduino-api.tar.zstd
           retention-days: 1
+          archive: false
 
 
 
@@ -129,7 +131,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           path: /home/runner
-          name: build-env
+          name: build-env.tar.zstd
 
       - name: Restore build environment
         run: |
@@ -199,6 +201,7 @@ jobs:
           name: ${{ format('{0}binaries-{1}', (job.status == 'failure') && 'failed-' || '', env.ARTIFACT_TAG) }}
           path: binaries-${{ env.ARTIFACT_TAG }}.tar.zstd
           retention-days: 7 # for failed build inspection
+          archive: false
 
       - name: Archive build reports
         if: ${{ !cancelled() }}
@@ -223,7 +226,7 @@ jobs:
       - build-board
     env:
       ALL_BOARD_DATA: ${{ needs.build-env.outputs.ALL_BOARD_DATA }}
-      CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}
+      CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
       CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
     strategy:
       matrix:
@@ -243,7 +246,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           path: .
-          name: arduino-api
+          name: arduino-api.tar.zstd
 
       # Get all built binaries
       - uses: actions/download-artifact@v8
@@ -261,13 +264,14 @@ jobs:
             tar --use-compress-program=unzstd -xpf $f
           done
           # Create the core artifact for this set of boards
-          ./extra/package_core.sh ${{ matrix.artifact }} ${CORE_TAG} distrib/${CORE_ARTIFACT}.tar.bz2
+          ./extra/package_core.sh ${{ matrix.artifact }} ${CORE_TAG} distrib/${CORE_ARTIFACT}
 
       - uses: actions/upload-artifact@v7
         if: ${{ success() || failure() }}
         with:
           name: ${{ env.CORE_ARTIFACT }}
-          path: distrib/${{ env.CORE_ARTIFACT }}.tar.bz2
+          path: distrib/${{ env.CORE_ARTIFACT }}
+          archive: false
 
 
 
@@ -284,9 +288,9 @@ jobs:
       - uses: geekyeggo/delete-artifact@v5.1.0
         with:
           name: |
-            arduino-api
+            arduino-api.tar.zstd
             binaries-*
-            build-env
+            build-env.tar.zstd
           failOnError: false
 
 
@@ -310,7 +314,7 @@ jobs:
     env:
       PLAT: arduino:${{ matrix.subarch }}
       FQBN: arduino:${{ matrix.subarch }}:${{ matrix.board }}:link_mode=${{ matrix.link_mode }}
-      CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}
+      CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
       ARTIFACT_TAG: ${{ needs.build-env.outputs.CORE_HASH }}-${{ matrix.board }}-${{ matrix.link_mode }}
     if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     steps:
@@ -330,7 +334,7 @@ jobs:
 
       - name: Set up core
         run: |
-          tar xf ${CORE_ARTIFACT}.tar.bz2 # will create ArduinoCore-zephyr/
+          tar xf ${CORE_ARTIFACT} # will create ArduinoCore-zephyr/
           echo "REPORT_FILE=$(echo ${FQBN} | tr ':' '-').json" >> $GITHUB_ENV
 
       - name: Get test sketches
@@ -450,6 +454,7 @@ jobs:
           name: size-reports
           path: size-reports-${{ needs.build-env.outputs.CORE_TAG }}.tar.bz2
           retention-days: 1
+          archive: false
 
       # The last line makes the job fail if the 'result' file does not contain "PASSED".
       # No further actions are allowed in case of error.
