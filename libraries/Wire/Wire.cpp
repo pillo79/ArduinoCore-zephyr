@@ -54,9 +54,7 @@ arduino::ZephyrI2C::ZephyrI2C(const struct device *i2c) : i2c_dev(i2c), i2c_cfg(
 }
 
 void arduino::ZephyrI2C::begin() {
-#ifdef CONFIG_PINCTRL_DYNAMIC
 	i2c_dev->ops.init(i2c_dev);
-#endif
 }
 
 void arduino::ZephyrI2C::begin(uint8_t slaveAddr) {
