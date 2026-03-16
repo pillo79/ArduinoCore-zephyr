@@ -59,6 +59,10 @@ void arduino::ZephyrSerial::begin(unsigned long baud, uint16_t conf) {
 		.flow_ctrl = UART_CFG_FLOW_CTRL_NONE,
 	};
 
+#ifdef CONFIG_PINCTRL_DYNAMIC
+	uart->ops.init(uart);
+#endif
+
 	uart_configure(uart, &config);
 	uart_irq_callback_user_data_set(uart, arduino::ZephyrSerial::IrqDispatch, this);
 	k_sem_take(&rx.sem, K_FOREVER);

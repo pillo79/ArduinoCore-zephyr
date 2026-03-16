@@ -7,6 +7,21 @@
 #include <Arduino.h>
 #include "zephyrInternal.h"
 
+#ifdef CONFIG_PINCTRL_DYNAMIC
+// create an array of arduino_pins with functions to reinitialize pins if needed
+static const struct device *pinmux_array[DT_PROP_LEN(DT_PATH(zephyr_user), digital_pin_gpios)] = {
+	nullptr};
+
+void _reinit_peripheral_if_needed(pin_size_t pin, const struct device *dev) {
+	if (pinmux_array[pin] != dev) {
+		pinmux_array[pin] = dev;
+		if (dev != NULL) {
+			dev->ops.init(dev);
+		}
+	}
+}
+#endif
+
 static const struct gpio_dt_spec arduino_pins[] = {
 	DT_FOREACH_PROP_ELEM_SEP(
 	DT_PATH(zephyr_user), digital_pin_gpios, GPIO_DT_SPEC_GET_BY_IDX, (, ))};
@@ -209,6 +224,9 @@ void yield(void) {
  *  A high physical level will be interpreted as value 1
  */
 void pinMode(pin_size_t pinNumber, PinMode pinMode) {
+#ifdef CONFIG_PINCTRL_DYNAMIC
+	_reinit_peripheral_if_needed(pinNumber, NULL);
+#endif
 	if (pinMode == INPUT) { // input mode
 		gpio_pin_configure_dt(&arduino_pins[pinNumber], GPIO_INPUT | GPIO_ACTIVE_HIGH);
 	} else if (pinMode == INPUT_PULLUP) { // input with internal pull-up
@@ -312,6 +330,9 @@ void analogWrite(pin_size_t pinNumber, int value) {
 		return;
 	}
 
+#ifdef CONFIG_PINCTRL_DYNAMIC
+	_reinit_peripheral_if_needed(pinNumber, arduino_pwm[idx].dev);
+#endif
 	value = map(value, 0, 1 << _analog_write_resolution, 0, arduino_pwm[idx].period);
 
 	if (((uint32_t)value) > arduino_pwm[idx].period) {
@@ -335,6 +356,11 @@ void analogWrite(enum dacPins dacName, int value) {
 		return;
 	}
 
+	// TODO: add reverse map to find pin name from DAC* define
+	// In the meantime, consider A0 == DAC0
+#ifdef CONFIG_PINCTRL_DYNAMIC
+	_reinit_peripheral_if_needed((pin_size_t)(dacName + A0), dac_dev);
+#endif
 	dac_channel_setup(dac_dev, &dac_ch_cfg[dacName]);
 
 	const int max_dac_value = 1U << dac_ch_cfg[dacName].resolution;
@@ -385,6 +411,9 @@ int analogRead(pin_size_t pinNumber) {
 		return -ENOTSUP;
 	}
 
+#ifdef CONFIG_PINCTRL_DYNAMIC
+	_reinit_peripheral_if_needed(pinNumber, arduino_adc[idx].dev);
+#endif
 	err = adc_channel_setup(arduino_adc[idx].dev, &arduino_adc[idx].channel_cfg);
 	if (err < 0) {
 		return err;
