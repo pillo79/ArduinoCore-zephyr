@@ -115,9 +115,7 @@ void arduino::ZephyrSPI::detachInterrupt() {
 }
 
 void arduino::ZephyrSPI::begin() {
-#ifdef CONFIG_PINCTRL_DYNAMIC
 	spi_dev->ops.init(spi_dev);
-#endif
 }
 
 void arduino::ZephyrSPI::end() {
