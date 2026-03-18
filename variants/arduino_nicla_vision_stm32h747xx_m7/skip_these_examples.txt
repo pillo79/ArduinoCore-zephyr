@@ -9,3 +9,4 @@
 # relative to the root of the repository.
 
 libraries/Ethernet
+libraries/CAN

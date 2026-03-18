@@ -27,6 +27,12 @@
 		 	 <&rcc STM32_SRC_LSI RTC_SEL(2)>;
 };
 
+&fdcan1 {
+	status = "okay";
+	clocks = <&rcc STM32_CLOCK(APB1_2, 8)>,
+		 <&rcc STM32_SRC_HSE FDCAN_SEL(0)>;
+};
+
 &i2c3 {
 	status = "okay";
 
@@ -387,6 +393,7 @@ qspi_flash: &mx25l12833f {};
 		cdc-acm = <&board_cdc_acm_uart>;
 		i2cs = <&i2c3>, <&i2c1>, <&i2c4>;
 		spis = <&spi2>;
+		cans = <&fdcan1>;
 		pwms = <&pwm1 1 PWM_HZ(12000000) PWM_POLARITY_NORMAL>,	/* Camera */
 		       <&pwm3 1 PWM_HZ(500) PWM_POLARITY_NORMAL>,
 		       <&pwm3 2 PWM_HZ(500) PWM_POLARITY_NORMAL>,

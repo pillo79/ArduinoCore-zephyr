@@ -116,6 +116,11 @@ EXPORT_SYMBOL(k_malloc);
 EXPORT_SYMBOL(k_free);
 EXPORT_SYMBOL(k_sched_lock);
 EXPORT_SYMBOL(k_sched_unlock);
+EXPORT_SYMBOL(k_msgq_init);
+EXPORT_SYMBOL(k_msgq_put);
+EXPORT_SYMBOL(k_msgq_get);
+EXPORT_SYMBOL(k_msgq_num_used_get);
+EXPORT_SYMBOL(k_sys_work_q);
 
 #if defined(CONFIG_USB_DEVICE_STACK)
 EXPORT_SYMBOL(usb_enable);
@@ -379,4 +384,8 @@ FORCE_EXPORT_SYM(fs_mkfs);
 #endif
 FORCE_EXPORT_SYM(fs_register);
 FORCE_EXPORT_SYM(fs_unregister);
+#endif
+
+#if defined(CONFIG_CAN)
+FORCE_EXPORT_SYM(can_add_rx_filter);
 #endif

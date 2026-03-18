@@ -10,3 +10,4 @@
 
 libraries/Camera
 libraries/Zephyr_SDRAM
+libraries/CAN
