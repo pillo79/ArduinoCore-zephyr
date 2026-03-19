@@ -36,7 +36,7 @@ jobs:
         output-formats: json xlsx
 
     - name: Get the report
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       if: env.NEW_FILES_FOUND == 'true'
       with:
         name: scancode-outputs
