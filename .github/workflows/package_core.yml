@@ -450,7 +450,7 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         with:
           name: size-reports
-          path: size-reports-${{ needs.build-env.outputs.CORE_TAG }}.tar.bz2
+          path: size-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
           retention-days: 1
           archive: false
 
