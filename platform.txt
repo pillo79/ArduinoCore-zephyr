@@ -35,13 +35,13 @@ compiler.warning_flags.all=-Wall -Wextra
 
 compiler.path={build.compiler_path}
 compiler.c.cmd={build.crossprefix}gcc
-compiler.c.flags=-g -Os {compiler.defines} {compiler.warning_flags} {compiler.zephyr.macros} {compiler.zephyr.c.flags} -fdata-sections -ffunction-sections -mcpu={build.mcu} {build.float-abi} {build.fpu}
+compiler.c.flags=-g -Os {compiler.defines} {compiler.warning_flags} {compiler.zephyr.machine_flags} {compiler.zephyr.macros} {compiler.zephyr.c.flags} -fdata-sections -ffunction-sections
 compiler.cpp.cmd={build.crossprefix}g++
-compiler.cpp.flags=-g -Os -std=gnu++17 {compiler.defines} {compiler.warning_flags} {compiler.zephyr.macros} {compiler.zephyr.cpp.flags} {compiler.zephyr.common_ldflags} {compiler.zephyr.extra_ldflags} {compiler.zephyr.common_cxxflags} -mcpu={build.mcu} {build.float-abi} {build.fpu}
+compiler.cpp.flags=-g -Os -std=gnu++17 {compiler.defines} {compiler.warning_flags} {compiler.zephyr.machine_flags} {compiler.zephyr.macros} {compiler.zephyr.cpp.flags} {compiler.zephyr.common_ldflags} {compiler.zephyr.extra_ldflags} {compiler.zephyr.common_cxxflags}
 compiler.c.elf.cmd={build.crossprefix}g++
-compiler.c.elf.flags=-Wl,--gc-sections -mcpu={build.mcu} {build.float-abi} {build.fpu} -std=gnu++17
+compiler.c.elf.flags=-Wl,--gc-sections {compiler.zephyr.machine_flags} -std=gnu++17
 compiler.S.cmd={build.crossprefix}g++
-compiler.S.flags=-x assembler-with-cpp {compiler.defines} -mcpu={build.mcu} {build.fpu} {compiler.zephyr.macros}
+compiler.S.flags=-x assembler-with-cpp {compiler.defines} {compiler.zephyr.machine_flags} {compiler.zephyr.macros}
 compiler.ar.cmd={build.crossprefix}ar
 compiler.ar.flags=rcs
 compiler.objcopy.cmd=
@@ -56,6 +56,7 @@ compiler.includes="-I{build.core.path}/api/deprecated" "-I{build.core.path}/api/
 compiler.zephyr.includes="-iprefix{build.variant.path}" "@{build.variant.path}/includes.txt"
 compiler.zephyr.c.flags="@{build.variant.path}/cflags.txt"
 compiler.zephyr.cpp.flags="@{build.variant.path}/cxxflags.txt"
+compiler.zephyr.machine_flags="@{build.variant.path}/machine_flags.txt"
 compiler.zephyr.macros="-imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h" "-imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h"
 compiler.zephyr.common_cxxflags=-fno-exceptions -fno-rtti -fdata-sections -ffunction-sections -fno-unwind-tables
 compiler.zephyr.common_ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit -lstdc++ -lsupc++ -lnosys -nostdlib
