@@ -58,15 +58,47 @@ func main() {
 	}
 	defer os.RemoveAll(tmpDir) // Clean up
 
-	// Download the file from http://downloads.arduino.cc/cores/zephyr/ArduinoCore-zephyr-{git_tag}.zip
-	gitCorePath := os.Args[1]
-	// Force an hash, for debug only
-	forceHash := ""
-	if len(os.Args) > 2 {
-		forceHash = os.Args[2]
+	// usage: sync-zephyr-artifacts [<git_core_path>] [forced_hash]
+
+	// parse arguments
+	if len(os.Args) > 1 && (os.Args[1] == "-h" || os.Args[1] == "--help") {
+		fmt.Fprintf(os.Stderr, "Usage: %s [<git_core_path>] [forced_hash]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  git_core_path: path to the ArduinoCore-zephyr git repository (default: current directory)\n")
+		fmt.Fprintf(os.Stderr, "  forced_hash:   force a specific git hash (for debug only)\n")
+		os.Exit(0)
 	}
 
-	cmd := exec.Command("git", "ls-files", "--exclude-standard", "-dmo", ".")
+	// Download the file from http://downloads.arduino.cc/cores/zephyr/ArduinoCore-zephyr-{git_tag}.zip
+	gitCorePath := "."
+	if len(os.Args) > 1 {
+		gitCorePath = os.Args[1]
+	}
+
+	// Force a specific hash, for debug only
+	inputHash := ""
+	if len(os.Args) > 2 {
+		inputHash = os.Args[2]
+	}
+
+	// Test if the provided path contains 'variants/' folder
+	if _, err := os.Stat(filepath.Join(gitCorePath, "variants")); os.IsNotExist(err) {
+		fmt.Println("Error: not an ArduinoCore-zephyr folder:", gitCorePath)
+		return
+	}
+
+	if inputHash == "" {
+		cmd := exec.Command("git", "-C", gitCorePath, "describe", "--always", "HEAD")
+		stdout, err := cmd.Output()
+		if err != nil {
+			fmt.Println("Error executing command:", err)
+			return
+		}
+
+		inputHash = strings.TrimSpace(string(stdout))
+	}
+	fmt.Println("Git SHA:", inputHash)
+
+	cmd := exec.Command("git", "ls-files", "--exclude-standard", "-dmo", gitCorePath)
 	stdout, err := cmd.Output()
 	if err != nil {
 		fmt.Println("Error executing command:", err)
@@ -91,20 +123,8 @@ func main() {
 		return
 	}
 
-	cmd = exec.Command("git", "describe", "--always", "--abbrev=7")
-	stdout, err = cmd.Output()
-	if err != nil {
-		fmt.Println("Error executing command:", err)
-		return
-	}
-
-	hash := strings.TrimSpace(string(stdout))
-	fmt.Println("Git SHA:", hash)
-	if forceHash != "" {
-		hash = forceHash
-	}
-
 	// Compose download URL from git hash
+	hash := inputHash
 	filename := fmt.Sprintf("ArduinoCore-zephyr-%s.tar.bz2", hash)
 	url := fmt.Sprintf("http://downloads.arduino.cc/cores/zephyr/%s", filename)
 	fmt.Println("Download URL:", url)
@@ -157,4 +177,6 @@ func main() {
 		fmt.Println("Error copying variants folder:", err)
 		return
 	}
+
+	fmt.Println("Done.")
 }
