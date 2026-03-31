@@ -62,6 +62,7 @@
 		__real_##name(a);                                                                          \
 	}
 
+#ifdef CONFIG_ARM
 /*
  * Naked trampoline for compiler ABI helpers (__aeabi_*).
  *
@@ -79,6 +80,7 @@
 				"movt r12, #:upper16:__real_" #name "\n\t"                                         \
 				"bx   r12");                                                                       \
 	}
+#endif
 
 /* string.h */
 W3(void *, memcpy, void *, const void *, size_t)
@@ -162,7 +164,10 @@ W1(float, sinf, float)
 W1(float, sqrtf, float)
 W1(float, tanf, float)
 
-/* compiler ABI helpers: need to preserve all RTABI argument registers */
+#ifdef CONFIG_ARM
+/* ARM compiler ABI helpers: need to preserve all RTABI argument registers */
+/* thread pointer access */
+VN(__aeabi_read_tp)
 /* double arithmetic */
 VN(__aeabi_dadd)
 VN(__aeabi_dsub)
@@ -198,6 +203,7 @@ VN(__aeabi_idivmod)
 VN(__aeabi_uidivmod)
 VN(__aeabi_ldivmod)
 VN(__aeabi_uldivmod)
+#endif
 
 /* stdio.h */
 W1(int, puts, const char *)

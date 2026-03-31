@@ -325,7 +325,10 @@ EXPORT_SYMBOL(ring_buf_area_finish);
 
 EXPORT_SYMBOL(sys_clock_cycle_get_32);
 
-/* compiler ABI helpers: exported as __real_##name for VN() trampolines in llext_wrappers.c */
+#ifdef CONFIG_ARM
+/* ARM compiler ABI helpers: exported as __real_##name for VN() trampolines in llext_wrappers.c */
+/* thread pointer access */
+EXPORT_AEABI_SYM(__aeabi_read_tp);
 /* double arithmetic */
 EXPORT_AEABI_SYM(__aeabi_dadd);
 EXPORT_AEABI_SYM(__aeabi_dsub);
@@ -361,6 +364,7 @@ EXPORT_AEABI_SYM(__aeabi_idivmod);
 EXPORT_AEABI_SYM(__aeabi_uidivmod);
 EXPORT_AEABI_SYM(__aeabi_ldivmod);
 EXPORT_AEABI_SYM(__aeabi_uldivmod);
+#endif
 
 #if defined(CONFIG_CPP)
 FORCE_EXPORT_SYM(__cxa_pure_virtual);
