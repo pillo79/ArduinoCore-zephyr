@@ -289,6 +289,10 @@ EXPORT_SYMBOL(ring_buf_area_finish);
 #endif
 
 EXPORT_SYMBOL(sys_clock_cycle_get_32);
+
+#if defined(CONFIG_ARM)
+extern uint32_t __aeabi_read_tp(void);
+EXPORT_LIBC_SYM(__aeabi_read_tp);
 FORCE_EXPORT_SYM(__aeabi_dcmpun);
 FORCE_EXPORT_SYM(__aeabi_dcmple);
 FORCE_EXPORT_SYM(__aeabi_d2lz);
@@ -318,6 +322,7 @@ FORCE_EXPORT_SYM(__aeabi_idivmod);
 FORCE_EXPORT_SYM(__aeabi_ldivmod);
 FORCE_EXPORT_SYM(__aeabi_ul2f);
 FORCE_EXPORT_SYM(__aeabi_dcmpge);
+#endif
 
 #if defined (CONFIG_CPP)
 FORCE_EXPORT_SYM(__cxa_pure_virtual);
