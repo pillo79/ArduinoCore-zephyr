@@ -20,10 +20,10 @@
        EXPORT_SYMBOL(name);
 
 /*
- * Libc functions are exported with a __real_ prefix so that the sketch
- * core can provide long-call trampolines under the original names.
- * This avoids R_ARM_THM_JUMP24 / R_ARM_THM_CALL relocations that would
- * fail when the LLEXT is loaded in a different memory region (>16 MB away).
+ * Standard library functions are exported with a __real_ prefix so that the
+ * sketch core can provide long-call trampolines under the original names.
+ * This avoids R_ARM_THM_JUMP24 / R_ARM_THM_CALL relocations that would fail
+ * when the LLEXT is loaded in a different memory region (>16 MB away).
  */
 #define EXPORT_LIBC_SYM(name) EXPORT_SYMBOL_NAMED(name, __real_##name)
 

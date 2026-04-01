@@ -8,170 +8,125 @@
  * relocations for the export libc functions. These have a +/-16 MB range
  * limit which is exceeded when the LLEXT is loaded in a different memory
  * region than the kernel.
+ *
+ * Each trampoline is a naked function that loads the full 32-bit target
+ * address into ip (r12) and branches to it. This preserves all argument
+ * registers (r0-r3, s0-s15/d0-d7) and lr, so the callee returns directly to
+ * the original call site. Even though the return types are not declared here,
+ * the caller and callee agree on the calling convention, so the return value
+ * is passed back correctly in r0/s0/d0 as appropriate.
  */
 
-#include <stddef.h>
-#include <stdarg.h>
-
-/* ret func(void) */
-#define W0(ret, name)                                                                              \
-	extern ret __real_##name(void);                                                                \
-	ret name(void) {                                                                               \
-		return __real_##name();                                                                    \
-	}
-
-/* ret func(t1) */
-#define W1(ret, name, t1)                                                                          \
-	extern ret __real_##name(t1);                                                                  \
-	ret name(t1 a) {                                                                               \
-		return __real_##name(a);                                                                   \
-	}
-
-/* ret func(t1, t2) */
-#define W2(ret, name, t1, t2)                                                                      \
-	extern ret __real_##name(t1, t2);                                                              \
-	ret name(t1 a, t2 b) {                                                                         \
-		return __real_##name(a, b);                                                                \
-	}
-
-/* ret func(t1, t2, t3) */
-#define W3(ret, name, t1, t2, t3)                                                                  \
-	extern ret __real_##name(t1, t2, t3);                                                          \
-	ret name(t1 a, t2 b, t3 c) {                                                                   \
-		return __real_##name(a, b, c);                                                             \
-	}
-
-/* ret func(t1, t2, t3, t4) */
-#define W4(ret, name, t1, t2, t3, t4)                                                              \
-	extern ret __real_##name(t1, t2, t3, t4);                                                      \
-	ret name(t1 a, t2 b, t3 c, t4 d) {                                                             \
-		return __real_##name(a, b, c, d);                                                          \
-	}
-
-/* void func(void) */
-#define V0(name)                                                                                   \
-	extern void __real_##name(void);                                                               \
-	void name(void) {                                                                              \
-		__real_##name();                                                                           \
-	}
-
-/* void func(t1) */
-#define V1(name, t1)                                                                               \
-	extern void __real_##name(t1);                                                                 \
-	void name(t1 a) {                                                                              \
-		__real_##name(a);                                                                          \
-	}
-
-#ifdef CONFIG_ARM
-/* ARM EABI thread pointer access */
-W0(size_t, __aeabi_read_tp)
+#ifndef CONFIG_ARM
+#error "LLEXT trampolines are only supported on ARM"
 #endif
 
+/*
+ * TRAMPOLINE — emit a register-preserving veneer for __real_<name>.
+ *
+ * Uses ip (r12), the intra-procedure-call scratch register (AAPCS),
+ * with an inline literal pool so every trampoline is self-contained.
+ * BX (not BLX) leaves lr untouched: the callee returns to the
+ * original caller.
+ */
+#define TRAMPOLINE(name)                                                                           \
+	__attribute__((naked)) void name(void) {                                                       \
+		__asm__("ldr ip, 1f\n\t"                                                                   \
+				"bx  ip\n\t"                                                                       \
+				".align 2\n"                                                                       \
+				"1: .word __real_" #name "\n");                                                    \
+	}
+
+/* ARM EABI functions */
+TRAMPOLINE(__aeabi_read_tp);
+
 /* string.h */
-W3(void *, memcpy, void *, const void *, size_t)
-W3(void *, memmove, void *, const void *, size_t)
-W1(size_t, strlen, const char *)
-W2(size_t, strnlen, const char *, size_t)
-W2(char *, strchr, const char *, int)
-W2(char *, strrchr, const char *, int)
-W2(char *, strstr, const char *, const char *)
-W2(int, strcmp, const char *, const char *)
-W3(int, strncmp, const char *, const char *, size_t)
-W2(int, strcasecmp, const char *, const char *)
-W3(char *, strncpy, char *, const char *, size_t)
-W2(char *, strcat, char *, const char *)
-W2(char *, strcpy, char *, const char *)
-W3(int, memcmp, const void *, const void *, unsigned int)
-W3(void *, memset, void *, int, unsigned int)
-W2(char *, strtok, char *, const char *)
+TRAMPOLINE(memcpy);
+TRAMPOLINE(memmove);
+TRAMPOLINE(strlen);
+TRAMPOLINE(strnlen);
+TRAMPOLINE(strchr);
+TRAMPOLINE(strrchr);
+TRAMPOLINE(strstr);
+TRAMPOLINE(strcmp);
+TRAMPOLINE(strncmp);
+TRAMPOLINE(strcasecmp);
+TRAMPOLINE(strncpy);
+TRAMPOLINE(strcat);
+TRAMPOLINE(strcpy);
+TRAMPOLINE(memcmp);
+TRAMPOLINE(memset);
+TRAMPOLINE(strtok);
 
 /* stdlib.h - conversion */
-W2(double, strtod, const char *, char **)
-W3(long, strtol, const char *, char **, int)
-W3(unsigned long, strtoul, const char *, char **, int)
-W1(int, atoi, const char *)
-W1(double, atof, const char *)
-W1(long, atol, const char *)
+TRAMPOLINE(strtod);
+TRAMPOLINE(strtol);
+TRAMPOLINE(strtoul);
+TRAMPOLINE(atoi);
+TRAMPOLINE(atof);
+TRAMPOLINE(atol);
 
 /* stdlib.h - memory */
-W1(void *, malloc, size_t)
-W2(void *, realloc, void *, size_t)
-W2(void *, calloc, size_t, size_t)
-V1(free, void *)
+TRAMPOLINE(malloc);
+TRAMPOLINE(realloc);
+TRAMPOLINE(calloc);
+TRAMPOLINE(free);
 
 /* stdlib.h - random */
-W0(int, rand)
-V1(srand, unsigned int)
+TRAMPOLINE(rand);
+TRAMPOLINE(srand);
 
 /* ctype.h */
-W1(int, isspace, int)
-W1(int, isalnum, int)
-W1(int, tolower, int)
-W1(int, toupper, int)
-W1(int, isalpha, int)
-W1(int, iscntrl, int)
-W1(int, isdigit, int)
-W1(int, isgraph, int)
-W1(int, isprint, int)
-W1(int, isupper, int)
-W1(int, islower, int)
-W1(int, isxdigit, int)
+TRAMPOLINE(isspace);
+TRAMPOLINE(isalnum);
+TRAMPOLINE(tolower);
+TRAMPOLINE(toupper);
+TRAMPOLINE(isalpha);
+TRAMPOLINE(iscntrl);
+TRAMPOLINE(isdigit);
+TRAMPOLINE(isgraph);
+TRAMPOLINE(isprint);
+TRAMPOLINE(isupper);
+TRAMPOLINE(islower);
+TRAMPOLINE(isxdigit);
 
 /* math.h - double */
-W1(double, acos, double)
-W1(double, asin, double)
-W1(double, atan, double)
-W2(double, atan2, double, double)
-W1(double, cos, double)
-W1(double, exp, double)
-W1(double, exp2, double)
-W2(double, ldexp, double, int)
-W1(double, log10, double)
-W1(double, log2, double)
-W1(double, log, double)
-W2(double, pow, double, double)
-W1(double, sin, double)
-W1(double, sqrt, double)
-W1(double, tan, double)
+TRAMPOLINE(acos);
+TRAMPOLINE(asin);
+TRAMPOLINE(atan);
+TRAMPOLINE(atan2);
+TRAMPOLINE(cos);
+TRAMPOLINE(exp);
+TRAMPOLINE(exp2);
+TRAMPOLINE(ldexp);
+TRAMPOLINE(log10);
+TRAMPOLINE(log2);
+TRAMPOLINE(log);
+TRAMPOLINE(pow);
+TRAMPOLINE(sin);
+TRAMPOLINE(sqrt);
+TRAMPOLINE(tan);
 
 /* math.h - float */
-W1(float, acosf, float)
-W1(float, asinf, float)
-W1(float, atanf, float)
-W2(float, atan2f, float, float)
-W1(float, cosf, float)
-W1(float, logf, float)
-W1(float, sinf, float)
-W1(float, sqrtf, float)
-W1(float, tanf, float)
+TRAMPOLINE(acosf);
+TRAMPOLINE(asinf);
+TRAMPOLINE(atanf);
+TRAMPOLINE(atan2f);
+TRAMPOLINE(cosf);
+TRAMPOLINE(logf);
+TRAMPOLINE(sinf);
+TRAMPOLINE(sqrtf);
+TRAMPOLINE(tanf);
 
 /* stdio.h */
-W1(int, puts, const char *)
-W1(int, putchar, int)
-W4(int, vsnprintf, char *, size_t, const char *, va_list)
+TRAMPOLINE(puts);
+TRAMPOLINE(putchar);
+TRAMPOLINE(vsnprintf);
 
 /* stdlib.h - atexit */
-typedef void (*__atexit_fn)(void);
-W1(int, atexit, __atexit_fn)
+TRAMPOLINE(atexit);
 
 /* process control - noreturn */
-extern void __real_abort(void) __attribute__((noreturn));
-
-__attribute__((noreturn)) void abort(void) {
-	__real_abort();
-	__builtin_unreachable();
-}
-
-extern void __real_exit(int) __attribute__((noreturn));
-
-__attribute__((noreturn)) void exit(int status) {
-	__real_exit(status);
-	__builtin_unreachable();
-}
-
-extern void __real__exit(int) __attribute__((noreturn));
-
-__attribute__((noreturn)) void _exit(int status) {
-	__real__exit(status);
-	__builtin_unreachable();
-}
+__attribute__((noreturn)) TRAMPOLINE(abort);
+__attribute__((noreturn)) TRAMPOLINE(exit);
+__attribute__((noreturn)) TRAMPOLINE(_exit);
