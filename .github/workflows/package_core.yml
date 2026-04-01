@@ -454,7 +454,7 @@ jobs:
 
       # upload size delta report artifact (will be retrieved by report_size_deltas.yml)
       - name: Archive size deltas report information
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: ${{ github.event_name == 'pull_request' }}
         with:
           name: sketches-reports
@@ -530,7 +530,7 @@ jobs:
           pattern: size-reports-*.tar.bz2
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.IAM_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
