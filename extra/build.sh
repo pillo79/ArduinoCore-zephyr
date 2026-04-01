@@ -21,7 +21,7 @@ fi
 if [ $# -eq 0 ] || [ x$1 == x"-h" ] || [ x$1 == x"--help" ]; then
 	cat << EOF
 Usage:
-	$0 <arduino_board>
+	$0 <arduino_board> [--debug] [<west_args>]
 	$0 <zephyr_board> [<west_args>]
 Build the loader for the given target.
 
@@ -47,16 +47,32 @@ if ! [ -z "$chosen_board" ]; then
 	# found, use the target and args from there
 	target=$(jq -cr '.target' <<< "$chosen_board")
 	args=$(jq -cr '.args' <<< "$chosen_board")
+
+	# Check for debug flag after board name
+	shift
+	if [ x$1 == x"--debug" ]; then
+		shift
+		# anything else is considered a west argument
+		args="$args $*"
+		if [[ " $args " == *" -- "* ]]; then
+			args="$args -DEXTRA_CONF_FILE=../extra/debug.conf"
+		else
+			args="$args -- -DEXTRA_CONF_FILE=../extra/debug.conf"
+		fi
+		echo "Debug mode enabled"
+	else
+		# pass any additional arguments as-is
+		args="$args $*"
+	fi
 else
 	# expect Zephyr-compatible target and args
 	target=$1
 	shift
 	args="$*"
-fi
-
-# Check for debug flag and append
-if [ x$2 == x"--debug" ]; then
-	args="$args -- -DEXTRA_CONF_FILE=../extra/debug.conf"
+	chosen_board=$(extra/get_board_details.sh | jq -cr ".[] | select(.target == \"$target\") // empty")
+	if [ -z "$chosen_board" ]; then
+		log_msg warning "No board for target '$target' defined in 'boards.txt'. A proper definition is required to use the core."
+	fi
 fi
 
 echo
@@ -75,7 +91,6 @@ fi
 # Build the loader
 BUILD_DIR=build/${variant}
 VARIANT_DIR=variants/${variant}
-rm -rf ${BUILD_DIR}
 west build -d ${BUILD_DIR} -b ${target} loader -t llext-edk ${args}
 
 # Extract the generated EDK tarball and copy it to the variant directory
