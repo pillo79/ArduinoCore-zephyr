@@ -400,3 +400,7 @@ EXPORT_SYMBOL(arm_irq_disable);
 EXPORT_SYMBOL(arm_irq_is_enabled);
 EXPORT_SYMBOL(arm_irq_priority_set);
 #endif
+
+#if defined(__arm__)
+EXPORT_SYMBOL(SystemCoreClock);
+#endif
