@@ -118,7 +118,7 @@ nano33ble.upload.wait_for_upload_port=true
 nano33ble.upload.native_usb=true
 nano33ble.upload.maximum_size=1966080
 nano33ble.upload.maximum_data_size=523624
-nano33ble.upload.address=0xD0000
+nano33ble.upload.address=0x60000
 
 nano33ble.upload.maximum_size=786432
 nano33ble.upload.maximum_data_size=523624
