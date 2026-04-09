@@ -6,8 +6,8 @@
 name: Package and upload tool
 
 # Trigger on any pull request that modifies files in the tools/ directory or
-# the packaging script, or on any tag that starts with tool/ and has the
-# format tool/<tool>/<version>, e.g. tool/gen-rodata-ld/0.1.0.
+# the packaging script, or on any tag that starts with tools/ and has the
+# format tools/<tool>/<version>, e.g. tools/gen-rodata-ld/0.1.0.
 #
 # For tag pushes, only build the specific tool and version indicated by the
 # tag, and only publish if the repository is the official Arduino one.
@@ -15,7 +15,7 @@ name: Package and upload tool
 on:
   push:
     tags:
-      - 'tool/**'
+      - 'tools/**'
   pull_request:
     paths:
       - 'tools/**'
@@ -44,9 +44,9 @@ jobs:
       - name: Set build matrix
         id: set-matrix
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/tool/* ]]; then
+          if [[ "$GITHUB_REF" == refs/tags/tools/* ]]; then
             # single tool, release build on main repo
-            TAG="${GITHUB_REF#refs/tags/tool/}"
+            TAG="${GITHUB_REF#refs/tags/tools/}"
             TOOL="${TAG%%/*}"
             VERSION="${TAG#*/}"
             MATRIX=$(jq -cn --arg tool "$TOOL" --arg version "$VERSION" \
