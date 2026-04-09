@@ -5,24 +5,9 @@
 
 name: Package, test and upload core
 
-# Trigger on all pushes and PRs, except for changes only affecting the 'tools/'
-# directory or tagged with "tool/**".
-
 on:
   push:
-    branches:
-      - '**'
-    tags-ignore:
-      - 'tool/**'
-    paths:
-      - '**'
-      - '!extra/package_tool.sh'
-      - '!tools/**'
   pull_request:
-    paths:
-      - '**'
-      - '!extra/package_tool.sh'
-      - '!tools/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.actor }}

@@ -5,22 +5,17 @@
 
 name: Package and upload tool
 
-# Trigger on any push or pull request that modifies files in the tools/
-# directory or the packaging script, or on any tag that starts with tool/.
+# Trigger on any pull request that modifies files in the tools/ directory or
+# the packaging script, or on any tag that starts with tool/ and has the
+# format tool/<tool>/<version>, e.g. tool/gen-rodata-ld/0.1.0.
 #
 # For tag pushes, only build the specific tool and version indicated by the
-# tag, and only publish if the repository is the main one
-# (arduino/ArduinoCore-zephyr).
+# tag, and only publish if the repository is the official Arduino one.
 
 on:
   push:
-    branches:
-      - '**'
     tags:
       - 'tool/**'
-    paths:
-      - 'tools/**'
-      - 'extra/package_tool.sh'
   pull_request:
     paths:
       - 'tools/**'
