@@ -45,6 +45,7 @@ EXPORT_LIBC_SYM(memcmp);
 EXPORT_LIBC_SYM(memset);
 EXPORT_LIBC_SYM(strtok);
 EXPORT_LIBC_SYM(memchr);
+EXPORT_LIBC_SYM(strdup);
 
 // stdlib.h
 EXPORT_LIBC_SYM(malloc);
