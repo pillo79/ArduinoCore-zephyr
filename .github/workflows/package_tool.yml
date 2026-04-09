@@ -1,0 +1,151 @@
+# Copyright (c) Arduino s.r.l. and/or its affiliated companies
+# SPDX-License-Identifier: Apache-2.0
+
+# CI workflow to build, package and upload a specific tool.
+
+name: Package and upload tool
+
+# Trigger on any push or pull request that modifies files in the tools/
+# directory or the packaging script, or on any tag that starts with tool/.
+#
+# For tag pushes, only build the specific tool and version indicated by the
+# tag, and only publish if the repository is the main one
+# (arduino/ArduinoCore-zephyr).
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - 'tool/**'
+    paths:
+      - 'tools/**'
+      - 'extra/package_tool.sh'
+  pull_request:
+    paths:
+      - 'tools/**'
+      - 'extra/package_tool.sh'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.actor }}
+  cancel-in-progress: true
+
+jobs:
+
+  setup:
+    name: Set up build matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      is_release: ${{ steps.set-matrix.outputs.is_release }}
+      tool_artifact: ${{ steps.set-matrix.outputs.tool_artifact }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: 'ignore'
+
+      - name: Set build matrix
+        id: set-matrix
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/tool/* ]]; then
+            # single tool, release build on main repo
+            TAG="${GITHUB_REF#refs/tags/tool/}"
+            TOOL="${TAG%%/*}"
+            VERSION="${TAG#*/}"
+            MATRIX=$(jq -cn --arg tool "$TOOL" --arg version "$VERSION" \
+              '{include: [{tool: $tool, version: $version}]}')
+            echo "tool_artifact=$TOOL-$VERSION" >> "$GITHUB_OUTPUT"
+            echo "is_release=${{ github.repository == 'arduino/ArduinoCore-zephyr' }}" >> "$GITHUB_OUTPUT"
+          else
+            # build all tools using commit SHA as version
+            VERSION=$(git rev-parse --short ${{ github.event.pull_request.head.sha || 'HEAD' }})
+            MATRIX=$(for d in tools/*/; do [ -f "$d/go.mod" ] && basename "$d"; done \
+              | jq -Rnc --arg version "$VERSION" '{include: [inputs | {tool: ., version: $version}]}')
+            echo "tool_artifact=" >> "$GITHUB_OUTPUT"
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  build-tool:
+    name: Build ${{ matrix.tool }} ${{ matrix.version }}
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+          submodules: 'ignore'
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Build and package ${{ matrix.tool }}
+        run: extra/package_tool.sh tools/${{ matrix.tool }} ${{ matrix.version }}
+
+      - name: Upload ${{ matrix.tool }} ${{ matrix.version }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.tool }}-${{ matrix.version }}
+          path: |
+            distrib/*.tar.gz
+            distrib/*.zip
+          retention-days: 7
+
+      - name: Upload JSON ${{ matrix.tool }} ${{ matrix.version }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.tool }}-${{ matrix.version }}.json
+          path: distrib/*.json
+          archive: false
+          retention-days: 7
+          if-no-files-found: ignore
+
+  verify-tool:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: build-tool
+    steps:
+      - name: Check build result
+        run: |
+          [ "${{ needs.build-tool.result }}" == "success" ]
+
+  # Upload the built tool packages to the S3 bucket for public distribution.
+
+  publish-tool:
+    name: Publish tool
+    runs-on: ubuntu-latest
+    if: fromJSON(needs.setup.outputs.is_release)
+    needs:
+      - setup
+      - build-tool
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.setup.outputs.tool_artifact }}
+          path: .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload tools to S3
+        run: |
+          for f in *.tar.gz *.zip ; do
+            [ -f "$f" ] || continue
+            aws s3 cp "$f" s3://${{ secrets.S3_TOOLS_BUCKET }}/
+          done
+

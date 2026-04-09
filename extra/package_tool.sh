@@ -57,7 +57,7 @@ build_for_arch() {
 
 	echo "Building $TOOL_NAME for $os/$arch ($plat)"
 	mkdir -p "$build_dir"
-	(cd $BASE_DIR/extra/$TOOL_NAME && GOOS="$os" GOARCH="$arch" go build -o "$build_dir/$build_file")
+	(cd $TOOL_DIR && GOOS="$os" GOARCH="$arch" go build -o "$build_dir/$build_file")
 	(cd "$tool_stem" && $pkg_cmd "$package_file" $plat/)
 	hash_file $plat "$package_file" > $build_dir.json
 }
