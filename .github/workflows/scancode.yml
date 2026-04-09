@@ -22,14 +22,15 @@ jobs:
         git fetch origin $GITHUB_BASE_REF
         # copy all new files to a separate directory for scanning
         for NEW_FILE in $(git diff --name-only --diff-filter=A --ignore-submodules origin/$GITHUB_BASE_REF..HEAD) ; do
-          mkdir -p $(dirname "scancode-inputs/$NEW_FILE")
-          cp "$NEW_FILE" "scancode-inputs/$NEW_FILE"
+          TARGET_FILE=${NEW_FILE#.} # remove leading dot if present
+          mkdir -p $(dirname "scancode-inputs/$TARGET_FILE")
+          cp "$NEW_FILE" "scancode-inputs/$TARGET_FILE"
           echo 'NEW_FILES_FOUND=true' >> $GITHUB_ENV
         done
 
     - name: Scan the code
       id: scancode
-      uses: aboutcode-org/scancode-action@beta
+      uses: aboutcode-org/scancode-action@v0.1
       if: env.NEW_FILES_FOUND == 'true'
       with:
         check-compliance: true
@@ -39,7 +40,7 @@ jobs:
       uses: actions/download-artifact@v8
       if: env.NEW_FILES_FOUND == 'true'
       with:
-        name: scancode-outputs
+        name: scancode-outputs-scancode-action
 
     - name: Process the report
       if: env.NEW_FILES_FOUND == 'true'
