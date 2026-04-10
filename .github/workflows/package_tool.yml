@@ -27,6 +27,12 @@ concurrency:
 
 jobs:
 
+  # Set up the build matrix based on the event type. For tag pushes, the matrix
+  # will contain only the tool and version specified by the tag. For pull
+  # requests, the matrix will include all tools with the version set to the
+  # commit SHA. Also determine if this is a release build on the main
+  # repository, and if so, set the tool artifact name for later use.
+
   setup:
     name: Set up build matrix
     runs-on: ubuntu-latest
@@ -63,6 +69,9 @@ jobs:
           fi
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
+  # Build and package the tools in parallel according to the matrix, uploading
+  # the resulting packages and metadata as artifacts for later use.
+
   build-tool:
     name: Build ${{ matrix.tool }} ${{ matrix.version }}
     needs: setup
@@ -81,10 +90,10 @@ jobs:
           go-version: stable
           cache: false
 
-      - name: Build and package ${{ matrix.tool }}
+      - name: Build and package tool
         run: extra/package_tool.sh tools/${{ matrix.tool }} ${{ matrix.version }}
 
-      - name: Upload ${{ matrix.tool }} ${{ matrix.version }}
+      - name: Upload tool artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.tool }}-${{ matrix.version }}
@@ -93,23 +102,13 @@ jobs:
             distrib/*.zip
           retention-days: 7
 
-      - name: Upload JSON ${{ matrix.tool }} ${{ matrix.version }}
+      - name: Upload JSON artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.tool }}-${{ matrix.version }}.json
           path: distrib/*.json
           archive: false
           retention-days: 7
-          if-no-files-found: ignore
-
-  verify-tool:
-    runs-on: ubuntu-latest
-    if: always()
-    needs: build-tool
-    steps:
-      - name: Check build result
-        run: |
-          [ "${{ needs.build-tool.result }}" == "success" ]
 
   # Upload the built tool packages to the S3 bucket for public distribution.
 
@@ -137,10 +136,24 @@ jobs:
           role-to-assume: ${{ secrets.IAM_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Upload tools to S3
+      - name: Upload tool files to S3
         run: |
           for f in *.tar.gz *.zip ; do
             [ -f "$f" ] || continue
             aws s3 cp "$f" s3://${{ secrets.S3_TOOLS_BUCKET }}/
           done
 
+  # The final verification step always runs to properly get the overall job status.
+
+  verify-tool:
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+     - build-tool
+     - publish-tool
+    steps:
+      - name: Check build result
+        run: |
+          # A failure here means either the build or publish step failed when it was expected to run.
+          [ ${{ needs.build-tool.result }} == "success" ] && \
+            ( [ ${{ needs.publish-tool.result }} == "success" ] || [ ${{ needs.publish-tool.result }} == "skipped" ] )
