@@ -33,9 +33,9 @@
 # environments the correct commit is used, even in pull requests where HEAD
 # might be a temporary detached commit.
 
-VERSION=$(git describe --tags --exact-match 2>/dev/null)
+VERSION=$(git describe --tags --exact-match --exclude '*/*' 2>/dev/null)
 if [ -z "$VERSION" ]; then
-	STEM=$(git describe --tags 2>/dev/null |
+	STEM=$(git describe --tags --exclude '*/*' 2>/dev/null |
 	       sed 's/\.\([[:digit:]]\+\)\(-.*\)*-[[:digit:]]\+-g.*/ \1 \2/' |
 	       awk '{ if (NF==2) { print $1 "." ($2+1) "-0.dev" } else { print $1 "." $2 $3 "-0.dev" }}')
 	if [ -z "$STEM" ]; then
@@ -44,8 +44,7 @@ if [ -z "$VERSION" ]; then
 	fi
 
 	# If HEAD_REF is not set, we're not in CI but in a local clone. Use the
-	# default branch (HEAD) and include --dirty to test for uncommitted
-	# changes.
-	VERSION="${STEM}+$(git describe --always ${HEAD_REF:---dirty HEAD})"
+	# implicit HEAD and include --dirty to test for uncommitted changes.
+	VERSION="${STEM}+$(git describe --always ${HEAD_REF:---dirty})"
 fi
 echo $VERSION
