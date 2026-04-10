@@ -5,24 +5,9 @@
 
 name: Package, test and upload core
 
-# Trigger on all pushes and PRs, except for changes only affecting the 'tools/'
-# directory or tagged with "tool/**".
-
 on:
   push:
-    branches:
-      - '**'
-    tags-ignore:
-      - 'tool/**'
-    paths:
-      - '**'
-      - '!extra/package_tool.sh'
-      - '!tools/**'
   pull_request:
-    paths:
-      - '**'
-      - '!extra/package_tool.sh'
-      - '!tools/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.actor }}
@@ -90,7 +75,7 @@ jobs:
         # needs the above env vars
         run: |
           echo "## Building \`$CORE_VER\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "CORE_TAG=$(git describe --tags --exact-match 2>/dev/null || echo $CORE_HASH)" >> "$GITHUB_ENV"
+          echo "CORE_TAG=$(git describe --tags --exact-match --exclude '*/*' 2>/dev/null || echo $CORE_HASH)" >> "$GITHUB_ENV"
           echo "ALL_BOARD_FQBNS=$(jq -c 'map((. + {link_mode: "static"}), (. + {link_mode: "dynamic"}))' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "ARTIFACTS=$(jq -c '["zephyr"] + (map(.artifact) | unique)' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "SUB_ARCHES=$(jq -c 'map(.subarch) | unique' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"

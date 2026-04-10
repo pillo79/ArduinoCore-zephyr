@@ -5,22 +5,17 @@
 
 name: Package and upload tool
 
-# Trigger on any push or pull request that modifies files in the tools/
-# directory or the packaging script, or on any tag that starts with tool/.
+# Trigger on any pull request that modifies files in the tools/ directory or
+# the packaging script, or on any tag that starts with tools/ and has the
+# format tools/<tool>/<version>, e.g. tools/gen-rodata-ld/0.1.0.
 #
 # For tag pushes, only build the specific tool and version indicated by the
-# tag, and only publish if the repository is the main one
-# (arduino/ArduinoCore-zephyr).
+# tag, and only publish if the repository is the official Arduino one.
 
 on:
   push:
-    branches:
-      - '**'
     tags:
-      - 'tool/**'
-    paths:
       - 'tools/**'
-      - 'extra/package_tool.sh'
   pull_request:
     paths:
       - 'tools/**'
@@ -31,6 +26,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
+  # Set up the build matrix based on the event type. For tag pushes, the matrix
+  # will contain only the tool and version specified by the tag. For pull
+  # requests, the matrix will include all tools with the version set to the
+  # commit SHA. Also determine if this is a release build on the main
+  # repository, and if so, set the tool artifact name for later use.
 
   setup:
     name: Set up build matrix
@@ -49,9 +50,9 @@ jobs:
       - name: Set build matrix
         id: set-matrix
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/tool/* ]]; then
+          if [[ "$GITHUB_REF" == refs/tags/tools/* ]]; then
             # single tool, release build on main repo
-            TAG="${GITHUB_REF#refs/tags/tool/}"
+            TAG="${GITHUB_REF#refs/tags/tools/}"
             TOOL="${TAG%%/*}"
             VERSION="${TAG#*/}"
             MATRIX=$(jq -cn --arg tool "$TOOL" --arg version "$VERSION" \
@@ -67,6 +68,9 @@ jobs:
             echo "is_release=false" >> "$GITHUB_OUTPUT"
           fi
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  # Build and package the tools in parallel according to the matrix, uploading
+  # the resulting packages and metadata as artifacts for later use.
 
   build-tool:
     name: Build ${{ matrix.tool }} ${{ matrix.version }}
@@ -86,10 +90,10 @@ jobs:
           go-version: stable
           cache: false
 
-      - name: Build and package ${{ matrix.tool }}
+      - name: Build and package tool
         run: extra/package_tool.sh tools/${{ matrix.tool }} ${{ matrix.version }}
 
-      - name: Upload ${{ matrix.tool }} ${{ matrix.version }}
+      - name: Upload tool artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.tool }}-${{ matrix.version }}
@@ -98,23 +102,13 @@ jobs:
             distrib/*.zip
           retention-days: 7
 
-      - name: Upload JSON ${{ matrix.tool }} ${{ matrix.version }}
+      - name: Upload JSON artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.tool }}-${{ matrix.version }}.json
           path: distrib/*.json
           archive: false
           retention-days: 7
-          if-no-files-found: ignore
-
-  verify-tool:
-    runs-on: ubuntu-latest
-    if: always()
-    needs: build-tool
-    steps:
-      - name: Check build result
-        run: |
-          [ "${{ needs.build-tool.result }}" == "success" ]
 
   # Upload the built tool packages to the S3 bucket for public distribution.
 
@@ -142,10 +136,24 @@ jobs:
           role-to-assume: ${{ secrets.IAM_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Upload tools to S3
+      - name: Upload tool files to S3
         run: |
           for f in *.tar.gz *.zip ; do
             [ -f "$f" ] || continue
             aws s3 cp "$f" s3://${{ secrets.S3_TOOLS_BUCKET }}/
           done
 
+  # The final verification step always runs to properly get the overall job status.
+
+  verify-tool:
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+     - build-tool
+     - publish-tool
+    steps:
+      - name: Check build result
+        run: |
+          # A failure here means either the build or publish step failed when it was expected to run.
+          [ ${{ needs.build-tool.result }} == "success" ] && \
+            ( [ ${{ needs.publish-tool.result }} == "success" ] || [ ${{ needs.publish-tool.result }} == "skipped" ] )
