@@ -11,6 +11,7 @@
     "online": "https://www.arduino.cc/en/Reference/HomePage"
   },
   "boards": [],
+  "libraryDependencies": [],
   "toolsDependencies": [
     {
       "packager": "zephyr",
