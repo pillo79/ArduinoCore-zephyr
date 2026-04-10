@@ -135,10 +135,15 @@ size_t arduino::ZephyrI2C::requestFrom(uint8_t address, size_t len_in, bool stop
 		ret = i2c_read(i2c_dev, buf, len, address);
 	}
 
+	if (ret != 0) {
+		// In case i2c_read fails don't claim space in the ring buffer
+		len = 0;
+	}
+
 	// Must be called even if 0 bytes claimed.
 	ring_buf_put_finish(&rxRingBuffer.rb, len);
 
-	return ret ? 0 : len;
+	return len;
 }
 
 size_t arduino::ZephyrI2C::requestFrom(uint8_t address, size_t len) {
