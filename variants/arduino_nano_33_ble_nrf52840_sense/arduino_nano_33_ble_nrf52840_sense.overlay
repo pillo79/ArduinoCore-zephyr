@@ -290,3 +290,8 @@
 	clock-frequency = <I2C_BITRATE_FAST>;
 };
 
+&rtc2 {
+    status = "okay";
+    clock-frequency = <32768>;
+    prescaler = <1>;  // Optional: sets the RTC tick to ~30.5 µs
+};

@@ -20,6 +20,13 @@
 	status = "okay";
 };
 
+&rtc {
+    status = "okay";
+
+	clocks = <&rcc STM32_CLOCK(APB4, 16U)>,
+		 	 <&rcc STM32_SRC_LSI RTC_SEL(2)>;
+};
+
 &i2c3 {
 	status = "okay";
 

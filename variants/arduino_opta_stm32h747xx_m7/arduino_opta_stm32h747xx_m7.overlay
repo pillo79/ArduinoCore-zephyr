@@ -27,6 +27,13 @@
 	status = "okay";
 };
 
+&rtc {
+    status = "okay";
+
+	clocks = <&rcc STM32_CLOCK_BUS_APB1 0x10000000>,
+	         <&rcc STM32_SRC_LSE RTC_SEL(1)>;
+};
+
 &i2c1 {
 	status = "okay";
 	pinctrl-0 = <&i2c1_scl_pb6 &i2c1_sda_pb7>;
