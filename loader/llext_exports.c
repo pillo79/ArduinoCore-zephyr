@@ -220,6 +220,11 @@ FORCE_EXPORT_SYM(shared_multi_heap_aligned_alloc);
 FORCE_EXPORT_SYM(shared_multi_heap_free);
 #endif
 
+#if defined(CONFIG_STM32_BACKUP_PROTECTION)
+FORCE_EXPORT_SYM(stm32_backup_domain_enable_access);
+FORCE_EXPORT_SYM(stm32_backup_domain_disable_access);
+#endif
+
 #if defined(CONFIG_NET_SOCKETS)
 FORCE_EXPORT_SYM(getaddrinfo);
 FORCE_EXPORT_SYM(freeaddrinfo)
