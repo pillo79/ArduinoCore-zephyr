@@ -161,11 +161,11 @@ int Rtc::getSeconds() {
 
 #if defined(CONFIG_RTC_STM32) || defined(CONFIG_RTC_RPI_PICO)
 
-#if DT_NODE_EXISTS(DT_NODELABEL(rtc))
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(rtc), okay)
 #define RTC_NODE DT_NODELABEL(rtc)
 #else
 #define RTC_NODE DT_INVALID_NODE
-#warning "RTC node not found in devicetree"
+#warning "RTC node not found or not enabled in devicetree"
 #endif
 
 /**
@@ -470,13 +470,12 @@ int Rtc::getCalibration(int32_t &calibration) {
 
 #elif defined(CONFIG_COUNTER_NRF_RTC) // For other platforms (nordic), we must use the counter API
 									  // to implement RTC functionality
-
-#if DT_NODE_EXISTS(DT_NODELABEL(rtc1))
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(rtc1), okay)
 #define COUNTER_NODE DT_NODELABEL(rtc1)
-#elif DT_NODE_EXISTS(DT_NODELABEL(rtc2))
+#elif DT_NODE_HAS_STATUS(DT_NODELABEL(rtc2), okay)
 #define COUNTER_NODE DT_NODELABEL(rtc2)
 #else
-#warning "RTC node not found in devicetree"
+#warning "RTC node not found or not enabled in devicetree"
 #define COUNTER_NODE DT_INVALID_NODE
 #endif
 LOG_MODULE_REGISTER(Rtc);
