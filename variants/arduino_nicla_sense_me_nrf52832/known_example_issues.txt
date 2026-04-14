@@ -9,3 +9,5 @@
 # against the path of each sketch found in this repo. If a match is found, the
 # sketch compilation result will be ignored.
 
+# too little RAM
+# libraries/ArduinoBLE
