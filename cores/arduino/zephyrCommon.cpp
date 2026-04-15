@@ -334,6 +334,11 @@ int analogWriteResolution() {
 
 #ifdef CONFIG_PWM
 
+static uint32_t map64(uint32_t x, uint32_t in_min, uint32_t in_max, uint32_t out_min,
+					  uint32_t out_max) {
+	return ((uint64_t)(x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min);
+}
+
 void analogWrite(pin_size_t pinNumber, int value) {
 	const int maxInput = BIT(_analog_write_resolution) - 1U;
 	size_t idx = pwm_pin_index(pinNumber);
@@ -353,7 +358,7 @@ void analogWrite(pin_size_t pinNumber, int value) {
 	_reinit_peripheral_if_needed(pinNumber, arduino_pwm[idx].dev);
 	value = CLAMP(value, 0, maxInput);
 
-	const uint32_t pulse = map(value, 0, maxInput, 0, arduino_pwm[idx].period);
+	const uint32_t pulse = map64(value, 0, maxInput, 0, arduino_pwm[idx].period);
 
 	/*
 	 * A duty ratio determines by the period value defined in dts
