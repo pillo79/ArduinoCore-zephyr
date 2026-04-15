@@ -23,3 +23,5 @@
 
 #define SDA     0
 #define SCL     0
+
+#define SE05X_ENABLE_GPIO (7u)

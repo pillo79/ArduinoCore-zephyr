@@ -205,7 +205,8 @@
                             <&gpiog 1 GPIO_ACTIVE_HIGH>,    /* D3 PG_1 */
                             <&gpioe 3 GPIO_ACTIVE_HIGH>,    /* Red LED PE_3 */
                             <&gpioc 13 GPIO_ACTIVE_HIGH>,   /* Green LED PC_13 */
-                            <&gpiof 4 GPIO_ACTIVE_HIGH>;    /* Blue LED PF_4 */
+                            <&gpiof 4 GPIO_ACTIVE_HIGH>,    /* Blue LED PF_4 */
+							<&gpiog 0 GPIO_ACTIVE_HIGH>;	/* SE05X_EN */
 
         adc-pin-gpios = <&gpioc 4 GPIO_ACTIVE_HIGH>,  /* A0 PC_4 */
                         <&gpiof 13 GPIO_ACTIVE_HIGH>, /* A1 PF_13 */
