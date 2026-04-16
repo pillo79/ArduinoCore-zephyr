@@ -270,7 +270,13 @@ FORCE_EXPORT_SYM(shared_multi_heap_alloc);
 
 EXPORT_SYMBOL(k_timer_init);
 EXPORT_SYMBOL(k_fatal_halt);
+EXPORT_SYMBOL(k_work_init);
 EXPORT_SYMBOL(k_work_schedule);
+EXPORT_SYMBOL(k_work_init_delayable);
+EXPORT_SYMBOL(k_work_schedule_for_queue);
+EXPORT_SYMBOL(k_work_reschedule_for_queue);
+EXPORT_SYMBOL(k_work_queue_start);
+EXPORT_SYMBOL(k_work_submit_to_queue);
 //FORCE_EXPORT_SYM(k_timer_user_data_set);
 //FORCE_EXPORT_SYM(k_timer_start);
 
