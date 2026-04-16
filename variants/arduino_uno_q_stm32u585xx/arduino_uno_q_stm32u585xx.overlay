@@ -204,6 +204,14 @@
              <&rcc STM32_SRC_LSE RTC_SEL(1)>;
 };
 
+&fdcan1 {
+	status = "okay";
+	pinctrl-0 = <&fdcan1_rx_pa11 &fdcan1_tx_pa12>;
+	pinctrl-names = "default";
+	clocks = <&rcc STM32_CLOCK_BUS_APB1_2 0x00000200>,
+		 <&rcc STM32_SRC_PLL1_Q FDCAN1_SEL(1)>;
+};
+
 / {
 	zephyr,user {
 		digital-pin-gpios = <&gpiob 7 GPIO_ACTIVE_HIGH>, /* D0 - PB7 */
@@ -321,6 +329,7 @@
 					<&gpioc 0 0>;
 
 		serials = <&usart1>, <&lpuart1>;
+		cans = <&fdcan1>;
 		i2cs = <&i2c2>, <&i2c4>, <&i2c3>;
 		spis = <&spi2>, <&spi3>;
 		/* PWM mapping for the digital pins  */

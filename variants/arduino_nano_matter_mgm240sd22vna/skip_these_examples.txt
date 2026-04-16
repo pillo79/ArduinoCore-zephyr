@@ -18,3 +18,4 @@ libraries/Storage
 libraries/WiFi
 libraries/Zephyr_SDRAM
 libraries/RTC
+libraries/CAN

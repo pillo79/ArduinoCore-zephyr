@@ -159,6 +159,12 @@
 	status = "okay";
 };
 
+&fdcan2 {
+	status = "okay";
+	clocks = <&rcc STM32_CLOCK(APB1_2, 8)>,
+		 <&rcc STM32_SRC_HSE FDCAN_SEL(0)>;
+};
+
 &dcmi {
 	status = "okay";
 	/* ext-sdram = <&sdram1>; */
@@ -518,6 +524,7 @@
 
 		serials = <&board_cdc_acm_uart>, <&usart1>, <&usart2>, <&uart4>, <&usart6>;
 		cdc-acm = <&board_cdc_acm_uart>;
+		cans = <&fdcan2>;
 		i2cs = <&i2c2>, <&i2c4>, <&i2c1>;
 		spis = <&spi1>, <&spi5>;
 		pwms = <&pwm1 3 PWM_HZ(12000000) PWM_POLARITY_NORMAL>,
