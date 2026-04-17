@@ -11,6 +11,7 @@
 #include <zephyr/usb/bos.h>
 
 #include <zephyr/logging/log.h>
+#include <zephyr/app_version.h>
 
 #ifdef CONFIG_USB_DEVICE_STACK_NEXT
 
@@ -32,8 +33,8 @@ USBD_DESC_PRODUCT_DEFINE(sample_product, CONFIG_USB_DEVICE_PRODUCT);
 USBD_DESC_SERIAL_NUMBER_DEFINE(sample_sn);
 /* doc string instantiation end */
 
-USBD_DESC_CONFIG_DEFINE(fs_cfg_desc, "FS Configuration");
-USBD_DESC_CONFIG_DEFINE(hs_cfg_desc, "HS Configuration");
+USBD_DESC_CONFIG_DEFINE(fs_cfg_desc, APP_VERSION_EXTENDED_STRING);
+USBD_DESC_CONFIG_DEFINE(hs_cfg_desc, APP_VERSION_EXTENDED_STRING);
 
 /* doc configuration instantiation start */
 static const uint8_t attributes = 0;
