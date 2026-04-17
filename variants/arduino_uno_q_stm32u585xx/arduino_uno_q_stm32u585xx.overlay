@@ -97,7 +97,7 @@
 /* Enable PWM timers */
 &timers1 {
 	status = "okay";
-	st,prescaler = <4>;
+	st,prescaler = <63>;
 
 	pwm1: pwm {
 		status = "okay";
@@ -160,7 +160,7 @@
 /* Currently only the pins marked with ~ on the pin headers are enabled */
 &timers8 {
 	status = "okay";
-	st,prescaler = <4>;
+	st,prescaler = <63>;
 
 	pwm8: pwm {
 		status = "okay";
