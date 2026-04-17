@@ -291,8 +291,9 @@
   					<&ioport2 6 GPIO_ACTIVE_HIGH>, /*   D88    |   SDHI D2   */
   					<&ioport2 5 GPIO_ACTIVE_HIGH>, /*   D89    |   SDHI D3   */
   					<&ioport4 15 GPIO_ACTIVE_HIGH>, /*   D90    |   SDHI CD   */
-  					<&ioport4 14 GPIO_ACTIVE_HIGH>; /*   D91    |   SDHI WP   */
+  					<&ioport4 14 GPIO_ACTIVE_HIGH>, /*   D91    |   SDHI WP   */
 
+					<&ioport0 10 GPIO_ACTIVE_HIGH>; /*  SE05X_EN |        */
 
 
 		builtin-led-gpios = <&ioport4 0 GPIO_ACTIVE_LOW>,

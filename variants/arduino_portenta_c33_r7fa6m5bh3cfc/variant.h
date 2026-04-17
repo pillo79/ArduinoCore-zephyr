@@ -5,3 +5,5 @@
  */
 
 #pragma once
+
+#define SE05X_ENABLE_GPIO (92u)

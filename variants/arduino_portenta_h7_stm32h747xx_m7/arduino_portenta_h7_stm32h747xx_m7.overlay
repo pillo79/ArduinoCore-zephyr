@@ -360,7 +360,8 @@ qspi_flash: &mx25l12833f {};
 
 				    <&gpiok 5 0>,		/* LEDR */
 				    <&gpiok 6 0>,		/* LEDG */
-				    <&gpiok 7 0>;		/* LEDB */
+				    <&gpiok 7 0>,		/* LEDB */
+				    <&gpioi 12 0>;		/* SE05X_EN */
 
 		builtin-led-gpios = <&gpiok 6 0>,
 				    <&gpiok 5 0>,
