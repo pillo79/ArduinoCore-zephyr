@@ -39,3 +39,5 @@
 #define LED4_R DIGITAL_PIN_GPIOS_FIND_NODE(DT_NODELABEL(led4_red))
 #define LED4_G DIGITAL_PIN_GPIOS_FIND_NODE(DT_NODELABEL(led4_green))
 #define LED4_B DIGITAL_PIN_GPIOS_FIND_NODE(DT_NODELABEL(led4_blue))
+
+#include "../common/gpio_lowlevel_stm32.h"

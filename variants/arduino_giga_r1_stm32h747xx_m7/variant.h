@@ -13,3 +13,5 @@
 #define SS      0
 #define SDA     0
 #define SCL     0
+
+#include "../common/gpio_lowlevel_stm32.h"
