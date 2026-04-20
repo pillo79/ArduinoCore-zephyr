@@ -107,7 +107,7 @@ jobs:
   # for later jobs.
 
   build-board:
-    # NOTE: this name is hardcoded in ci_inspect_logs.py
+    # NOTE: this name is hardcoded in ci_collect_data.py
     name: Build for ${{ matrix.board }}
     runs-on: ubuntu-latest
     needs:
@@ -298,7 +298,7 @@ jobs:
   # This step never fails, so that expected errors do not block the CI run.
 
   test-core:
-    # NOTE: this name is hardcoded in ci_inspect_logs.py
+    # NOTE: this name is hardcoded in ci_collect_data.py
     name: Test ${{ matrix.board }}:${{ matrix.link_mode }}
     runs-on: ubuntu-latest
     needs:
@@ -383,7 +383,7 @@ jobs:
 
 
   # Collect all build and test reports, analyze them and produce a summary.
-  # See ci_inspect_logs.py for details.
+  # See ci_collect_data.py and ci_generate_report.py for details.
 
   verify-core:
     runs-on: ubuntu-latest
@@ -415,8 +415,9 @@ jobs:
         run: |
           # gather the array of job metadata (especially name and ID) for the current workflow run
           export WORKFLOW_JOBS=$(gh run view ${{ github.run_id }} --attempt ${{ github.run_attempt }} --json jobs --jq '.jobs')
-          # Run the log inspection script
-          extra/ci_inspect_logs.py result summary full_log
+          # Collect all CI data into a JSON file, then generate the report
+          extra/ci_collect_data.py ci_data.json
+          extra/ci_generate_report.py ci_data.json result summary full_log
           cat result
 
           # Display the summary and full log in the step summary
