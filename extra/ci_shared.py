@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Arduino s.r.l. and/or its affiliated companies
+# SPDX-License-Identifier: Apache-2.0
+
+# Shared constants and data classes for CI log inspection scripts.
+
+import json
+
+# Constants for test statuses, in increasing order of severity
+SKIP = -1           # Test was not performed
+PASS = 0            # (PASS)  Compiled successfully
+WARNING = 1         # (PASS)  Compiled with warnings
+EXPECTED_ERROR = 2  # (PASS*) Compilation failed with expected errors
+ERROR = 3           # (FAIL)  Compilation failed with errors
+FAILURE = 4         # Test run failed to complete
+
+# Status legends and icons, indexed by status constant
+TEST_LEGEND = [
+        "Test passed successfully, with no warnings or errors.",
+        "Test completed with some warnings; no errors detected.",
+        "Test completed with errors, but all are known/expected.",
+        "Test completed with unexpected errors.",
+        "Test run failed to complete.",
+        "Test was skipped." # -1
+]
+
+TEST_STATUS = [
+    ":green_circle:",
+    ":yellow_circle:",
+    ":no_entry_sign:",
+    ":red_circle:",
+    ":fire:",
+    ":new_moon:" # -1
+]
+
+BOARD_STATUS = [
+    ":white_check_mark:",
+    ":white_check_mark:*",
+    ":heavy_check_mark:*",
+    ":x:",
+    ":fire:",
+    ":new_moon:" # -1
+]
+
+# Loader build status data structure, one per loader
+class LoaderEntry:
+    def __init__(self, artifact, board, variant, job_link):
+        self.artifact = artifact
+        self.board = board
+        self.variant = variant
+        self.job_link = job_link
+
+        self.warnings = self.read_warnings() # list of warning messages
+        self.config = self.read_config() # set of Kconfig settings
+        self.meminfo = self.read_meminfo() # memory usage report
+
+        if not (self.config and self.meminfo):
+            self.status = FAILURE
+        elif self.warnings:
+            self.status = WARNING
+        else:
+            self.status = PASS
+
+    def read_config(self):
+        """
+        Extract Kconfig settings from the loader config file.
+        Format: SYMBOL=VALUE per line or # comment lines for disabled symbols.
+        """
+        report_file = f"zephyr-{self.variant}.config"
+        try:
+            with open(report_file, 'r') as f:
+                configs = {}
+                for line in f:
+                    if line.startswith('#') or '=' not in line:
+                        continue
+                    sym, val = line.strip().split('=', 1)
+                    if val.startswith('"'):
+                        configs[sym] = val.strip('"')
+                    elif val=='y':
+                        configs[sym] = 1
+                    else:
+                        configs[sym] = eval(val)
+                return configs
+        except Exception as e:
+            return {}
+
+    def read_warnings(self):
+        """
+        Read loader compilation warnings from the warnings file.
+        File may be missing in case of no warnings.
+        Format: one line per warning message.
+        """
+        report_file = f"zephyr-{self.variant}.warnings"
+        try:
+            with open(report_file, 'r') as f:
+                return [ line.strip() for line in f if line.strip() ]
+        except Exception as e:
+            return []
+
+    def read_meminfo(self):
+        """
+        Extract memory usage data from the meminfo file.
+        Input format: JSON array of region_name, used_bytes, total_bytes tuples
+        Output format: dict of { region_name: [ used_bytes, total_bytes ] }
+        """
+        report_file = f"zephyr-{self.variant}.meminfo"
+        try:
+            with open(report_file, 'r') as f:
+                report_data = json.load(f)
+                meminfo = { region.replace(':',''): [used, total] for region, used, total in report_data }
+                meminfo.pop('IDT_LIST', None)
+                return meminfo
+        except Exception as e:
+            return {}
+
+    def to_dict(self):
+        return {
+            'artifact': self.artifact,
+            'board': self.board,
+            'variant': self.variant,
+            'job_link': self.job_link,
+            'warnings': self.warnings,
+            'config': self.config,
+            'meminfo': self.meminfo,
+            'status': self.status,
+        }
+
+    @classmethod
+    def from_dict(cls, d):
+        obj = cls.__new__(cls)
+        obj.artifact = d['artifact']
+        obj.board = d['board']
+        obj.variant = d['variant']
+        obj.job_link = d['job_link']
+        obj.warnings = d['warnings']
+        obj.config = d['config']
+        obj.meminfo = d['meminfo']
+        obj.status = d['status']
+        return obj
+
+
+# Single test data structure, one per compilation test
+class TestEntry:
+    def __init__(self, artifact, board, sketch, link_mode, excepted, status, issues, job_link,
+                 invalid_exception=None, group=None, name=None):
+        import re
+        self.artifact = artifact
+        self.board = board
+        self.sketch = sketch
+        self.link_mode = link_mode
+        self.excepted = excepted
+        self.status = status
+        self.issues = issues
+        self.job_link = job_link
+        self.invalid_exception = invalid_exception if invalid_exception is not None else (excepted and status in (PASS, WARNING))
+
+        if group is not None and name is not None:
+            self.group = group
+            self.name = name
+        else:
+            match = re.search(r'(libraries|examples)/([^/]+)/(examples/|extras/)?(.*)', sketch)
+            if match:
+                self.group = match.group(2)
+                self.name = match.group(4)
+            else:
+                self.group = ""
+                self.name = sketch
+
+    def to_dict(self):
+        return {
+            'artifact': self.artifact,
+            'board': self.board,
+            'sketch': self.sketch,
+            'link_mode': self.link_mode,
+            'excepted': self.excepted,
+            'status': self.status,
+            'issues': self.issues,
+            'job_link': self.job_link,
+            'invalid_exception': self.invalid_exception,
+            'group': self.group,
+            'name': self.name,
+        }
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(
+            artifact=d['artifact'],
+            board=d['board'],
+            sketch=d['sketch'],
+            link_mode=d['link_mode'],
+            excepted=d['excepted'],
+            status=d['status'],
+            issues=d['issues'],
+            job_link=d['job_link'],
+            invalid_exception=d['invalid_exception'],
+            group=d['group'],
+            name=d['name'],
+        )
+
+
+# Summary data structure, used to group test results
+class TestGroup:
+    def __init__(self):
+        # Sets to track unique board, sketch and (group,name) tuples
+        self.boards = set()
+        self.sketches = set()
+        self.group_names = set()
+        # Counts of test results by status
+        self.counts = { status : 0 for status in [PASS, WARNING, EXPECTED_ERROR, ERROR, FAILURE] }
+        # Overall status of the group
+        self.status = SKIP
+        # List of individual TestEntry objects by feature
+        self.tests = []
+        self.tests_with_issues = []
+        self.tests_with_invalid_exceptions = []
+
+    def track(self, test_entry):
+        """
+        Update this group with a new test entry
+        """
+        self.tests.append(test_entry)
+        if test_entry.issues:
+            self.tests_with_issues.append(test_entry)
+        if test_entry.invalid_exception:
+            self.tests_with_invalid_exceptions.append(test_entry)
+
+        self.counts[test_entry.status] += 1
+        self.status = max(self.status, test_entry.status)
+        self.boards.add(test_entry.board)
+        self.sketches.add(test_entry.sketch)
+        self.group_names.add((test_entry.group, test_entry.name))
