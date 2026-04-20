@@ -25,7 +25,7 @@ int status = WL_IDLE_STATUS;
 // if you don't want to use DNS (and reduce your sketch size)
 // use the numeric IP instead of the name for the server:
 // IPAddress server(93,184,216,34);  // IP address for example.com (no DNS)
-char server[] = "example.com";  // host name for example.com (using DNS)
+const char *server = "example.com";  // host name for example.com (using DNS)
 
 ZephyrClient client;
 
@@ -61,7 +61,7 @@ void setup() {
   if (client.connect(server, 80)) {
     Serial.println("connected to server");
     // Make a HTTP request:
-    client.println("GET /index.html HTTP/1.1");
+    client.println("GET / HTTP/1.1");
     client.print("Host: ");
     client.println(server);
     client.println("Connection: close");
