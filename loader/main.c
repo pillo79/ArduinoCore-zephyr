@@ -40,13 +40,13 @@ struct sketch_header_v1 {
 
 #define SKETCH_RAM_BUFFER_LEN 131072
 
-#define TARGET_HAS_USB_CDC                                                                         \
-	DT_NODE_HAS_PROP(DT_PATH(zephyr_user), cdc_acm) &&                                             \
-		(CONFIG_USB_DEVICE_STACK || CONFIG_USB_DEVICE_STACK_NEXT)
-
-#if TARGET_HAS_USB_CDC
+/* Need to replicate logic from zephyrSerial.h to avoid C++ here */
+#define ZARD_FIRST_SERIAL_IS_SERIALUSB                                                             \
+	DT_NODE_HAS_PROP(DT_PATH(zephyr_user), cdc_acm_serial) &&                                      \
+		(CONFIG_USB_CDC_ACM || CONFIG_USBD_CDC_ACM_CLASS)
+#if ZARD_FIRST_SERIAL_IS_SERIALUSB
 const struct device *const usb_dev =
-	DEVICE_DT_GET(DT_PHANDLE_BY_IDX(DT_PATH(zephyr_user), cdc_acm, 0));
+	DEVICE_DT_GET(DT_PHANDLE_BY_IDX(DT_PATH(zephyr_user), cdc_acm_serial, 0));
 
 #if CONFIG_USB_DEVICE_STACK_NEXT
 #include <zephyr/usb/usbd.h>
@@ -139,7 +139,7 @@ static int loader(const struct shell *sh) {
 		// This is not a valid sketch, but try to start a shell anyway
 	}
 
-#if TARGET_HAS_USB_CDC
+#if ZARD_FIRST_SERIAL_IS_SERIALUSB
 	int debug = (!sketch_valid) || (sketch_hdr->flags & SKETCH_FLAG_DEBUG);
 #if CONFIG_SHELL
 	if (strcmp(k_thread_name_get(k_current_get()), "main") == 0) {
