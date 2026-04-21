@@ -12,21 +12,25 @@ class TestStatus(enum.IntEnum):
     """
     Test result status codes, in increasing order of severity.
     Each member carries display metadata: test_icon, board_icon, legend.
+    passed is True for statuses that do not represent a build/test failure.
+    built is True for statuses that represent a build that completed successfully.
     """
-    def __new__(cls, value, test_icon, board_icon, legend):
+    def __new__(cls, value, passed, built, test_icon, board_icon, legend):
         obj = int.__new__(cls, value)
         obj._value_ = value
+        obj.passed = passed
+        obj.built = built
         obj.test_icon = test_icon
         obj.board_icon = board_icon
         obj.legend = legend
         return obj
 
-    SKIP           = (-1, ":new_moon:",      ":new_moon:",          "Test was skipped.")
-    PASS           = ( 0, ":green_circle:",  ":white_check_mark:",  "Test passed successfully, with no warnings or errors.")
-    WARNING        = ( 1, ":yellow_circle:", ":white_check_mark:*", "Test completed with some warnings; no errors detected.")
-    EXPECTED_ERROR = ( 2, ":no_entry_sign:", ":heavy_check_mark:*", "Test completed with errors, but all are known/expected.")
-    ERROR          = ( 3, ":red_circle:",    ":x:",                 "Test completed with unexpected errors.")
-    FAILURE        = ( 4, ":fire:",          ":fire:",              "Test run failed to complete.")
+    SKIP           = (-1, True,  False, ":new_moon:",      ":new_moon:",          "Test was skipped.")
+    PASS           = ( 0, True,  True,  ":green_circle:",  ":white_check_mark:",  "Test passed successfully, with no warnings or errors.")
+    WARNING        = ( 1, True,  True,  ":yellow_circle:", ":white_check_mark:*", "Test completed with some warnings; no errors detected.")
+    EXPECTED_ERROR = ( 2, True,  False, ":no_entry_sign:", ":heavy_check_mark:*", "Test completed with errors, but all are known/expected.")
+    ERROR          = ( 3, False, False, ":red_circle:",    ":x:",                 "Test completed with unexpected errors.")
+    FAILURE        = ( 4, False, False, ":fire:",          ":fire:",              "Test run failed to complete.")
 
 # Module-level aliases so consumers can import status constants directly
 SKIP, PASS, WARNING, EXPECTED_ERROR, ERROR, FAILURE = TestStatus
@@ -141,7 +145,7 @@ class TestEntry:
         self.status = status
         self.issues = issues
         self.job_link = job_link
-        self.invalid_exception = invalid_exception if invalid_exception is not None else (excepted and status in (PASS, WARNING))
+        self.invalid_exception = invalid_exception if invalid_exception is not None else (excepted and status.built)
 
         if group is not None and name is not None:
             self.group = group
