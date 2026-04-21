@@ -189,7 +189,7 @@ for board_data in ALL_BOARD_DATA.values():
 ARTIFACTS = sorted(ARTIFACT_TESTS.keys())
 
 ci_run_status = max(res.status for res in ARTIFACT_TESTS.values())
-ci_run_passed = ci_run_status in (PASS, WARNING, EXPECTED_ERROR)
+ci_run_passed = ci_run_status.passed
 
 # Serialize all data to JSON
 output = {
