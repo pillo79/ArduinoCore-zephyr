@@ -21,8 +21,7 @@ import sys
 
 import ci_shared
 from ci_shared import (
-    SKIP, PASS, WARNING, EXPECTED_ERROR, ERROR, FAILURE,
-    TEST_LEGEND, TEST_STATUS, BOARD_STATUS,
+    TestStatus, SKIP, PASS, WARNING, EXPECTED_ERROR, ERROR, FAILURE,
     LoaderEntry, TestEntry, TestGroup,
 )
 
@@ -65,7 +64,7 @@ def print_summary():
     if ci_run_passed:
         title = f"# [CI run]({JOB_LINK_STEM}#user-content-summary) PASSED :green_circle:\n"
     else:
-        failed_boards = [ f"{BOARD_STATUS[res.status]} `{board}`" for board, res in BOARD_TESTS.items() if res.status in (ERROR, FAILURE) ]
+        failed_boards = [ f"{res.status.board_icon} `{board}`" for board, res in BOARD_TESTS.items() if res.status in (ERROR, FAILURE) ]
         title = f"# [CI run]({JOB_LINK_STEM}#user-content-summary) FAILED: {', '.join(failed_boards)}\n"
     f_print("<a name='summary'></a>\n")
     f_print(title)
@@ -86,7 +85,7 @@ def print_summary():
         artifact_boards = sorted(ARTIFACT_TESTS[artifact].boards)
         artifact_status = ARTIFACT_TESTS[artifact].status
 
-        first_row_text = f"<td rowspan='{len(artifact_boards)}'>{BOARD_STATUS[artifact_status]} <a href='{JOB_LINK_STEM}#user-content-{artifact}'><code>{artifact}</code></a></td>"
+        first_row_text = f"<td rowspan='{len(artifact_boards)}'>{artifact_status.board_icon} <a href='{JOB_LINK_STEM}#user-content-{artifact}'><code>{artifact}</code></a></td>"
         for board in artifact_boards:
             # Artifact name (multi-row)
             f_print(f"<tr>{first_row_text}")
@@ -101,7 +100,7 @@ def print_summary():
 
             # Core build status + message on failure
             if res.status == FAILURE:
-                f_print(f"<td align='center'>{BOARD_STATUS[FAILURE]}</td><td colspan='6'>Core build failed!</td></tr>")
+                f_print(f"<td align='center'>{res.status.board_icon}</td><td colspan='6'>Core build failed!</td></tr>")
                 continue
 
             pin = f"{len(res.warnings)} :label:" if res.status == WARNING else ":green_book:"
@@ -109,7 +108,7 @@ def print_summary():
 
             # Sketch build status + message on failure
             res = BOARD_TESTS[board]
-            f_print(f"<td align='center'>{BOARD_STATUS[res.status]}</td>")
+            f_print(f"<td align='center'>{res.status.board_icon}</td>")
             if res.status == FAILURE:
                 f_print(f"<td colspan='5'>")
                 f_print("<br>".join(f"{test.issues[0]} (<a href='{test.job_link}'>full log</a>)" for test in res.tests))
@@ -134,10 +133,10 @@ def print_summary():
     # Print the legend
     f_print("<details><summary>Legend</summary>")
     f_print("<blockquote><br><table><tr><th align='center'>Board</th><th align='center'>Test</th><th>Status description</th></tr>")
-    for status in FAILURE, ERROR, EXPECTED_ERROR, WARNING, PASS, SKIP:
-        f_print(f"<tr><td align='center'>{BOARD_STATUS[status]}</td>")
-        f_print(f"<td align='center'>{TEST_STATUS[status]}</td>")
-        f_print(f"<td>{TEST_LEGEND[status]}</td></tr>")
+    for status in reversed(TestStatus): # worst errors first
+        f_print(f"<tr><td align='center'>{status.board_icon}</td>")
+        f_print(f"<td align='center'>{status.test_icon}</td>")
+        f_print(f"<td>{status.legend}</td></tr>")
     f_print("</table></blockquote></details>\n")
 
     # Print artifact error warnings
@@ -161,7 +160,7 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
     header_row = f"<tr><th colspan='2'><code>{artifact}</code> {title}</th>"
     for board in artifact_boards:
         res = BOARD_TESTS[board]
-        header_col = f"<code>{board}</code><br>{BOARD_STATUS[res.status]}"
+        header_col = f"<code>{board}</code><br>{res.status.board_icon}"
         header_row += f"<th>{header_col}</th>"
     header_row += "</tr>"
 
@@ -184,7 +183,7 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
             data_rows.append(f"<tr><th colspan='2' align='left'><code>{group}</code></th><th colspan={len(artifact_boards)}><code>{group}</code></th></tr>")
             #data_rows.append(f"<tr><th colspan='2' align='left'><code>{group}</code></th>{''.join('<td align=center>---</td>' for x in artifact_boards)}</tr>")
         for sample, res in sorted(sketch_groups[group]):
-            row_data = f"<tr><td>{TEST_STATUS[res.status]}</td>"
+            row_data = f"<tr><td>{res.status.test_icon}</td>"
             # If there are issues, make the sketch name a link to the detailed logs below
             name_link = f"<code>{sample}</code>"
             if res.tests_with_issues:
@@ -201,7 +200,7 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
                     status_icon = ":interrobang:"
                     invalid_exceptions[board].add(sketch)
                 else:
-                    status_icon = TEST_STATUS[status]
+                    status_icon = status.test_icon
                 row_data += f"<td align='center'>{status_icon}</td>"
 
             row_data += "</tr>"
@@ -238,7 +237,7 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
             sketch = next(iter(res.sketches)) # only one
             sketch_id = sketch.replace('/', '_').replace(' ', '_').replace('-', '_')
             f_print(f"<a name='{artifact}_{sketch_id}'></a>")
-            f_print(f"<details name='{artifact}_{title}'><summary><code>{artifact}</code> logs for {TEST_STATUS[res.status]} <code>{group}</code> <code>{sample}</code></summary>")
+            f_print(f"<details name='{artifact}_{title}'><summary><code>{artifact}</code> logs for {res.status.test_icon} <code>{group}</code> <code>{sample}</code></summary>")
             f_print("<blockquote><br><table>")
 
             # Test logs by board, group similar messages
@@ -247,7 +246,7 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
                 test_text = f"<code>{test.board}:{test.link_mode}</code>"
                 if test.job_link:
                     test_text += f" (<a href='{test.job_link}'>full log</a>)"
-                test_text = f"{TEST_STATUS[test.status]} {test_text}"
+                test_text = f"{test.status.test_icon} {test_text}"
 
                 boards_by_issues[tuple(test.issues)].append(test_text)
 
