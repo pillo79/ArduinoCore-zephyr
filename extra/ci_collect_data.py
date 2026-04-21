@@ -39,7 +39,7 @@ import sys
 
 import ci_shared
 from ci_shared import (
-    TestStatus, SKIP, PASS, WARNING, EXPECTED_ERROR, ERROR, FAILURE,
+    TestStatus, SKIP, PASS, WARNING, EXPECTED_ERROR, INVALID_EXCEPTION, ERROR, FAILURE,
     LoaderEntry, TestEntry, TestGroup,
 )
 
