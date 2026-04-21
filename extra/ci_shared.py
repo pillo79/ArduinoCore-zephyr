@@ -5,43 +5,31 @@
 
 # Shared constants and data classes for CI log inspection scripts.
 
+import enum
 import json
 
-# Constants for test statuses, in increasing order of severity
-SKIP = -1           # Test was not performed
-PASS = 0            # (PASS)  Compiled successfully
-WARNING = 1         # (PASS)  Compiled with warnings
-EXPECTED_ERROR = 2  # (PASS*) Compilation failed with expected errors
-ERROR = 3           # (FAIL)  Compilation failed with errors
-FAILURE = 4         # Test run failed to complete
+class TestStatus(enum.IntEnum):
+    """
+    Test result status codes, in increasing order of severity.
+    Each member carries display metadata: test_icon, board_icon, legend.
+    """
+    def __new__(cls, value, test_icon, board_icon, legend):
+        obj = int.__new__(cls, value)
+        obj._value_ = value
+        obj.test_icon = test_icon
+        obj.board_icon = board_icon
+        obj.legend = legend
+        return obj
 
-# Status legends and icons, indexed by status constant
-TEST_LEGEND = [
-        "Test passed successfully, with no warnings or errors.",
-        "Test completed with some warnings; no errors detected.",
-        "Test completed with errors, but all are known/expected.",
-        "Test completed with unexpected errors.",
-        "Test run failed to complete.",
-        "Test was skipped." # -1
-]
+    SKIP           = (-1, ":new_moon:",      ":new_moon:",          "Test was skipped.")
+    PASS           = ( 0, ":green_circle:",  ":white_check_mark:",  "Test passed successfully, with no warnings or errors.")
+    WARNING        = ( 1, ":yellow_circle:", ":white_check_mark:*", "Test completed with some warnings; no errors detected.")
+    EXPECTED_ERROR = ( 2, ":no_entry_sign:", ":heavy_check_mark:*", "Test completed with errors, but all are known/expected.")
+    ERROR          = ( 3, ":red_circle:",    ":x:",                 "Test completed with unexpected errors.")
+    FAILURE        = ( 4, ":fire:",          ":fire:",              "Test run failed to complete.")
 
-TEST_STATUS = [
-    ":green_circle:",
-    ":yellow_circle:",
-    ":no_entry_sign:",
-    ":red_circle:",
-    ":fire:",
-    ":new_moon:" # -1
-]
-
-BOARD_STATUS = [
-    ":white_check_mark:",
-    ":white_check_mark:*",
-    ":heavy_check_mark:*",
-    ":x:",
-    ":fire:",
-    ":new_moon:" # -1
-]
+# Module-level aliases so consumers can import status constants directly
+SKIP, PASS, WARNING, EXPECTED_ERROR, ERROR, FAILURE = TestStatus
 
 # Loader build status data structure, one per loader
 class LoaderEntry:
@@ -123,7 +111,7 @@ class LoaderEntry:
             'warnings': self.warnings,
             'config': self.config,
             'meminfo': self.meminfo,
-            'status': self.status,
+            'status': int(self.status),
         }
 
     @classmethod
@@ -136,7 +124,7 @@ class LoaderEntry:
         obj.warnings = d['warnings']
         obj.config = d['config']
         obj.meminfo = d['meminfo']
-        obj.status = d['status']
+        obj.status = TestStatus(d['status'])
         return obj
 
 
@@ -174,7 +162,7 @@ class TestEntry:
             'sketch': self.sketch,
             'link_mode': self.link_mode,
             'excepted': self.excepted,
-            'status': self.status,
+            'status': int(self.status),
             'issues': self.issues,
             'job_link': self.job_link,
             'invalid_exception': self.invalid_exception,
@@ -190,7 +178,7 @@ class TestEntry:
             sketch=d['sketch'],
             link_mode=d['link_mode'],
             excepted=d['excepted'],
-            status=d['status'],
+            status=TestStatus(d['status']),
             issues=d['issues'],
             job_link=d['job_link'],
             invalid_exception=d['invalid_exception'],
@@ -207,7 +195,7 @@ class TestGroup:
         self.sketches = set()
         self.group_names = set()
         # Counts of test results by status
-        self.counts = { status : 0 for status in [PASS, WARNING, EXPECTED_ERROR, ERROR, FAILURE] }
+        self.counts = { s: 0 for s in TestStatus }
         # Overall status of the group
         self.status = SKIP
         # List of individual TestEntry objects by feature
