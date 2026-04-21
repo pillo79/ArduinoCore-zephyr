@@ -64,7 +64,7 @@ def print_summary():
     if ci_run_passed:
         title = f"# [CI run]({JOB_LINK_STEM}#user-content-summary) PASSED :green_circle:\n"
     else:
-        failed_boards = [ f"{res.status.board_icon} `{board}`" for board, res in BOARD_TESTS.items() if res.status in (ERROR, FAILURE) ]
+        failed_boards = [ f"{res.status.board_icon} `{board}`" for board, res in BOARD_TESTS.items() if not res.status.passed ]
         title = f"# [CI run]({JOB_LINK_STEM}#user-content-summary) FAILED: {', '.join(failed_boards)}\n"
     f_print("<a name='summary'></a>\n")
     f_print(title)
@@ -142,7 +142,7 @@ def print_summary():
     # Print artifact error warnings
     for artifact in ARTIFACTS:
         artifact_boards = sorted(ARTIFACT_TESTS[artifact].boards)
-        failed_boards = [ f"`{board}`" for board in artifact_boards if BOARD_TESTS[board].status in (ERROR, FAILURE) ]
+        failed_boards = [ f"`{board}`" for board in artifact_boards if not BOARD_TESTS[board].status.passed ]
 
         if failed_boards:
             f_print("> [!CAUTION]")
@@ -196,7 +196,7 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
                 # there are multiple tests per sketch&board due to FQBN variations
                 status = max( [ t.status for t in res.tests if t.board == board ], default=SKIP)
                 invalid = any( [ t.invalid_exception for t in res.tests if t.board == board ] )
-                if invalid and status in (PASS, WARNING):
+                if invalid and status.built:
                     status_icon = ":interrobang:"
                     invalid_exceptions[board].add(sketch)
                 else:
@@ -440,7 +440,7 @@ with open(full_report_file, 'w') as f:
                 summary += f" ({warning_tests} with warnings)"
 
             f_print(f"<details><summary>{summary}</summary><blockquote><br>\n")
-            print_test_matrix(artifact, artifact_boards, "tests", sketch_filter=lambda res: res.status in (PASS, WARNING))
+            print_test_matrix(artifact, artifact_boards, "tests", sketch_filter=lambda res: res.status.built)
             f_print("</blockquote></details>\n")
 
         # print memory usage report in a collapsible section
