@@ -441,7 +441,8 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         run: |
           export GITHUB_BASE_SHA=$(git describe --always origin/${GITHUB_BASE_REF})
-          extra/ci_calc_size_reports.py ${GITHUB_BASE_SHA} sketches-reports/
+          # errors due to race conditions with parallel branch runs should not fail the job
+          extra/ci_calc_size_reports.py ${GITHUB_BASE_SHA} sketches-reports/ || true
 
       # upload comment request artifact (will be retrieved by leave_pr_comment.yml)
       - name: Archive comment information
