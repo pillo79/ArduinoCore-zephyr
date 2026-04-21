@@ -25,15 +25,16 @@ class TestStatus(enum.IntEnum):
         obj.legend = legend
         return obj
 
-    SKIP           = (-1, True,  False, ":new_moon:",      ":new_moon:",          "Test was skipped.")
-    PASS           = ( 0, True,  True,  ":green_circle:",  ":white_check_mark:",  "Test passed successfully, with no warnings or errors.")
-    WARNING        = ( 1, True,  True,  ":yellow_circle:", ":white_check_mark:*", "Test completed with some warnings; no errors detected.")
-    EXPECTED_ERROR = ( 2, True,  False, ":no_entry_sign:", ":heavy_check_mark:*", "Test completed with errors, but all are known/expected.")
-    ERROR          = ( 3, False, False, ":red_circle:",    ":x:",                 "Test completed with unexpected errors.")
-    FAILURE        = ( 4, False, False, ":fire:",          ":fire:",              "Test run failed to complete.")
+    SKIP              = (-1, True,  False, ":new_moon:",      ":new_moon:",          "Test was skipped.")
+    PASS              = ( 0, True,  True,  ":green_circle:",  ":white_check_mark:",  "Test passed successfully, with no warnings or errors.")
+    WARNING           = ( 1, True,  True,  ":yellow_circle:", ":white_check_mark:*", "Test completed with some warnings; no errors detected.")
+    EXPECTED_ERROR    = ( 2, True,  False, ":no_entry_sign:", ":heavy_check_mark:*", "Test completed with errors, but all are known/expected.")
+    INVALID_EXCEPTION = ( 3, False, False, ":interrobang:",   ":interrobang:",       "Test was expected to fail but passed; exception entry is outdated.")
+    ERROR             = ( 4, False, False, ":red_circle:",    ":x:",                 "Test completed with unexpected errors.")
+    FAILURE           = ( 5, False, False, ":fire:",          ":fire:",              "Test run failed to complete.")
 
 # Module-level aliases so consumers can import status constants directly
-SKIP, PASS, WARNING, EXPECTED_ERROR, ERROR, FAILURE = TestStatus
+SKIP, PASS, WARNING, EXPECTED_ERROR, INVALID_EXCEPTION, ERROR, FAILURE = TestStatus
 
 # Loader build status data structure, one per loader
 class LoaderEntry:
@@ -135,17 +136,16 @@ class LoaderEntry:
 # Single test data structure, one per compilation test
 class TestEntry:
     def __init__(self, artifact, board, sketch, link_mode, excepted, status, issues, job_link,
-                 invalid_exception=None, group=None, name=None):
+                 group=None, name=None):
         import re
         self.artifact = artifact
         self.board = board
         self.sketch = sketch
         self.link_mode = link_mode
         self.excepted = excepted
-        self.status = status
+        self.status = INVALID_EXCEPTION if (excepted and status.built) else status
         self.issues = issues
         self.job_link = job_link
-        self.invalid_exception = invalid_exception if invalid_exception is not None else (excepted and status.built)
 
         if group is not None and name is not None:
             self.group = group
@@ -169,7 +169,6 @@ class TestEntry:
             'status': int(self.status),
             'issues': self.issues,
             'job_link': self.job_link,
-            'invalid_exception': self.invalid_exception,
             'group': self.group,
             'name': self.name,
         }
@@ -185,7 +184,6 @@ class TestEntry:
             status=TestStatus(d['status']),
             issues=d['issues'],
             job_link=d['job_link'],
-            invalid_exception=d['invalid_exception'],
             group=d['group'],
             name=d['name'],
         )
@@ -205,7 +203,6 @@ class TestGroup:
         # List of individual TestEntry objects by feature
         self.tests = []
         self.tests_with_issues = []
-        self.tests_with_invalid_exceptions = []
 
     def track(self, test_entry):
         """
@@ -214,8 +211,6 @@ class TestGroup:
         self.tests.append(test_entry)
         if test_entry.issues:
             self.tests_with_issues.append(test_entry)
-        if test_entry.invalid_exception:
-            self.tests_with_invalid_exceptions.append(test_entry)
 
         self.counts[test_entry.status] += 1
         self.status = max(self.status, test_entry.status)

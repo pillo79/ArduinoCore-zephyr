@@ -21,7 +21,7 @@ import sys
 
 import ci_shared
 from ci_shared import (
-    TestStatus, SKIP, PASS, WARNING, EXPECTED_ERROR, ERROR, FAILURE,
+    TestStatus, SKIP, PASS, WARNING, EXPECTED_ERROR, INVALID_EXCEPTION, ERROR, FAILURE,
     LoaderEntry, TestEntry, TestGroup,
 )
 
@@ -194,14 +194,10 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
 
             for board in artifact_boards:
                 # there are multiple tests per sketch&board due to FQBN variations
-                status = max( [ t.status for t in res.tests if t.board == board ], default=SKIP)
-                invalid = any( [ t.invalid_exception for t in res.tests if t.board == board ] )
-                if invalid and status.built:
-                    status_icon = ":interrobang:"
-                    invalid_exceptions[board].add(sketch)
-                else:
-                    status_icon = status.test_icon
-                row_data += f"<td align='center'>{status_icon}</td>"
+                status = max( [ t.status for t in res.tests if t.board == board ], default=TestStatus.SKIP)
+                if status == INVALID_EXCEPTION:
+                    invalid_exceptions[board].add(sample)
+                row_data += f"<td align='center'>{status.test_icon}</td>"
 
             row_data += "</tr>"
             data_rows.append(row_data)
@@ -429,7 +425,7 @@ with open(full_report_file, 'w') as f:
             f_print("</blockquote></details>\n")
 
         # print failed tests matrix
-        print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status in (ERROR, EXPECTED_ERROR) or res.tests_with_invalid_exceptions)
+        print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status >= EXPECTED_ERROR)
 
         # print successful tests matrix in a collapsible section
         successful_tests = ARTIFACT_TESTS[artifact].counts[PASS] + ARTIFACT_TESTS[artifact].counts[WARNING]
