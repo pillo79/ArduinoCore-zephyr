@@ -151,6 +151,7 @@ FORCE_EXPORT_SYM(net_if_ipv4_set_netmask);
 FORCE_EXPORT_SYM(net_if_ipv4_set_netmask_by_addr);
 #endif
 FORCE_EXPORT_SYM(net_if_lookup_by_dev);
+FORCE_EXPORT_SYM(net_if_get_first_ethernet);
 #endif
 
 #if defined(CONFIG_NET_L2_ETHERNET)
