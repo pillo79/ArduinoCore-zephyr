@@ -416,8 +416,8 @@ jobs:
           # gather the array of job metadata (especially name and ID) for the current workflow run
           export WORKFLOW_JOBS=$(gh run view ${{ github.run_id }} --attempt ${{ github.run_attempt }} --json jobs --jq '.jobs')
           # Collect all CI data into a JSON file, then generate the report
-          extra/ci_collect_data.py ci_data.json
-          extra/ci_generate_report.py ci_data.json result summary full_log
+          extra/ci_collect_data.py ${CORE_VER}.json
+          extra/ci_generate_report.py ${CORE_VER}.json result summary full_log
           cat result
 
           # Display the summary and full log in the step summary
@@ -444,6 +444,14 @@ jobs:
           export GITHUB_BASE_SHA=$(git describe --always origin/${GITHUB_BASE_REF})
           # errors due to race conditions with parallel branch runs should not fail the job
           extra/ci_calc_size_reports.py ${GITHUB_BASE_SHA} sketches-reports/ || true
+
+      # upload build metadata artifact, for upload to ci-builds
+      - name: Archive build metadata information
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-metadata
+          path: ${{ env.CORE_VER }}.json
+          retention-days: 1
 
       # upload comment request artifact (will be retrieved by leave_pr_comment.yml)
       - name: Archive comment information
