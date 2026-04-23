@@ -81,6 +81,7 @@ W3(void *, memset, void *, int, unsigned int)
 W2(char *, strtok, char *, const char *)
 W3(void *, memchr, const void *, int, size_t)
 W1(char *, strdup, const char *)
+W4(void *, memmem, const void *, size_t, const void *, size_t);
 
 /* stdlib.h - conversion */
 W2(double, strtod, const char *, char **)
