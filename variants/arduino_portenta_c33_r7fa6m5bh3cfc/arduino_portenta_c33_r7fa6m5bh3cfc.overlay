@@ -110,6 +110,39 @@
 	};
 };
 
+
+&pwm3 {
+	status = "okay";
+	pinctrl-0 = <&pwm3_default>;
+	pinctrl-names = "default";
+	interrupts = <65 1>, <66 1>;
+	interrupt-names = "gtioca", "overflow";
+};
+
+&pwm7 {
+	status = "okay";
+	pinctrl-0 = <&pwm7_default>;
+	pinctrl-names = "default";
+	interrupts = <67 1>, <68 1>;
+	interrupt-names = "gtioca", "overflow";
+	/* GPT7 is a 16-bit timer on RA6M5 (BSP_FEATURE_GPT_32BIT_CHANNEL_MASK=0x0F).
+	 * DIV_4 brings PCLKD (120MHz) down to 30MHz, giving period_cycles ~61224
+	 * at 490Hz which fits in 16-bit (65535). */
+	divider = <RA_PWM_SOURCE_DIV_4>;
+};
+
+&pwm8 {
+	status = "okay";
+	pinctrl-0 = <&pwm8_default>;
+	pinctrl-names = "default";
+	interrupts = <69 1>, <70 1>;
+	interrupt-names = "gtioca", "overflow";
+	/* GPT8 is a 16-bit timer on RA6M5 (BSP_FEATURE_GPT_32BIT_CHANNEL_MASK=0x0F).
+	 * DIV_4 brings PCLKD (120MHz) down to 30MHz, giving period_cycles ~61224
+	 * at 490Hz which fits in 16-bit (65535). */
+	divider = <RA_PWM_SOURCE_DIV_4>;
+};
+
 &adc0 {
 	status = "okay";
 	#address-cells = <1>;
@@ -301,13 +334,19 @@
                         <&ioport4 0 GPIO_ACTIVE_LOW>,
                         <&ioport8 0 GPIO_ACTIVE_LOW>;
 
-		pwm-pin-gpios =	<>;
+		pwm-pin-gpios =	<&ioport1 5 0>,
+				    <&ioport1 6 0>,
+				    <&ioport1 11 0>,
+				    <&ioport3 3 0>;
 
 		cdc-acm-serial = <&board_cdc_acm_uart>; /* 'Serial' object is managed by SerialUSB */
 		serials = <&uart9>, <&uart7>, <&uart6>, <&uart5>; /* 'Serial1' onwards */
 		i2cs = <&iic0>, <&iic1>, <&i2c3>;
 		spis = <&spi1>;
-		pwms = <>;
+		pwms = <&pwm1 0 PWM_HZ(490) PWM_POLARITY_NORMAL>,
+		       <&pwm8 1 PWM_HZ(490) PWM_POLARITY_NORMAL>,
+		       <&pwm3 0 PWM_HZ(490) PWM_POLARITY_NORMAL>,
+		       <&pwm7 1 PWM_HZ(490) PWM_POLARITY_NORMAL>;
 		cans = <&canfd0>;
 
 		io-channels =	<&adc0 6>,
