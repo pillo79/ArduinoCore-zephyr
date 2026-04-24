@@ -341,7 +341,7 @@ jobs:
           extra/ci_test_list.sh ${{ matrix.artifact }} ${{ matrix.variant }}
 
       - name: Compile tests for ${{ matrix.board }}
-        uses: pillo79/compile-sketches@next
+        uses: pillo79/compile-sketches@parallel
         with:
           fqbn: ${{ env.FQBN }}
           platforms: |
