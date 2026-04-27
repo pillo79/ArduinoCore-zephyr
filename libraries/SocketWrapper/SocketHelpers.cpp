@@ -10,7 +10,13 @@
 LOG_MODULE_DECLARE(sketch, LOG_LEVEL_NONE);
 
 int NetworkInterface::dhcp() {
-	net_dhcpv4_start(netif);
+	// If dhcp was never started on this interface, start it, otherwise restart it, so that we force
+	// to ask the dhcp server for a new lease
+	if (netif->config.dhcpv4.state == NET_DHCPV4_DISABLED) {
+		net_dhcpv4_start(netif);
+	} else {
+		net_dhcpv4_restart(netif);
+	}
 
 	LOG_INF("DHCPv4 started...\n");
 
