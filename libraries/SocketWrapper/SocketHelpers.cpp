@@ -100,6 +100,10 @@ void NetworkInterface::setMACAddress(const uint8_t *mac) {
 }
 
 int NetworkInterface::begin(bool blocking, uint64_t additional_event_mask) {
+	if (!net_if_is_up(netif)) {
+		net_if_up(netif);
+	}
+
 	dhcp();
 
 	// FIXME: additional_event_mask cannot be ORed here due to how Zephyr
@@ -107,8 +111,11 @@ int NetworkInterface::begin(bool blocking, uint64_t additional_event_mask) {
 	// and register multiple event masks with event_handler instead.
 	ARG_UNUSED(additional_event_mask);
 
-	int ret = net_mgmt_event_wait_on_iface(netif, NET_EVENT_IPV4_ADDR_ADD, NULL, NULL, NULL,
-										   blocking ? K_FOREVER : K_SECONDS(1));
+	int ret = 0;
+	if (blocking && netif->config.dhcpv4.state != NET_DHCPV4_BOUND) {
+		ret = net_mgmt_event_wait_on_iface(netif, NET_EVENT_IPV4_DHCP_BOUND, NULL, NULL, NULL,
+										   K_SECONDS(10));
+	}
 	return (ret == 0) ? 1 : 0;
 }
 
