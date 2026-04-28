@@ -72,6 +72,12 @@ To get started with your board:
 #### **Q: I get an out of memory error**
 **A:** Since collecting bug reports is very important at this time, we are keeping Zephyr's shell enabled to allow loading a full sketch (which requires a large stack). Adjust your board's `.conf` file to reduce the stack size if your platform doesn't have enough RAM.
 
+---
+
+#### **Q: I get a compilation error during library detection, but the mentioned libraries are installed**
+**A:** If you have installed the core locally in your Arduino sketchbook, make sure the Zephyr core is installed in a folder named `zephyr` (`${sketchbook}/hardware/arduino-git/zephyr`).
+See the [Using the Core in Arduino IDE/CLI](#using-the-core-in-arduino-idecli) section for further details on the installation.
+
 ## 📚 Libraries
 
 ### Included with the core: ###
@@ -131,11 +137,6 @@ In this section, we’ll guide you through setting up your environment to work o
 
 Shell scripts are available to simplify the installation process (Windows is not directly supported at the moment 😔, but there are some tricks - see below).
 
-### Clone the repository
-```bash
-mkdir my_new_zephyr_folder && cd my_new_zephyr_folder
-git clone https://github.com/arduino/ArduinoCore-zephyr
-```
 ### Pre-requirements
 Before running the installation script, ensure that Python, `pip` and `venv` are installed on your system. The script will automatically install `west` and manage the necessary dependencies.
 
@@ -155,7 +156,7 @@ brew install python cmake ninja zstd jq git
 ```
 Note: Homebrew’s Python installation already includes `pip`, `setuptools` and `venv`.
 
-### On Windows
+#### On Windows
 Building natively on Windows is not currently supported; however, it is possible to setup and build the loader using [WSL](https://learn.microsoft.com/windows/wsl/about). Once you have that installed, you will need to follow these instructions as if you had Ubuntu.
 
 There are two strategies to set up the sources for building the loader on Windows:
@@ -167,6 +168,12 @@ There are pros and cons to both strategies:
 2) Builds on WSL's file system are a lot faster, however, you need to copy the resulting build back to somewhere in your Windows directory structure. Use this location in the Arduino IDE as mentioned below in the [Using the Core in Arduino IDE/CLI](#using-the-core-in-arduino-idecli) section.
 
 After `bootstrap.sh` has completed, you may also have to update the `cores\arduino\api` link to the path of the ArduinoCore-API's `api` folder.
+
+### Clone the repository
+```bash
+mkdir my_new_zephyr_folder && cd my_new_zephyr_folder
+git clone https://github.com/arduino/ArduinoCore-zephyr
+```
 
 ### Run the ```bootstrap``` script
 ```bash
@@ -234,9 +241,19 @@ This can also be performed via the "Burn bootloader" action in the IDE if the co
 ### Using the Core in Arduino IDE/CLI
 
 After running the `bootstrap.sh` script, you can create a symlink from the
-`ArduinoCore-zephyr` folder to `${sketchbook}/hardware/arduino-git/zephyr`, so
-that the `boards.txt` file in this repository will be also available as
-`${sketchbook}/hardware/arduino-git/zephyr/boards.txt`.
+`ArduinoCore-zephyr` folder to `${sketchbook}/hardware/arduino-git/zephyr`,
+or manually copy the whole folder to that location.
+
+> [!IMPORTANT]
+> Make sure the final location of the `boards.txt` file is exactly
+> `${sketchbook}/hardware/arduino-git/zephyr/boards.txt`.
+>
+> The `zephyr` folder name above is used as part of the FQBN architecture
+> (`packager:architecture:board`) and is considered for library
+> compatibility checks.
+> Using a different architecture folder name may result in:
+> - an unsupported FQBN (e.g. `arduino-git:wrong_zephyr_folder:unoq`)
+> - architecture-specific libraries (e.g. `architectures=zephyr`) not being selected
 
 Once this is done, your development folder will appear in the IDE/CLI package
 list as `arduino-git:zephyr`, and the Fully Qualified Board Name (FQBN) to use
