@@ -36,6 +36,9 @@ jobs:
       # Tag (if found) or hash identifying this core build, should be used for
       # user-friendly strings and file names
       CORE_TAG: ${{ env.CORE_TAG }}
+      # Target branch referred to by this workflow (HEAD_REF for branch pushes,
+      # or closest branch that contains the tag), used for ci-builds tracking
+      CORE_BRANCH: ${{ env.CORE_BRANCH }}
       # Hash identifying this core build, should be used for exact version match
       CORE_HASH: ${{ env.CORE_HASH }}
       # JSON describing all boards to build, collected by get_board_details.sh
@@ -76,6 +79,13 @@ jobs:
         run: |
           echo "## Building \`$CORE_VER\`" >> "$GITHUB_STEP_SUMMARY"
           echo "CORE_TAG=$(git describe --tags --exact-match --exclude '*/*' 2>/dev/null || echo $CORE_HASH)" >> "$GITHUB_ENV"
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            BRANCH=$(git branch -r --contains HEAD --sort=-committerdate --format='%(refname:short)' | sed 's|origin/||' | grep -v HEAD | head -1)
+            [[ -n "$BRANCH" ]] || { echo "::error::No branch found containing tag ${{ github.ref_name }}"; exit 1; }
+            echo "CORE_BRANCH=${BRANCH}" >> "$GITHUB_ENV"
+          else
+            echo "CORE_BRANCH=${{ github.head_ref || github.ref_name }}" >> "$GITHUB_ENV"
+          fi
           echo "ALL_BOARD_FQBNS=$(jq -c 'map((. + {link_mode: "static"}), (. + {link_mode: "dynamic"}))' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "ARTIFACTS=$(jq -c '["zephyr"] + (map(.artifact) | unique)' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "SUB_ARCHES=$(jq -c 'map(.subarch) | unique' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
