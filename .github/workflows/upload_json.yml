@@ -24,6 +24,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  dump-event:
+    name: Dump event
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump event
+        run: echo "${{ toJson(github.event) }}"
+
   submit-json-to-gh-pages:
     name: Update git JSON on Github Pages
     runs-on: ubuntu-latest
