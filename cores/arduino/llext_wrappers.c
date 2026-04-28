@@ -144,6 +144,10 @@ W1(float, sinf, float)
 W1(float, sqrtf, float)
 W1(float, tanf, float)
 
+/* compiler double helper functions */
+W2(double, __aeabi_dadd, double, double)
+W2(int, __aeabi_dcmpgt, double, double)
+
 /* stdio.h */
 W1(int, puts, const char *)
 W1(int, putchar, int)
