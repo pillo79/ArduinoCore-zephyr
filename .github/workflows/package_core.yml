@@ -604,3 +604,66 @@ jobs:
         with:
           name: ArduinoCore-zephyr-${{ env.CORE_TAG }}-jsons
           path: ArduinoCore-*-${{ env.CORE_TAG }}.json
+
+  ci-builds-upload:
+    runs-on: ubuntu-latest
+    needs:
+      - build-env
+      - verify-core
+      - prepare-json
+    permissions:
+      id-token: write   # required to obtain the OIDC token
+    env:
+      CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
+      CORE_VER: ${{ needs.build-env.outputs.CORE_VER }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: jsons/
+          name: ArduinoCore-zephyr-${{ env.CORE_TAG }}-jsons
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: .
+          name: build-metadata
+
+      - run: |
+          find
+          echo "SNIPPETS<<EOF" >> $GITHUB_ENV
+          jq -n 'reduce inputs as $i ({}; .[input_filename] = $i)' ArduinoCore-*.json >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          echo "METADATA<<EOF" >> $GITHUB_ENV
+          jq -c '{"${{ env.CORE_VER }}": .}' ${CORE_VER}.json >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Get OIDC identity token
+        id: oidc
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const token = await core.getIDToken('arduino/ci-builds');
+            core.setOutput('token', token)
+
+      - name: Store snippets in ci-builds
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.CI_BUILDS_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'pillo79',
+              repo: 'ci-builds',
+              workflow_id: 'store-snippets.yml',
+              ref: 'main',
+              inputs: {
+                oidc_token: '${{ steps.oidc.outputs.token }}',
+                // Required only when running from a tag ref; ignored for branch refs.
+                // Snippets will be stored under this branch's folder.
+                base_branch: '${{ needs.build-env.outputs.CORE_BRANCH }}',
+                // 'platform' (default) or 'tool'
+                snippet_type: 'platform',
+                // build version — required when passing metadata
+                version: '${{ env.CORE_VER }}',
+                snippets: '${{ env.SNIPPETS }}',
+                metadata: '${{ env.METADATA }}',
+              },
+            });
