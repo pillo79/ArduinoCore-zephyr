@@ -7,9 +7,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"path/filepath"
 	"strings"
 
@@ -18,19 +20,7 @@ import (
 )
 
 func main() {
-
-	// Create a temporary folder, download a URL based on a git tag in it
-	// and extract the file to the temporary folder
-	tmpDir, err := os.MkdirTemp("", "sync-zephyr-artifacts")
-	if err != nil {
-		fmt.Println("Error creating temp dir:", err)
-		return
-	}
-	defer os.RemoveAll(tmpDir) // Clean up
-
-	// usage: sync-zephyr-artifacts [<git_core_path>] [forced_hash]
-
-	// parse arguments
+	// Parse and check arguments
 	if len(os.Args) > 1 && (os.Args[1] == "-h" || os.Args[1] == "--help") {
 		fmt.Fprintf(os.Stderr, "Usage: %s [<git_core_path>] [forced_hash]\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  git_core_path: path to the ArduinoCore-zephyr git repository (default: current directory)\n")
@@ -38,7 +28,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Download the file from http://downloads.arduino.cc/cores/zephyr/ArduinoCore-zephyr-{git_tag}.zip
 	gitCorePath := "."
 	if len(os.Args) > 1 {
 		gitCorePath = os.Args[1]
@@ -52,10 +41,26 @@ func main() {
 
 	// Test if the provided path contains 'variants/' folder
 	if _, err := os.Stat(filepath.Join(gitCorePath, "variants")); os.IsNotExist(err) {
-		fmt.Println("Error: not an ArduinoCore-zephyr folder:", gitCorePath)
+		fmt.Println("Error: not an Arduino Core for Zephyr folder:", gitCorePath)
 		return
 	}
 
+	// Make sure the path's last components are "hardware", any folder, and start with "zephyr"
+	absPath, err := filepath.Abs(gitCorePath)
+	if err != nil {
+		fmt.Println("Error getting absolute path:", err)
+		return
+	}
+	pathParts := strings.Split(filepath.ToSlash(absPath), "/")
+	if len(pathParts) < 3 ||
+	   pathParts[len(pathParts)-3] != "hardware" ||
+	   !strings.HasPrefix(pathParts[len(pathParts)-1], "zephyr") {
+		expPath := filepath.Join("hardware", "*", "zephyr")
+		fmt.Println("Error: the core path should end with ", expPath)
+		return
+	}
+
+	// Get the current git hash if not forced
 	if inputHash == "" {
 		cmd := exec.Command("git", "-C", gitCorePath, "describe", "--always", "HEAD")
 		stdout, err := cmd.Output()
@@ -68,7 +73,8 @@ func main() {
 	}
 	fmt.Println("Git SHA:", inputHash)
 
-	cmd := exec.Command("git", "ls-files", "--exclude-standard", "-dmo", gitCorePath)
+	// Check for uncommitted changes in firmwares/ and variants/ folders
+	cmd := exec.Command("git", "-C", gitCorePath, "ls-files", "--exclude-standard", "-dmo")
 	stdout, err := cmd.Output()
 	if err != nil {
 		fmt.Println("Error executing command:", err)
@@ -89,9 +95,17 @@ func main() {
 		for _, path := range changes {
 			fmt.Println("- ", path)
 		}
-		fmt.Println("Please commit or stash them before running this script.")
+		fmt.Println("Please commit, stash or remove them before running this script.")
 		return
 	}
+
+	// Create a temporary folder to download and extract the archive
+	tmpDir, err := os.MkdirTemp("", "sync-zephyr-artifacts")
+	if err != nil {
+		fmt.Println("Error creating temp dir:", err)
+		return
+	}
+	defer os.RemoveAll(tmpDir) // Clean up
 
 	// Compose download URL from git hash
 	var archive_stream io.Reader
@@ -140,6 +154,37 @@ func main() {
 		return
 	}
 
+	checkoutApi := false
+	apiPath := filepath.Join(gitCorePath, "cores", "arduino", "api")
+	apiHeaderPath := filepath.Join(apiPath, "ArduinoAPI.h")
+	_, err = os.Lstat(apiHeaderPath)
+	if err != nil {
+		// If the file doesn't exist, we will checkout the Arduino API
+		// folder as well. Remove any leftover content for this.
+		checkoutApi = true
+		info, err := os.Lstat(apiPath)
+		if err == nil {
+			// On Windows, the user might create a junction for the api
+			// folder; that will appear as a "regular" directory, but we
+			// should not emove the linked content but only the junction itself.
+			isJunction := runtime.GOOS == "windows"	&& info.Mode()&os.ModeIrregular != 0
+			if info.IsDir() && !isJunction {
+				// Regular directory: remove it entirely
+				os.RemoveAll(apiPath)
+			} else {
+				// Anything else: remove just the file or the junction itself
+				os.Remove(apiPath)
+			}
+		} else if !os.IsNotExist(err) {
+			fmt.Println("Error checking api path:", err)
+			return
+		}
+
+		// Add the folder to the ignored list to avoid pestering the user about this
+		cmd := exec.Command("git", "-C", gitCorePath, "update-index", "--assume-unchanged", apiPath)
+		_ = cmd.Run() // no error check, the api symlink may be gone in the future
+	}
+
 	// Remove old firmwares and variants/*/llext-edk files
 	os.RemoveAll(filepath.Join(gitCorePath, "firmwares"))
 	filepath.WalkDir(filepath.Join(gitCorePath, "variants"), func(path string, d os.DirEntry, err error) error {
@@ -150,6 +195,7 @@ func main() {
 
 		if d.IsDir() && d.Name() == "llext-edk" {
 			os.RemoveAll(path)
+			return fs.SkipDir
 		}
 		return nil
 	})
@@ -165,6 +211,16 @@ func main() {
 	if err != nil {
 		fmt.Println("Error copying variants folder:", err)
 		return
+	}
+
+	// Copy the content of api folder to gitCorePath/cores/arduino/api, if needed
+	if checkoutApi {
+		sourceApiPath := filepath.Join(tmpDir, "ArduinoCore-zephyr", "cores", "arduino", "api")
+		err = cp.Copy(sourceApiPath, apiPath)
+		if err != nil {
+			fmt.Println("Error copying api folder:", err)
+			return
+		}
 	}
 
 	fmt.Println("Done.")
