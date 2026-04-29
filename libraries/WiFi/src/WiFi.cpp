@@ -34,6 +34,11 @@ int WiFiClass::begin(const char *ssid, const char *passphrase, wl_enc_type secur
 	sta_config.channel = WIFI_CHANNEL_ANY;
 	sta_config.band = WIFI_FREQ_BAND_2_4_GHZ;
 	sta_config.bandwidth = WIFI_FREQ_BANDWIDTH_20MHZ;
+
+	if (!net_if_is_up(netif)) {
+		net_if_up(netif);
+	}
+
 	int ret = net_mgmt(NET_REQUEST_WIFI_CONNECT, sta_iface, &sta_config,
 					   sizeof(struct wifi_connect_req_params));
 	if (ret) {
@@ -63,6 +68,11 @@ bool WiFiClass::beginAP(char *ssid, char *passphrase, int channel, bool blocking
 	ap_config.channel = channel;
 	ap_config.band = WIFI_FREQ_BAND_2_4_GHZ;
 	ap_config.bandwidth = WIFI_FREQ_BANDWIDTH_20MHZ;
+
+	if (!net_if_is_up(netif)) {
+		net_if_up(netif);
+	}
+
 	int ret = net_mgmt(NET_REQUEST_WIFI_AP_ENABLE, ap_iface, &ap_config,
 					   sizeof(struct wifi_connect_req_params));
 	if (ret) {
