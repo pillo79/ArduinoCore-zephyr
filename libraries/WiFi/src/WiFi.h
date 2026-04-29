@@ -42,6 +42,8 @@ public:
 
 	String firmwareVersion();
 
+	bool disconnect() override;
+
 private:
 	struct net_if *sta_iface = nullptr;
 	struct net_if *ap_iface = nullptr;

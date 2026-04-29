@@ -109,3 +109,18 @@ int32_t WiFiClass::RSSI() {
 	}
 	return 0;
 }
+
+bool WiFiClass::disconnect() {
+	int ret;
+	if (status() == WL_CONNECTED) {
+		ret = net_mgmt(NET_REQUEST_WIFI_DISCONNECT, netif, NULL, 0);
+
+		if (ret != 0) {
+			LOG_ERR("Error on Wifi Disconnect %d", ret);
+		}
+	}
+
+	ret = NetworkInterface::disconnect();
+
+	return ret;
+}
