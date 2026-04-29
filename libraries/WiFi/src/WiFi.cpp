@@ -11,7 +11,7 @@ LOG_MODULE_DECLARE(sketch, LOG_LEVEL_DBG);
 
 WiFiClass WiFi;
 
-String WiFiClass::firmwareVersion() {
+const char *WiFiClass::firmwareVersion() {
 #if defined(ARDUINO_PORTENTA_C33)
 	return "v1.5.0";
 #else
