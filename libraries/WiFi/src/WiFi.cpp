@@ -6,6 +6,9 @@
 
 #include "WiFi.h"
 
+#include <zephyr/logging/log.h>
+LOG_MODULE_DECLARE(sketch, LOG_LEVEL_DBG);
+
 WiFiClass WiFi;
 
 String WiFiClass::firmwareVersion() {
