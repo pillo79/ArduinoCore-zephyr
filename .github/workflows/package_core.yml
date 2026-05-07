@@ -469,6 +469,14 @@ jobs:
           # errors due to race conditions with parallel branch runs should not fail the job
           extra/ci_calc_size_reports.py ${GITHUB_BASE_SHA} sketches-reports/ || true
 
+      # upload build metadata artifact, for upload to ci-builds
+      - name: Archive build metadata information
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-metadata
+          path: build_info.json
+          retention-days: 1
+
       # upload comment request artifact (will be retrieved by leave_pr_comment.yml)
       - name: Archive comment information
         uses: actions/upload-artifact@v7
@@ -600,22 +608,48 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
+          pattern: ArduinoCore-*.tar.bz2
           path: .
-          pattern: ArduinoCore-*
           merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: build-metadata
+          path: snippets/metadata/
 
       - name: Prepare package index snippets
         run: |
+          mkdir -p snippets/platforms/
           jq -cr '.[]' <<< ${ARTIFACTS} | while read -r artifact; do
             # note: the archive names are always hash-based so they use a
             # predictable pattern. JSON files can use the tag for user-friendliness.
             ARTIFACT_FILE=ArduinoCore-${artifact}-${CORE_HASH}.tar.bz2
-            PACKAGE_JSON=ArduinoCore-${artifact}-${CORE_TAG}.json
+            PACKAGE_JSON=snippets/platforms/ArduinoCore-${artifact}-${CORE_TAG}.json
             ./extra/gen_package_index_json.sh ${artifact} ${ARTIFACT_FILE} ${PACKAGE_JSON}
           done
 
       - name: Archive package index snippets
         uses: actions/upload-artifact@v7
         with:
-          name: ArduinoCore-zephyr-${{ env.CORE_TAG }}-jsons
-          path: ArduinoCore-*-${{ env.CORE_TAG }}.json
+          name: snippets-${{ env.CORE_TAG }}
+          path: snippets/
+
+  ci-builds-upload:
+    name: Upload to ci-builds
+    if: ${{ github.event_name == 'push' && github.repository == 'arduino/ArduinoCore-zephyr' }}
+    runs-on: ubuntu-latest
+    needs:
+      - build-env
+      - verify-core
+      - prepare-json
+    permissions:
+      id-token: write   # required to obtain the OIDC token
+    steps:
+      # Run the composite action in this context to create a proper OIDC token
+      # for this repo and start the internal workflows.
+      - uses: arduino/core-ci-builds@main
+        with:
+          token: ${{ secrets.CI_BUILDS_TOKEN }}
+          version: ${{ needs.build-env.outputs.CORE_VER }}
+          artifact: snippets-${{ needs.build-env.outputs.CORE_TAG }}
+          base-branch: ${{ needs.build-env.outputs.CORE_BRANCH }}

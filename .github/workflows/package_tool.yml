@@ -102,7 +102,12 @@ jobs:
           cache: false
 
       - name: Build and package tool
-        run: extra/package_tool.sh tools/${{ matrix.tool }} ${{ matrix.version }}
+        run: |
+          mkdir -p snippets/tools snippets/metadata
+          extra/package_tool.sh tools/${{ matrix.tool }} ${{ matrix.version }}
+          mv distrib/*.json snippets/tools/
+          # metadata dir is empty, but is still required to preserve the
+          # directory structure in the generated artifacts
 
       - name: Upload tool artifact
         uses: actions/upload-artifact@v7
@@ -113,12 +118,11 @@ jobs:
             distrib/*.zip
           retention-days: 7
 
-      - name: Upload JSON artifact
+      - name: Upload JSON snippet
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.tool }}-${{ matrix.version }}.json
-          path: distrib/*.json
-          archive: false
+          name: snippet-${{ matrix.tool }}-${{ matrix.version }}
+          path: snippets/
 
   # Upload the built tool packages to the S3 bucket for public distribution.
 
@@ -167,3 +171,24 @@ jobs:
           # A failure here means either the build or publish step failed when it was expected to run.
           [ ${{ needs.build-tool.result }} == "success" ] && \
             ( [ ${{ needs.publish-tool.result }} == "success" ] || [ ${{ needs.publish-tool.result }} == "skipped" ] )
+
+  ci-builds-upload:
+    name: Upload to ci-builds
+    if: fromJSON(needs.setup.outputs.is_release)
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+      - build-tool
+      - publish-tool
+      - verify-tool
+    permissions:
+      id-token: write   # required to obtain the OIDC token
+    steps:
+      # Run the composite action in this context to create a proper OIDC token
+      # for this repo and start the internal workflows.
+      - uses: arduino/core-ci-builds@main
+        with:
+          token: ${{ secrets.CI_BUILDS_TOKEN }}
+          version: ${{ needs.build-env.outputs.CORE_VER }}
+          artifact: snippets-${{ needs.build-env.outputs.CORE_TAG }}
+          base-branch: ${{ needs.build-env.outputs.CORE_BRANCH }}
