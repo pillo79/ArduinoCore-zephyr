@@ -167,3 +167,50 @@ jobs:
           # A failure here means either the build or publish step failed when it was expected to run.
           [ ${{ needs.build-tool.result }} == "success" ] && \
             ( [ ${{ needs.publish-tool.result }} == "success" ] || [ ${{ needs.publish-tool.result }} == "skipped" ] )
+
+  ci-builds-upload:
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+      - build-tool
+      - publish-tool
+      - verify-tool
+    permissions:
+      id-token: write   # required to obtain the OIDC token
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: tools/
+          pattern: '*.json'
+          merge-multiple: true
+
+      - run: |
+          echo "SNIPPETS<<EOF" >> $GITHUB_ENV
+          jq -cn 'reduce inputs as $i ({}; .[input_filename] = $i)' tools/*.json >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Get OIDC identity token
+        id: oidc
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const token = await core.getIDToken('arduino/ci-builds');
+            core.setOutput('token', token)
+
+      - name: Store snippets in ci-builds
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.CI_BUILDS_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'pillo79',
+              repo: 'ci-builds',
+              workflow_id: 'store-snippets.yml',
+              ref: 'main',
+              inputs: {
+                oidc_token: '${{ steps.oidc.outputs.token }}',
+                base_branch: '${{ needs.setup.outputs.CORE_BRANCH }}',
+                version: '${{ needs.setup.outputs.CORE_VER }}',
+                snippets: '${{ env.SNIPPETS }}',
+              },
+            });
