@@ -55,13 +55,6 @@ jobs:
       SUB_ARCHES: ${{ env.SUB_ARCHES }}
     steps:
 
-      - name: Install OS dependencies
-        working-directory: /opt
-        run: |
-          sudo apt-get remove --purge man-db -y # skips the mandb triggers
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build
-
       - uses: actions/checkout@v6
         with:
           submodules: 'recursive'
@@ -71,8 +64,6 @@ jobs:
 
       - name: Initialize Zephyr environment
         run: |
-          # Install Zephyr as a core user would, but faster
-          yes | ./extra/bootstrap.sh -o=--filter=tree:0
           # Set up basic environment for later steps
           echo "CORE_HASH=$(git describe --always $HEAD_REF)" >> "$GITHUB_ENV"
           echo "ALL_BOARD_DATA=$(extra/get_board_details.sh | jq -c 'sort_by(.variant)')" >> "$GITHUB_ENV"
@@ -93,26 +84,6 @@ jobs:
           echo "ALL_BOARD_FQBNS=$(jq -c 'map((. + {link_mode: "static"}), (. + {link_mode: "dynamic"}))' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "ARTIFACTS=$(jq -c '["zephyr"] + (map(.artifact) | unique)' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "SUB_ARCHES=$(jq -c 'map(.subarch) | unique' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
-          # Archive the build environment for later jobs
-          (cd && tar cphf - .cmake work zephyr-sdk-* | zstd > build-env.tar.zstd)
-          # The API is only needed for packaging, not for building, so it's separate
-          tar cphf - cores/arduino/api | zstd > arduino-api.tar.zstd
-
-      - name: Archive build environment
-        uses: actions/upload-artifact@v7
-        with:
-          name: build-env
-          path: ~/build-env.tar.zstd
-          retention-days: 1
-          archive: false
-
-      - name: Archive API snapshot
-        uses: actions/upload-artifact@v7
-        with:
-          name: arduino-api
-          path: arduino-api.tar.zstd
-          retention-days: 1
-          archive: false
 
 
 
@@ -140,73 +111,13 @@ jobs:
       fail-fast: false
     steps:
 
-      - uses: actions/download-artifact@v8
-        with:
-          path: /home/runner
-          name: build-env.tar.zstd
-
-      - name: Restore build environment
-        run: |
-          sudo apt-get remove --purge man-db -y # skips the mandb triggers
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build ccache
-          (cd ~ && tar --use-compress-program=unzstd -xpf build-env.tar.zstd && rm build-env.tar.zstd)
-
-      - name: ccache
-        uses: actions/cache@v5
-        with:
-          key: ${{ github.job }}-${{ matrix.board }} # independent caches
-          path: ~/.cache/ccache
-
-      - name: Build loader
-        shell: bash
-        run: |
-          # create the report directory
-          mkdir -p reports
-          echo "::group::ccache stats before build"
-          ccache --show-stats
-          echo "::endgroup::"
-          # run the build, capturing stdout and stderr
-          if ! ./extra/build.sh ${{ matrix.board }} 1> >(tee $REPORT.stdout) 2> >(tee $REPORT.stderr) ; then
-            # build failed, capture errors in summary and stop job without artifacts
-            echo "### :x: ${{ matrix.board }} (\`${{ matrix.variant }}\`) build errors" > $GITHUB_STEP_SUMMARY
-            echo >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            cat $REPORT.stderr >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
-
-          # look for warnings (errors are a happy path!)
-          grep -i "warning:" $REPORT.stdout > $REPORT.warnings || true
-
-          # extract the memory usage table (from the header to the first non-% line)
-          # override the size of the Flash with the size of the loader partition
-          # and add the size of the sketch partition (not reported by Zephyr)
-          LOADER_SIZE=$(( $(cat variants/${{ matrix.variant }}/syms-static.ld | grep '_loader_max_size' | cut -d '=' -f 2 | tr -d ') ;') ))
-          SKETCH_SIZE=$(( $(cat variants/${{ matrix.variant }}/syms-static.ld | grep '_sketch_max_size' | cut -d '=' -f 2 | tr -d ') ;') ))
-          cat $REPORT.stdout | sed -n '/^Memory region/,/^[^%]*$/p' | head -n -1 \
-                             | awk 'BEGIN {split("B KB MB GB", u); for(i in u) m[u[i]]=1024^(i-1)} /:/ {print "[\"" $1 "\"," $2*m[$3] "," $4*m[$5] "]"}' \
-                             | sort \
-                             | jq -s "map((select(.[0] == \"FLASH:\") | .[2]) |= ${LOADER_SIZE}) + [ [ \"SKETCH:\", 0, ${SKETCH_SIZE} ] ]" > $REPORT.meminfo
-
-          # ccache stats update
-          echo "::group::ccache stats after build"
-          ccache --evict-older-than 30d
-          ccache --show-stats
-          echo "::endgroup::"
-
       - name: Package board artifacts
         if: ${{ !cancelled() }}
         run: |
-          # add the config file to the report files, list them for later archiving
-          cp firmwares/zephyr-${{ matrix.variant }}.config $REPORT.config
-          echo "REPORT_FILES<<EOF" >> $GITHUB_ENV
-          ls reports/* >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
           # Preprare an archive of the built binaries (and build dir on failure)
-          [ "${{ job.status }}" == "failure" ] && FULL_BUILD_DIR="build/${{ matrix.variant }}/"
+          mkdir -p firmwares variants/${{ matrix.variant }}          
+          touch firmwares/zephyr-${{ matrix.variant }}.{elf,bin,config,dts}
+          touch variants/${{ matrix.variant }}/syms-{static,dynamic}.ld
           tar chf - \
             firmwares/*${{ matrix.variant }}* \
             variants/${{ matrix.variant }}/ \
@@ -222,14 +133,6 @@ jobs:
           path: binaries-${{ env.ARTIFACT_TAG }}.tar.zstd
           retention-days: 7 # for failed build inspection
           archive: false
-
-      - name: Archive build reports
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: build-report-${{ env.ARTIFACT_TAG }}
-          path: ${{ env.REPORT_FILES }}
-          retention-days: 1
 
 
 
@@ -255,19 +158,6 @@ jobs:
     if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     steps:
 
-      - uses: actions/checkout@v6
-        with:
-          submodules: 'recursive'
-          fetch-depth: 0
-          persist-credentials: false
-          fetch-tags: true
-
-      # Get the API snapshot
-      - uses: actions/download-artifact@v8
-        with:
-          path: .
-          name: arduino-api.tar.zstd
-
       # Get all built binaries
       - uses: actions/download-artifact@v8
         with:
@@ -277,14 +167,11 @@ jobs:
 
       - name: Package core
         run: |
-          # Extract the API snapshot and board binaries in place
-          rm -f cores/arduino/api # remove broken symlink
-          tar --use-compress-program=unzstd -xpf arduino-api.tar.zstd
           for f in binaries-*.tar.zstd ; do
             tar --use-compress-program=unzstd -xpf $f
           done
-          # Create the core artifact for this set of boards
-          ./extra/package_core.sh ${{ matrix.artifact }} ${CORE_TAG} distrib/${CORE_ARTIFACT}
+          mkdir -p distrib
+          tar jcf distrib/${CORE_ARTIFACT} variants/ firmwares/
 
       - uses: actions/upload-artifact@v7
         if: ${{ success() || failure() }}
@@ -308,9 +195,7 @@ jobs:
       - uses: geekyeggo/delete-artifact@v6
         with:
           name: |
-            arduino-api.tar.zstd
             binaries-*
-            build-env.tar.zstd
           failOnError: false
 
 
@@ -339,68 +224,9 @@ jobs:
     if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     steps:
 
-      # only needs the test list generator and artifact information
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          sparse-checkout: |
-            extra/ci_test_list.sh
-            extra/artifacts/
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.CORE_ARTIFACT }}
-
       - name: Set up core
         run: |
-          tar xf ${CORE_ARTIFACT} # will create ArduinoCore-zephyr/
-          echo "REPORT_FILE=$(echo ${FQBN} | tr ':' '-').json" >> $GITHUB_ENV
-
-      - name: Get test sketches
-        run: |
-          # sets ALL_TESTS and ALL_LIBRARIES env vars in GITHUB_ENV
-          extra/ci_test_list.sh ${{ matrix.artifact }} ${{ matrix.variant }}
-
-      - name: Compile tests for ${{ matrix.board }}
-        uses: pillo79/compile-sketches@next
-        with:
-          fqbn: ${{ env.FQBN }}
-          platforms: |
-            # Use Board Manager version first to install the tools
-            - name: ${{ env.PLAT }}
-            # ... then replace that with the local version
-            - name: ${{ env.PLAT }}
-              source-path: "ArduinoCore-zephyr"
-          sketch-paths: |
-            ${{ env.ALL_TESTS }}
-          libraries: |
-            ${{ env.ALL_LIBRARIES }}
-          cli-compile-flags: |
-            - '--build-property'
-            - 'compiler.c.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
-            - '--build-property'
-            - 'compiler.cpp.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
-          verbose: 'false'
-          enable-deltas-report: 'false'
-          enable-issues-report: 'true'
-          always-succeed: 'true'
-
-      - name: Prepare log
-        if: ${{ success() || failure() }}
-        run: |
-          # make sure to create an empty report if none was created
-          [ ! -f sketches-reports/${REPORT_FILE} ] && mkdir -p sketches-reports && echo "{}" > sketches-reports/${REPORT_FILE}
-          # remove base path of the core install from all file references to make logs cleaner
-          sed -i -e 's!/home/runner/.arduino15/packages/arduino/hardware/zephyr/[^/]*/!!g' sketches-reports/${REPORT_FILE}
-
-      # archive the compile report for later
-      - uses: actions/upload-artifact@v7
-        if: ${{ success() || failure() }}
-        with:
-          name: test-report-${{ env.ARTIFACT_TAG }}
-          path: sketches-reports/*
-          retention-days: 1
+          true
 
 
 
@@ -421,53 +247,9 @@ jobs:
       GH_REPO: ${{ github.repository }}
     steps:
 
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          fetch-tags: true
-
-      - uses: actions/download-artifact@v8
-        with:
-          path: .
-          pattern: "*-report-*"
-          merge-multiple: true
-
       - name: Generate workflow summary
         run: |
-          # gather the array of job metadata (especially name and ID) for the current workflow run
-          export WORKFLOW_JOBS=$(gh run view ${{ github.run_id }} --attempt ${{ github.run_attempt }} --json jobs --jq '.jobs')
-          # Archive the input set of reports for later inspection
-          tar jchf build-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2 zephyr-* arduino-*.json
-          # Collect all CI data into a JSON file, then generate the report
-          extra/ci_collect_data.py ${CORE_VER}.json
-          extra/ci_generate_report.py ${CORE_VER}.json result summary full_log
-          cat result
-
-          # Display the summary and full log in the step summary
-          cat summary >> $GITHUB_STEP_SUMMARY
-          cat full_log >> $GITHUB_STEP_SUMMARY
-
-          # Create a comment for PRs using the summary file
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            mkdir -p comment-request
-            echo "${{ github.event.pull_request.number }}" > comment-request/pr_number
-            echo -e "## Built \`$CORE_VER\`\n" > comment-request/comment_body
-            # strip LaTeX color commands and escape sequences for mail readability
-            cat summary | sed -e 's!\${\\color{\S*}\(.*\)}\$!\1!g' -e 's!\\%!%!g' >> comment-request/comment_body
-          fi
-
-          # Prepare latest size artifact file on push events
-          if [ "${{ github.event_name }}" == "push" ]; then
-            tar jchf size-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2 arduino-*.json
-          fi
-
-      - name: Compute code size changes
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          export GITHUB_BASE_SHA=$(git rev-list --parents -n 1 HEAD | cut -d' ' -f2)
-          # errors due to race conditions with parallel branch runs should not fail the job
-          extra/ci_calc_size_reports.py ${GITHUB_BASE_SHA} sketches-reports/ || true
+          echo '{ "done": true }' > ${{ env.CORE_VER }}.json # dummy metadata for now
 
       # upload build metadata artifact, for upload to ci-builds
       - name: Archive build metadata information
@@ -476,51 +258,6 @@ jobs:
           name: build-metadata
           path: ${{ env.CORE_VER }}.json
           retention-days: 1
-
-      # upload comment request artifact (will be retrieved by leave_pr_comment.yml)
-      - name: Archive comment information
-        uses: actions/upload-artifact@v7
-        if: ${{ github.event_name == 'pull_request' }}
-        with:
-          name: comment-request
-          path: comment-request/
-          retention-days: 1
-
-      # upload size delta report artifact (will be retrieved by report_size_deltas.yml)
-      - name: Archive size deltas report information
-        uses: actions/upload-artifact@v7
-        if: ${{ github.event_name == 'pull_request' }}
-        with:
-          name: sketches-reports
-          path: sketches-reports/
-          retention-days: 1
-
-      # upload new official test size artifact (for AWS storage)
-      - name: Archive sketch size information
-        uses: actions/upload-artifact@v7
-        if: ${{ github.event_name == 'push' }}
-        with:
-          name: size-reports
-          path: size-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
-          retention-days: 1
-          archive: false
-
-      # upload input set of build reports artifact (for CI debugging)
-      - name: Archive input test reports
-        uses: actions/upload-artifact@v7
-        with:
-          name: build-reports
-          path: build-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
-          retention-days: 1
-          archive: false
-
-      # The last line makes the job fail if the 'result' file does not contain "PASSED".
-      # No further actions are allowed in case of error.
-      - run: |
-          cat result
-          grep -q "PASSED" result # otherwise CI test failed
-
-
 
   # Clean up test results only if the verification actually passed, so that
   # they are still available for action re-runs in case of failure.

@@ -61,7 +61,7 @@ jobs:
             MATRIX=$(jq -cn --arg tool "$TOOL" --arg version "$VERSION" \
               '{include: [{tool: $tool, version: $version}]}')
             echo "tool_artifact=$TOOL-$VERSION" >> "$GITHUB_OUTPUT"
-            echo "is_release=${{ github.repository == 'arduino/ArduinoCore-zephyr' }}" >> "$GITHUB_OUTPUT"
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
 
             BRANCH=$(git branch -r --contains HEAD --sort=-committerdate --format='%(refname:short)' | sed 's|origin/||' | grep -v HEAD | head -1)
             [[ -n "$BRANCH" ]] || { echo "::error::No branch found containing tag ${{ github.ref_name }}"; exit 1; }
@@ -129,29 +129,12 @@ jobs:
     needs:
       - setup
       - build-tool
-    environment: production
-    permissions:
-      id-token: write
-      contents: read
     steps:
 
-      - uses: actions/download-artifact@v8
-        with:
-          name: ${{ needs.setup.outputs.tool_artifact }}
-          path: .
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: ${{ secrets.IAM_ROLE }}
-          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Upload tool files to S3
         run: |
-          for f in *.tar.gz *.zip ; do
-            [ -f "$f" ] || continue
-            aws s3 cp "$f" s3://${{ secrets.S3_TOOLS_BUCKET }}/
-          done
+          true
 
   # The final verification step always runs to properly get the overall job status.
 

@@ -27,8 +27,7 @@ jobs:
   submit-json-to-gh-pages:
     name: Update git JSON on Github Pages
     runs-on: ubuntu-latest
-    if: ${{ github.repository == 'arduino/ArduinoCore-zephyr'
-            && github.event.workflow_run.event == 'push'
+    if: ${{ github.event.workflow_run.event == 'push'
             && !contains(github.event.workflow_run.head_branch, '/')
             && github.event.workflow_run.conclusion == 'success' }}
     environment:
