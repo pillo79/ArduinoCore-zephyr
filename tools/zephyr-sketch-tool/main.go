@@ -20,7 +20,23 @@ func main() {
 	var force = flag.Bool("force", false, "Ignore safety checks and overwrite the header")
 	var add_header = flag.Bool("add_header", false, "Add space for the header to the file")
 
+	// OTA mode: produce .ota update files from a mangled sketch + loader.
+	var ota = flag.Bool("ota", false, "OTA mode: produce .ota update files")
+	var otaLoader = flag.String("ota-loader", "", "[ota] loader binary path")
+	var otaSketch = flag.String("ota-sketch", "", "[ota] sketch binary path (the mangled -zsk.bin artifact)")
+	var otaOffset = flag.String("ota-offset", "", "[ota] sketch offset in merged binary (hex)")
+	var otaMagic = flag.String("ota-magic", "", "[ota] board magic number (hex, 32-bit)")
+
 	flag.Parse()
+
+	if *ota {
+		if err := runOTA(*otaLoader, *otaSketch, *otaOffset, *otaMagic, *otaSketch); err != nil {
+			fmt.Printf("OTA error: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	if flag.NArg() != 1 {
 		fmt.Printf("Usage: %s [flags] <filename>\n", os.Args[0])
 		flag.PrintDefaults()
