@@ -255,6 +255,18 @@
 	status = "okay";
 };
 
+&usart3_rx_pb11 {
+	bias-pull-up;
+};
+
+&usart3 {
+	status = "okay";
+	zephyr,deferred-init;
+	pinctrl-0 = <&usart3_tx_pb10 &usart3_rx_pb11>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+};
+
 &lpuart1 {
 	status = "okay";
 	zephyr,deferred-init;
@@ -377,7 +389,7 @@
 					<&gpioc 0 0>;
 
 		arduino,router-serial = <&lpuart1>; /* 'Serial' is provided by the Monitor */
-		serials = <&usart1>, <&lpuart1>;
+		serials = <&usart1>, <&lpuart1>, <&usart3>;
 		cans = <&fdcan1>;
 		i2cs = <&i2c2>, <&i2c4>, <&i2c3>;
 		spis = <&spi2>, <&spi3>;
