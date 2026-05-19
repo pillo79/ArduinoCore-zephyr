@@ -232,7 +232,7 @@
                     };
 
                     user_sketch: partition@e0000 {
-                        reg = <0x0E0000 0x20000>;
+                        reg = <0x000E0000 0x00040000>;
                     };
                 };
             };
@@ -289,6 +289,12 @@
                 <&pwm12 1 PWM_HZ(1000) PWM_POLARITY_NORMAL>;
     };
 };
+
+&sram1 {
+	reg = <0x30000000 DT_SIZE_K(256)>;
+};
+
+/delete-node/ &sram2;
 
 /* Include common flash filesystem configuration */
 qspi_flash: &n25q128a1 {};
