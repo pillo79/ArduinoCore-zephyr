@@ -91,9 +91,10 @@
 	/* usart9 is not set as deferred-init to catch early boot logs since it is assigned to zephyr,console */
 };
 
-&spi1 {
+/* spi1 currently not set to deferred-init to fix esp32 init */
+/* &spi1 {
 	zephyr,deferred-init;
-};
+}; */
 
 &sci3 {
 	status = "okay";
