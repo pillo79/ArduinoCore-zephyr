@@ -14,6 +14,7 @@
 /{
 	chosen {
 		zephyr,log-uart = &log_uarts;
+		arduino,eth-clock = &eth_clock;
 	};
 
 	log_uarts: log_uarts {
@@ -90,11 +91,6 @@
 	status = "okay";
 	/* usart9 is not set as deferred-init to catch early boot logs since it is assigned to zephyr,console */
 };
-
-/* spi1 currently not set to deferred-init to fix esp32 init */
-/* &spi1 {
-	zephyr,deferred-init;
-}; */
 
 &sci3 {
 	status = "okay";
@@ -233,6 +229,29 @@
 	pinctrl-names = "default", "sleep", "arduino";
 	interrupts = <71 1>, <72 1>;
 	interrupt-names = "gtioca", "overflow";
+};
+
+&pwm6 {
+	status = "okay";
+	zephyr,deferred-init;
+	pinctrl-0 = <&empty_default>;
+	pinctrl-1 = <&empty_default>;
+	pinctrl-2 = <&pwm6_default>;
+	pinctrl-names = "default", "sleep", "arduino";
+	interrupts = <63 1>, <64 1>;
+	interrupt-names = "gtioca", "overflow";
+
+	eth_clock: pwmclock {
+		zephyr,deferred-init;
+	};
+};
+
+&mdio {
+	zephyr,deferred-init;
+
+	phy: ethernet-phy@0 {
+		zephyr,deferred-init;
+	};
 };
 
 &adc0 {

@@ -45,6 +45,7 @@
 		compatible = "galaxycore,gc2145";
 		reg = <0x3c>;
 		status = "okay";
+		zephyr,deferred-init;
 
 		reset-gpios = <&gpioe 3 GPIO_ACTIVE_LOW>;
 		pwdn-gpios = <&gpiod 5 GPIO_ACTIVE_LOW>;
@@ -149,6 +150,7 @@
 	/* Camera source clock */
 	pwmclock: pwmclock {
 		status = "okay";
+		zephyr,deferred-init;
 		compatible = "pwm-clock";
 		clock-frequency = <0>;
 		#clock-cells = <1>;
@@ -171,6 +173,7 @@
 
 &dcmi {
 	status = "okay";
+	zephyr,deferred-init;
 	/* ext-sdram = <&sdram1>; */
 	pinctrl-0 = <&dcmi_hsync_pa4 &dcmi_pixclk_pa6 &dcmi_vsync_pi5
 		     &dcmi_d0_ph9 &dcmi_d1_ph10 &dcmi_d2_ph11 &dcmi_d3_ph12
@@ -296,6 +299,8 @@
 		zephyr,shell-uart = &usart6;
 		zephyr,cdc-acm-uart0 = &usart6;
 		zephyr,log-uart = &log_uarts;
+		arduino,camera-clock = &pwmclock;
+		arduino,eth-clock = &pwmclock;
 	};
 
 	log_uarts: log_uarts {
