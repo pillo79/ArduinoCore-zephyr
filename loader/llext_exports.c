@@ -15,6 +15,7 @@
 #include <zephyr/kernel.h>
 #include <time.h>
 #include <zephyr/drivers/pinctrl.h>
+#include <zephyr/device.h>
 
 #define FORCE_EXPORT_SYM(name)                                                                     \
 	extern void name(void);                                                                        \
@@ -427,4 +428,13 @@ EXPORT_SYMBOL(arm_irq_priority_set);
 
 #if defined(__arm__)
 EXPORT_SYMBOL(SystemCoreClock);
+#endif
+
+#if defined(CONFIG_DEVICE_DEPS)
+EXPORT_SYMBOL(device_from_handle);
+/* symbols required by device_from_handle */
+STRUCT_SECTION_START_EXTERN(device);
+STRUCT_SECTION_END_EXTERN(device);
+EXPORT_SYMBOL(TYPE_SECTION_START(device));
+EXPORT_SYMBOL(TYPE_SECTION_END(device));
 #endif

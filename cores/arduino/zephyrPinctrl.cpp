@@ -5,6 +5,7 @@
  */
 
 #include <Arduino.h>
+#include <zephyr/device.h>
 #include <zephyr/drivers/pinctrl.h>
 
 namespace zephyr {
@@ -66,6 +67,48 @@ static const struct pinctrl_dev_config *get_known_pcfg(const struct device *dev)
 	return nullptr;
 }
 
+static int init_device_with_dependencies(const struct device *dev) {
+#if defined(CONFIG_DEVICE_DEPS)
+	// Recurse on all dependencies
+	size_t handle_count = 0;
+	const device_handle_t *handles = device_required_handles_get(dev, &handle_count);
+	if (handles != nullptr) {
+		for (size_t i = 0; i < handle_count; i++) {
+			const struct device *dep_dev = device_from_handle(handles[i]);
+			if (dep_dev == nullptr) {
+				continue;
+			}
+			int ret = init_device_with_dependencies(dep_dev);
+			if (ret < 0) {
+				return ret;
+			}
+		}
+	}
+#endif
+
+	// Initialize the device
+	if (!device_is_ready(dev)) {
+		int ret = device_init(dev);
+		if (ret != 0 && ret != -EALREADY) {
+			return ret;
+		}
+	}
+
+	/*
+	 * If the device is without pinctrl or pinctrl_apply_state returns -ENOENT because no pins where
+	 * defined in PINCTRL_STATE_DEFAULT this should not be treated as an error, so just continue.
+	 */
+	const struct pinctrl_dev_config *pcfg = get_known_pcfg(dev);
+	if (pcfg != nullptr) {
+		int ret = pinctrl_apply_state(pcfg, PINCTRL_STATE_DEFAULT);
+		if (ret < 0 && ret != -ENOENT) {
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
 /**
  * @brief Initialize the peripheral and acquire a single pin to ARDUINO state.
  *
@@ -94,8 +137,9 @@ int init_dev_apply_channel_pinctrl(const struct device *dev, size_t state_pin_id
 	const struct pinctrl_dev_config *pcfg = get_known_pcfg(dev);
 
 	if (pcfg == nullptr) {
-		/* Device not in DT mapping - add to pinctrl_map if needed */
-		return -ENOTSUP;
+		/* Device not in DT mapping, add to pinctrl_map if needed. Don't return an error because
+		 * the device has been initialized successfully. */
+		return 0;
 	}
 
 	int err = pinctrl_lookup_state(pcfg, PINCTRL_STATE_ARDUINO, &state);
@@ -123,29 +167,17 @@ int init_dev_apply_channel_pinctrl(const struct device *dev, size_t state_pin_id
 
 /**
  * @brief Optimize peripheral transitions applying pinctrl state PINCTRL_STATE_DEFAULT.
+ * Before initializing the device itself, also ensure its dependencies are initialized and apply the
+ * pinctrl state to them as well if required.
  *
  * @param dev Target peripheral device to acquire pin for
  */
 int init_dev_apply_pinctrl(const struct device *dev) {
-
 	if (dev == nullptr) {
 		return -EINVAL;
 	}
 
-	if (!device_is_ready(dev)) {
-		int ret = device_init(dev);
-		if (ret != 0 && ret != -EALREADY) {
-			return ret;
-		}
-	}
-
-	const struct pinctrl_dev_config *pcfg = get_known_pcfg(dev);
-	if (pcfg == nullptr) {
-		/* Device not in DT mapping - add to pinctrl_map if needed */
-		return -ENOTSUP;
-	}
-
-	return pinctrl_apply_state(pcfg, PINCTRL_STATE_DEFAULT);
+	return init_device_with_dependencies(dev);
 }
 
 } // namespace arduino

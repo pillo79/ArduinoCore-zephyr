@@ -37,7 +37,7 @@ Typical mapping:
 - sleep: optional low-power/disconnected state (not used)
 - arduino: custom channel list used for per-pin restore (mainly ADC/PWM/DAC)
 
-## Runtime Infrastructure in zephyrCommon.cpp
+## Runtime Infrastructure in zephyrPinctrl.cpp
 
 The core builds a runtime map between devices and pinctrl configs. 
 
@@ -49,13 +49,18 @@ The map is then used by APIs:
 - init_dev_apply_pinctrl(dev)
 - init_dev_apply_channel_pinctrl(dev, state_pin_idx)
 
-If a device has no known pinctrl config in the map, APIs return -ENOTSUP.
+If a device has no known pinctrl config in the map:
+
+- init_dev_apply_channel_pinctrl(...) returns -ENOTSUP,
+- init_dev_apply_pinctrl(...) still initializes the device/dependencies but skips pinctrl apply for entries
+    not present in the map.
 
 ## Dynamic Pinmux APIs and Runtime Flow
 
 ### init_dev_apply_pinctrl(dev)
 
-Purpose: apply the whole pinctrl PINCTRL_STATE_DEFAULT state to a device.
+Purpose: initialize the target device and its dependencies, then apply the whole pinctrl
+PINCTRL_STATE_DEFAULT state where pinctrl configuration is known.
 
 Used for full peripheral remux, to restore the default state.
 
@@ -63,8 +68,10 @@ SPI (SPI.begin), I2C (Wire.begin) and UART (ZephyrSerial::begin) calls init_dev_
 
 Behavior details:
 
-- initializes the device on first use if needed,
-- applies PINCTRL_STATE_DEFAULT from the device pinctrl config.
+- recursively initializes required dependencies first,
+- initializes each device on first use if needed,
+- applies PINCTRL_STATE_DEFAULT from known device pinctrl configs,
+- treats -ENOENT from pinctrl_apply_state as non-fatal (for empty/default-less states).
 
 ### init_dev_apply_channel_pinctrl(dev, state_pin_idx)
 
@@ -153,8 +160,11 @@ Use deferred init and provide usual default/sleep states.
 
 Same pattern applies to i2cX and uartX.
 
-Recommendation: keep the UART selected as `zephyr,log-uart` out of deferred-init.
-If it is marked as deferred-init, early error logs generated during system startup or sketch load may not be visible.
+Note: the runtime map explicitly includes the node selected as `zephyr,console` even when it is
+not deferred-init.
+
+Recommendation: keep the UART used for early logs available from boot; if it is deferred-init,
+early error logs generated during system startup or sketch load may not be visible.
 
 ### For channel-based ADC/PWM/DAC nodes
 
