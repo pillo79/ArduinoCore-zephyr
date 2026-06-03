@@ -87,13 +87,23 @@ bool WiFiClass::beginAP(char *ssid, char *passphrase, int channel, bool blocking
 }
 
 int WiFiClass::status() {
-	sta_iface = net_if_get_wifi_sta();
-	netif = sta_iface;
-	if (net_mgmt(NET_REQUEST_WIFI_IFACE_STATUS, netif, &sta_state,
+	struct wifi_iface_status if_status;
+
+	if (netif == nullptr) {
+		sta_iface = net_if_get_wifi_sta();
+		netif = sta_iface;
+	}
+
+	if (net_mgmt(NET_REQUEST_WIFI_IFACE_STATUS, netif, &if_status,
 				 sizeof(struct wifi_iface_status))) {
 		return WL_NO_SHIELD;
 	}
-	if (sta_state.state >= WIFI_STATE_ASSOCIATED) {
+
+	if (if_status.iface_mode != WIFI_MODE_AP) {
+		memcpy(&sta_state, &if_status, sizeof(sta_state));
+	}
+
+	if (if_status.state >= WIFI_STATE_ASSOCIATED) {
 		return WL_CONNECTED;
 	} else {
 		return WL_DISCONNECTED;
