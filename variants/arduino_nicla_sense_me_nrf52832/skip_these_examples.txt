@@ -12,6 +12,7 @@
 examples/arduino-examples/examples/04.Communication/SerialPassthrough
 
 libraries/Arduino_SecureElement
+libraries/ArduinoBLE
 libraries/Camera
 libraries/Ethernet
 libraries/Storage
