@@ -31,6 +31,10 @@ search_for_sketches_in() {
 }
 
 fetch_and_extract() {
+	# $1: URL of the archive to fetch
+	# $2: Pattern to match the inner folder (e.g. "core-*"
+	# $3: Output folder to move the extracted content to
+	# $4...: Additional paths to search for examples within the extracted content
 	local temp_file=$(mktemp).tar.gz
 	local temp_dir=$(mktemp -d)
 	local link="$1"
@@ -59,7 +63,16 @@ get_latest_release() {
 	local folder="$1"
 	local repo="$2"
 	local project="${repo##*/}"
-	local url=$(curl -s "https://api.github.com/repos/${repo}/releases/latest" | jq -r '.tarball_url')
+	# Retry up to 3 times in case of transient API issues
+	for i in {1..3}; do
+		url=$(curl -s "https://api.github.com/repos/${repo}/releases/latest" | jq -r '.tarball_url')
+		if [ -n "$url" ] && [ "$url" != "null" ]; then
+			break
+		fi
+		echo "Failed to get URL from GitHub API, attempt $i/3."
+		# sleep a random time between 1 and 5 seconds before retrying
+		sleep $((RANDOM % 5 + 1))
+	done
 	shift 2
 
 	echo "::group::Getting latest release for ${repo}"
