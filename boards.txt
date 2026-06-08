@@ -389,56 +389,56 @@ frdm_rw612.bootloader.target=rw612
 
 ##########################################################################################
 
-niclasense.name=Arduino Nicla Sense ME
-niclasense.build.core=arduino
-niclasense.build.crossprefix=arm-zephyr-eabi-
-niclasense.build.compiler_path={runtime.tools.arm-zephyr-eabi-0.16.8.path}/bin/
+nicla_sense.name=Arduino Nicla Sense ME
+nicla_sense.build.core=arduino
+nicla_sense.build.crossprefix=arm-zephyr-eabi-
+nicla_sense.build.compiler_path={runtime.tools.arm-zephyr-eabi-0.16.8.path}/bin/
 
-niclasense.menu.link_mode.dynamic=Dynamic
-niclasense.menu.link_mode.static=Static
-niclasense.menu.link_mode.static.build.link_mode=static
-niclasense.menu.link_mode.static.upload.extension=bin-zsk.bin
+nicla_sense.menu.link_mode.dynamic=Dynamic
+nicla_sense.menu.link_mode.static=Static
+nicla_sense.menu.link_mode.static.build.link_mode=static
+nicla_sense.menu.link_mode.static.upload.extension=bin-zsk.bin
 
-niclasense.build.zephyr_target=arduino_nicla_sense_me
-niclasense.build.zephyr_args=
-niclasense.build.zephyr_hals=hal_nordic
-niclasense.build.artifact=zephyr_main
-niclasense.build.variant=arduino_nicla_sense_me_nrf52832
+nicla_sense.build.zephyr_target=arduino_nicla_sense_me
+nicla_sense.build.zephyr_args=
+nicla_sense.build.zephyr_hals=hal_nordic
+nicla_sense.build.artifact=zephyr_main
+nicla_sense.build.variant=arduino_nicla_sense_me_nrf52832
 
-niclasense.build.extra_flags=
-niclasense.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
-niclasense.build.board=NICLA_SENSE_ME
-niclasense.vid.0=0x2341
-niclasense.pid.0=0x0360
-niclasense.upload_port.0.vid=0x2341
-niclasense.upload_port.0.pid=0x0060
+nicla_sense.build.extra_flags=
+nicla_sense.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
+nicla_sense.build.board=NICLA_SENSE_ME
+nicla_sense.vid.0=0x2341
+nicla_sense.pid.0=0x0360
+nicla_sense.upload_port.0.vid=0x2341
+nicla_sense.upload_port.0.pid=0x0060
 
-niclasense.upload.tool=openocd
-niclasense.upload.tool.default=openocd
-niclasense.upload.protocol=
-niclasense.upload.config=-f target/nrf52.cfg
-niclasense.upload.programmer=-f interface/cmsis-dap.cfg
-niclasense.upload.vid=0x2341
-niclasense.upload.pid=0x0060
-niclasense.upload.interface=0
-niclasense.upload.use_1200bps_touch=false
-niclasense.upload.wait_for_upload_port=false
-niclasense.upload.native_usb=false
-niclasense.upload.target=nrf52
+nicla_sense.upload.tool=openocd
+nicla_sense.upload.tool.default=openocd
+nicla_sense.upload.protocol=
+nicla_sense.upload.config=-f target/nrf52.cfg
+nicla_sense.upload.programmer=-f interface/cmsis-dap.cfg
+nicla_sense.upload.vid=0x2341
+nicla_sense.upload.pid=0x0060
+nicla_sense.upload.interface=0
+nicla_sense.upload.use_1200bps_touch=false
+nicla_sense.upload.wait_for_upload_port=false
+nicla_sense.upload.native_usb=false
+nicla_sense.upload.target=nrf52
 
-niclasense.bootloader.tool=openocd
-niclasense.bootloader.tool.default=openocd
-niclasense.bootloader.vid=0x2341
-niclasense.bootloader.pid=0x0360
-niclasense.bootloader.interface=0
-niclasense.bootloader.file=zephyr-{build.variant}.hex
-niclasense.bootloader.target=nrf52
+nicla_sense.bootloader.tool=openocd
+nicla_sense.bootloader.tool.default=openocd
+nicla_sense.bootloader.vid=0x2341
+nicla_sense.bootloader.pid=0x0360
+nicla_sense.bootloader.interface=0
+nicla_sense.bootloader.file=zephyr-{build.variant}.hex
+nicla_sense.bootloader.target=nrf52
 
-niclasense.debug.tool=gdb
-niclasense.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
-niclasense.debug.server.openocd.scripts.1={programmer.transport_script}
-niclasense.debug.server.openocd.scripts.2=target/nrf52.cfg
-niclasense.debug.cortex-debug.custom.request=attach
+nicla_sense.debug.tool=gdb
+nicla_sense.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
+nicla_sense.debug.server.openocd.scripts.1={programmer.transport_script}
+nicla_sense.debug.server.openocd.scripts.2=target/nrf52.cfg
+nicla_sense.debug.cortex-debug.custom.request=attach
 
 
 ##########################################################################################
