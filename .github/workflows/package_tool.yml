@@ -190,5 +190,5 @@ jobs:
         with:
           token: ${{ secrets.CI_BUILDS_TOKEN }}
           version: ${{ needs.build-env.outputs.CORE_VER }}
-          artifact: snippets-${{ needs.build-env.outputs.CORE_TAG }}
+          artifact: snippets-${{ needs.build-env.outputs.CORE_VER }}
           base-branch: ${{ needs.build-env.outputs.CORE_BRANCH }}
