@@ -26,17 +26,6 @@
 #define DHCP_OPTION_NTP (42)
 
 class NetworkInterface {
-private:
-	uint8_t ntp_server[4];
-	static struct net_mgmt_event_callback mgmt_cb;
-	static struct net_dhcpv4_option_callback dhcp_cb;
-
-	static void event_handler(struct net_mgmt_event_callback *cb, uint64_t mgmt_event,
-							  struct net_if *iface);
-
-	static void option_handler(struct net_dhcpv4_option_callback *cb, size_t length,
-							   enum net_dhcpv4_msg_type msg_type, struct net_if *iface);
-
 protected:
 	struct net_if *netif = nullptr;
 	int dhcp();

@@ -9,61 +9,14 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(sketch, LOG_LEVEL_NONE);
 
-struct net_mgmt_event_callback NetworkInterface::mgmt_cb;
-struct net_dhcpv4_option_callback NetworkInterface::dhcp_cb;
-
-void NetworkInterface::event_handler(struct net_mgmt_event_callback *cb, uint64_t mgmt_event,
-									 struct net_if *iface) {
-	int i = 0;
-
-	ARG_UNUSED(cb);
-
-	if (mgmt_event != NET_EVENT_IPV4_ADDR_ADD) {
-		return;
-	}
-
-	for (i = 0; i < NET_IF_MAX_IPV4_ADDR; i++) {
-		char buf[NET_IPV4_ADDR_LEN];
-
-		if (iface->config.ip.ipv4->unicast[i].ipv4.addr_type != NET_ADDR_DHCP) {
-			continue;
-		}
-
-		LOG_INF("   Address[%d]: %s", net_if_get_by_iface(iface),
-				net_addr_ntop(AF_INET, &iface->config.ip.ipv4->unicast[i].ipv4.address.in_addr, buf,
-							  sizeof(buf)));
-		LOG_INF(
-			"    Subnet[%d]: %s", net_if_get_by_iface(iface),
-			net_addr_ntop(AF_INET, &iface->config.ip.ipv4->unicast[i].netmask, buf, sizeof(buf)));
-		LOG_INF("    Router[%d]: %s", net_if_get_by_iface(iface),
-				net_addr_ntop(AF_INET, &iface->config.ip.ipv4->gw, buf, sizeof(buf)));
-		LOG_INF("Lease time[%d]: %u seconds", net_if_get_by_iface(iface),
-				iface->config.dhcpv4.lease_time);
-	}
-}
-
-void NetworkInterface::option_handler(struct net_dhcpv4_option_callback *cb, size_t length,
-									  enum net_dhcpv4_msg_type msg_type, struct net_if *iface) {
-	char buf[NET_IPV4_ADDR_LEN];
-
-	ARG_UNUSED(length);
-	ARG_UNUSED(msg_type);
-	ARG_UNUSED(iface);
-
-	LOG_INF("DHCP Option %d: %s", cb->option, net_addr_ntop(AF_INET, cb->data, buf, sizeof(buf)));
-}
-
 int NetworkInterface::dhcp() {
-	net_mgmt_init_event_callback(&mgmt_cb, event_handler,
-								 NET_EVENT_IPV4_ADDR_ADD | NET_EVENT_IF_UP | NET_EVENT_IF_DOWN);
-	net_mgmt_add_event_callback(&mgmt_cb);
-
-	net_dhcpv4_init_option_callback(&dhcp_cb, option_handler, DHCP_OPTION_NTP, ntp_server,
-									sizeof(ntp_server));
-
-	net_dhcpv4_add_option_callback(&dhcp_cb);
-
-	net_dhcpv4_start(netif);
+	// If dhcp was never started on this interface, start it, otherwise restart it, so that we force
+	// to ask the dhcp server for a new lease
+	if (netif->config.dhcpv4.state == NET_DHCPV4_DISABLED) {
+		net_dhcpv4_start(netif);
+	} else {
+		net_dhcpv4_restart(netif);
+	}
 
 	LOG_INF("DHCPv4 started...\n");
 
@@ -153,6 +106,10 @@ void NetworkInterface::setMACAddress(const uint8_t *mac) {
 }
 
 int NetworkInterface::begin(bool blocking, uint64_t additional_event_mask) {
+	if (!net_if_is_up(netif)) {
+		net_if_up(netif);
+	}
+
 	dhcp();
 
 	// FIXME: additional_event_mask cannot be ORed here due to how Zephyr
@@ -160,8 +117,11 @@ int NetworkInterface::begin(bool blocking, uint64_t additional_event_mask) {
 	// and register multiple event masks with event_handler instead.
 	ARG_UNUSED(additional_event_mask);
 
-	int ret = net_mgmt_event_wait_on_iface(netif, NET_EVENT_IPV4_ADDR_ADD, NULL, NULL, NULL,
-										   blocking ? K_FOREVER : K_SECONDS(1));
+	int ret = 0;
+	if (blocking && netif->config.dhcpv4.state != NET_DHCPV4_BOUND) {
+		ret = net_mgmt_event_wait_on_iface(netif, NET_EVENT_IPV4_DHCP_BOUND, NULL, NULL, NULL,
+										   K_SECONDS(10));
+	}
 	return (ret == 0) ? 1 : 0;
 }
 
