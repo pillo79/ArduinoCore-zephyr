@@ -189,6 +189,6 @@ jobs:
       - uses: arduino/core-ci-builds@main
         with:
           token: ${{ secrets.CI_BUILDS_TOKEN }}
-          version: ${{ needs.build-env.outputs.CORE_VER }}
-          artifact: snippets-${{ needs.build-env.outputs.CORE_VER }}
-          base-branch: ${{ needs.build-env.outputs.CORE_BRANCH }}
+          version: ${{ needs.setup.outputs.CORE_VER }}
+          artifact: snippet-${{ needs.setup.outputs.tool_artifact }}
+          base-branch: ${{ needs.setup.outputs.CORE_BRANCH }}
