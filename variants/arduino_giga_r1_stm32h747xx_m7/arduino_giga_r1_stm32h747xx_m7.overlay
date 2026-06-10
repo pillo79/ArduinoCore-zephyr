@@ -53,6 +53,7 @@
 	zephyr,deferred-init;
 	gc2145: gc2145@3c {
 		compatible = "galaxycore,gc2145";
+		zephyr,deferred-init;
 		reg = <0x3c>;
 		reset-gpios = <&gpiod 4 GPIO_ACTIVE_LOW>;
 		pwdn-gpios = <&gpioa 1 GPIO_ACTIVE_LOW>;
@@ -173,6 +174,7 @@
 	/* Use the pwmclock node to start the clock generation */
 	pwmclock: pwmclock {
 		status = "okay";
+		zephyr,deferred-init;
 		compatible = "pwm-clock";
 		clock-frequency = <0>;
 		#clock-cells = <1>;
@@ -197,6 +199,7 @@
 
 &dcmi {
 	status = "okay";
+	zephyr,deferred-init;
 	/* ext-sdram = <&sdram1>; */
 	pinctrl-0 = <&dcmi_hsync_ph8 &dcmi_pixclk_pa6 &dcmi_vsync_pi5
 				&dcmi_d0_ph9 &dcmi_d1_ph10 &dcmi_d2_ph11 &dcmi_d3_pg11
@@ -386,6 +389,7 @@
 		zephyr,camera = &dcmi;
 		zephyr,log-uart = &log_uarts;
 		/* zephyr,console = &board_cdc_acm_uart; */
+		arduino,camera-clock = &pwmclock;
 	};
 
 	log_uarts: log_uarts {

@@ -22,8 +22,24 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
+#include <zephyr/devicetree/port-endpoint.h>
+#include <zephyr/drivers/pwm.h>
 #include <zephyr/drivers/video.h>
 #include <zephyr/drivers/video-controls.h>
+#include <zephyrClockInit.hpp>
+#include <zephyrPinctrl.h>
+
+#if !DT_HAS_CHOSEN(zephyr_camera)
+#error "zephyr,camera node is not defined in devicetree"
+#endif
+
+#define CLOCK_NODE DT_CHOSEN(arduino_camera_clock)
+static const struct pwm_dt_spec CLOCK_PWM = PWM_DT_SPEC_GET(CLOCK_NODE);
+
+#define CAMERA_NODE          DT_CHOSEN(zephyr_camera)
+#define CAMERA_PORT_NODE     DT_CHILD(CAMERA_NODE, port)
+#define CAMERA_ENDPOINT_NODE DT_CHILD(CAMERA_PORT_NODE, endpoint)
+#define CAMERA_SENSOR_NODE   DT_NODE_REMOTE_DEVICE(CAMERA_ENDPOINT_NODE)
 
 FrameBuffer::FrameBuffer() : vbuf(NULL) {
 }
@@ -51,15 +67,21 @@ Camera::Camera() : byte_swap(false), yuv_to_gray(false), vdev(NULL) {
 }
 
 bool Camera::begin(uint32_t width, uint32_t height, uint32_t pixformat, bool byte_swap) {
-#if DT_HAS_CHOSEN(zephyr_camera)
-	this->vdev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
-#endif
-
-	if (!this->vdev) {
+	if (zephyr::arduino::init_pwm_ref_clock(DEVICE_DT_GET(CLOCK_NODE), CLOCK_PWM) != 0) {
 		return false;
 	}
 
-	(void)zephyr::arduino::init_dev_apply_pinctrl(this->vdev);
+	// init camera sensor first
+	const struct device *sensor = DEVICE_DT_GET(CAMERA_SENSOR_NODE);
+	if (zephyr::arduino::init_dev_apply_pinctrl(sensor) < 0) {
+		return false;
+	}
+
+	this->vdev = DEVICE_DT_GET(CAMERA_NODE);
+
+	if (zephyr::arduino::init_dev_apply_pinctrl(this->vdev) < 0) {
+		return false;
+	}
 
 	switch (pixformat) {
 	case CAMERA_RGB565:
