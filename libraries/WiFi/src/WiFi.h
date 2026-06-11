@@ -40,7 +40,9 @@ public:
 	char *SSID();
 	int32_t RSSI();
 
-	String firmwareVersion();
+	const char *firmwareVersion();
+
+	bool disconnect() override;
 
 private:
 	struct net_if *sta_iface = nullptr;

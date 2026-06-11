@@ -6,9 +6,12 @@
 
 #include "WiFi.h"
 
+#include <zephyr/logging/log.h>
+LOG_MODULE_DECLARE(sketch, LOG_LEVEL_DBG);
+
 WiFiClass WiFi;
 
-String WiFiClass::firmwareVersion() {
+const char *WiFiClass::firmwareVersion() {
 #if defined(ARDUINO_PORTENTA_C33)
 	return "v1.5.0";
 #else
@@ -31,6 +34,11 @@ int WiFiClass::begin(const char *ssid, const char *passphrase, wl_enc_type secur
 	sta_config.channel = WIFI_CHANNEL_ANY;
 	sta_config.band = WIFI_FREQ_BAND_2_4_GHZ;
 	sta_config.bandwidth = WIFI_FREQ_BANDWIDTH_20MHZ;
+
+	if (!net_if_is_up(netif)) {
+		net_if_up(netif);
+	}
+
 	int ret = net_mgmt(NET_REQUEST_WIFI_CONNECT, sta_iface, &sta_config,
 					   sizeof(struct wifi_connect_req_params));
 	if (ret) {
@@ -60,6 +68,11 @@ bool WiFiClass::beginAP(char *ssid, char *passphrase, int channel, bool blocking
 	ap_config.channel = channel;
 	ap_config.band = WIFI_FREQ_BAND_2_4_GHZ;
 	ap_config.bandwidth = WIFI_FREQ_BANDWIDTH_20MHZ;
+
+	if (!net_if_is_up(netif)) {
+		net_if_up(netif);
+	}
+
 	int ret = net_mgmt(NET_REQUEST_WIFI_AP_ENABLE, ap_iface, &ap_config,
 					   sizeof(struct wifi_connect_req_params));
 	if (ret) {
@@ -74,13 +87,23 @@ bool WiFiClass::beginAP(char *ssid, char *passphrase, int channel, bool blocking
 }
 
 int WiFiClass::status() {
-	sta_iface = net_if_get_wifi_sta();
-	netif = sta_iface;
-	if (net_mgmt(NET_REQUEST_WIFI_IFACE_STATUS, netif, &sta_state,
+	struct wifi_iface_status if_status;
+
+	if (netif == nullptr) {
+		sta_iface = net_if_get_wifi_sta();
+		netif = sta_iface;
+	}
+
+	if (net_mgmt(NET_REQUEST_WIFI_IFACE_STATUS, netif, &if_status,
 				 sizeof(struct wifi_iface_status))) {
 		return WL_NO_SHIELD;
 	}
-	if (sta_state.state >= WIFI_STATE_ASSOCIATED) {
+
+	if (if_status.iface_mode != WIFI_MODE_AP) {
+		memcpy(&sta_state, &if_status, sizeof(sta_state));
+	}
+
+	if (if_status.state >= WIFI_STATE_ASSOCIATED) {
 		return WL_CONNECTED;
 	} else {
 		return WL_DISCONNECTED;
@@ -105,4 +128,19 @@ int32_t WiFiClass::RSSI() {
 		return sta_state.rssi;
 	}
 	return 0;
+}
+
+bool WiFiClass::disconnect() {
+	int ret;
+	if (status() == WL_CONNECTED) {
+		ret = net_mgmt(NET_REQUEST_WIFI_DISCONNECT, netif, NULL, 0);
+
+		if (ret != 0) {
+			LOG_ERR("Error on Wifi Disconnect %d", ret);
+		}
+	}
+
+	ret = NetworkInterface::disconnect();
+
+	return ret;
 }
