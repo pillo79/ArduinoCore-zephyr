@@ -6,13 +6,13 @@
 set -e
 
 get_boards() {
-	cat boards.txt | sed -e 's/#.*//' | grep -E '^.*\.build\.variant=' | sed -e 's/\.build\.variant=.*//'
+	cat boards.txt | sed -e 's/\s*#.*//' | grep -E '^.*\.build\.variant=' | sed -e 's/\.build\.variant=.*//'
 }
 
 get_board_field() {
 	board=$1
 	field=$2
-	cat boards.txt | sed -e 's/#.*//' | grep -E "^$board\\.$field=" | cut -d '=' -f2- | sed -e 's/"/\"/g'
+	cat boards.txt | sed -e 's/\s*#.*//' | grep -E "^$board\\.$field=" | cut -d '=' -f2- | sed -e 's/"/\"/g'
 }
 
 for BOARD in $(get_boards); do
@@ -23,6 +23,7 @@ for BOARD in $(get_boards); do
 	HALS=$(get_board_field $BOARD "build\\.zephyr_hals")
 	ARTIFACT=$(get_board_field $BOARD "build\\.artifact")
 	ARTIFACT=${ARTIFACT:-zephyr_contrib}
+	UPLOAD_OFFSET=$(get_board_field $BOARD "upload\\.offset")
 
 	ARTIFACT_JSON=extra/artifacts/$ARTIFACT.json
 	if ! [ -f "$ARTIFACT_JSON" ] ; then
@@ -49,7 +50,8 @@ for BOARD in $(get_boards); do
 	  "args": "$ARGS",
 	  "hals": "$HALS",
 	  "artifact": "$ARTIFACT",
-	  "subarch": "$SUBARCH"
+	  "subarch": "$SUBARCH",
+	  "upload_offset": "$UPLOAD_OFFSET"
 	}
 EOF
 done | jq -crs .

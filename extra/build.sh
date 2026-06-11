@@ -48,6 +48,7 @@ if ! [ -z "$chosen_board" ]; then
 	board=$(jq -cr '.board' <<< "$chosen_board")
 	target=$(jq -cr '.target' <<< "$chosen_board")
 	args=$(jq -cr '.args' <<< "$chosen_board")
+	upload_offset=$(jq -cr '.upload_offset' <<< "$chosen_board")
 
 	# Check for debug flag and append
 	if [ x$2 == x"--debug" ]; then
@@ -61,6 +62,7 @@ else
 	chosen_board=$(extra/get_board_details.sh | jq -cr ".[] | select(.target == \"$target\") // empty")
 	if [ ! -z "$chosen_board" ]; then
 		board=$(jq -cr '.board' <<< "$chosen_board")
+		upload_offset=$(jq -cr '.upload_offset' <<< "$chosen_board")
 	else
 		log_msg warning "No board for '$target' defined in 'boards.txt'. A proper definition is required to use the core."
 	fi
@@ -134,12 +136,23 @@ get_value_from_text_file() {
 
 update_local_field() {
 	local field=$1
-	local value=$2
+	local value="$2"
+	local comment="$3"
 	local full_field_name="${board}.${field}"
-	local match_regexp="^${full_field_name//./\\.}" # escape dots, match start of line
+	local match_regexp="${full_field_name//./\\.}" # escape dots
 
-	if grep -qE "${match_regexp}" boards.local.txt; then
-		sed -i -e "s/${match_regexp}=.*/${full_field_name}=${value}/" boards.local.txt
+	if [ -n "$comment" ]; then
+		# if there's a comment, add/update it as a commented-out line above the actual field
+		if grep -qE "^# ${match_regexp}:" boards.local.txt; then
+			sed -i -e "s/^# ${match_regexp}:.*/# ${full_field_name}: ${comment}/" boards.local.txt
+		else
+			echo "# ${full_field_name}: ${comment}" >> boards.local.txt
+		fi
+	fi
+
+	# update the actual field line
+	if grep -qE "^${match_regexp}" boards.local.txt; then
+		sed -i -e "s/^${match_regexp}=.*/${full_field_name}=${value}/" boards.local.txt
 	else
 		echo "${full_field_name}=${value}" >> boards.local.txt
 	fi
@@ -162,7 +175,14 @@ EOF
 
 	# sketch load address: start of sketch partition, hex (exact)
 	CODE_ADDR=$(get_value_from_text_file variants/${variant}/syms-static.ld '_sketch_start')
-	update_local_field "upload.address" $CODE_ADDR
+	if [ -z "$upload_offset" ] ; then
+		UPLOAD_ADDR=$CODE_ADDR
+		UPLOAD_ADDR_COMMENT=""
+	else
+		UPLOAD_ADDR=$(printf "0x%X" $((CODE_ADDR - upload_offset)))
+		UPLOAD_ADDR_COMMENT="$CODE_ADDR was offset by $upload_offset from ${board}.upload.offset"
+	fi
+	update_local_field "upload.address" "$UPLOAD_ADDR" "$UPLOAD_ADDR_COMMENT"
 
 	# maximum sketch size: size of sketch partition, decimal (exact limit)
 	CODE_SIZE=$(( $(get_value_from_text_file variants/${variant}/syms-static.ld '_sketch_max_size') ))
