@@ -405,6 +405,7 @@ nicla_sense.build.zephyr_hals=hal_nordic
 nicla_sense.build.artifact=zephyr_main
 nicla_sense.build.variant=arduino_nicla_sense_me_nrf52832
 
+nicla_sense.openocd_cfg=flash_sketch.cfg
 nicla_sense.build.extra_flags=
 nicla_sense.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 nicla_sense.build.board=NICLA_SENSE_ME
@@ -565,6 +566,7 @@ nano_matter.build.zephyr_hals=hal_silabs
 nano_matter.build.artifact=zephyr_main
 nano_matter.build.variant=arduino_nano_matter_mgm240sd22vna
 
+nano_matter.openocd_cfg=flash_sketch.cfg
 nano_matter.build.extra_flags=
 nano_matter.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 nano_matter.build.board=ARDUINO_NANO_MATTER
