@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "Arduino.h"
 #include "zephyr/sys/printk.h"
 #if defined(CONFIG_FILE_SYSTEM)
 #include <zephyr/fs/fs.h>
