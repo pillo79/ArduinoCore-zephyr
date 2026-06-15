@@ -20,4 +20,15 @@ get_branch_tip libraries arduino-libraries/ArduinoBLE master \
 	examples/Peripheral/ButtonLED \
 
 # Arduino_SecureElement
-get_latest_release libraries arduino-libraries/Arduino_SecureElement
+get_latest_release libraries arduino-libraries/Arduino_SecureElement \
+
+# Arduino_GigaDisplayTouch
+get_branch_tip libraries arduino-libraries/Arduino_GigaDisplayTouch main \
+	examples/Touch_Polling \
+	examples/Touch_IRQ \
+
+# Arduino_Video
+get_branch_tip libraries arduino-libraries/Arduino_Video main \
+	examples/ArduinoLogoDrawing \
+	examples/ArduinoLogo \
+	examples/LVGLDemo

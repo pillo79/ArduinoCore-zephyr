@@ -15,3 +15,5 @@ libraries/Storage
 libraries/WiFi
 libraries/Zephyr_SDRAM
 libraries/CAN
+libraries/Arduino_GigaDisplayTouch
+libraries/Arduino_Video

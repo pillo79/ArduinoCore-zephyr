@@ -11,6 +11,8 @@
 libraries/Camera
 libraries/Zephyr_SDRAM
 libraries/CAN
+libraries/Arduino_GigaDisplayTouch
+libraries/Arduino_Video
 
 # no SPI on Opta
 libraries/M95M01
