@@ -194,51 +194,29 @@
 };
 
 /*
- * Flash Partition Layout Override
  * Custom partition layout for Arduino Core compatibility:
  * - mcuboot: 256KB bootloader
  * - image-0: 640KB loader slot
- * - user_sketch: 128KB user data
- * Total: 1MB internal flash
+ * - user_sketch: rest of Flash
  */
+
+&flash0 {
+	reg = <0x8000000 DT_SIZE_K(2048)>;     /* assign all Flash to the M7 */
+	status = "okay";
+
+	partitions {
+		slot0_partition: partition@40000 {
+			label = "image-0";
+			reg = <0x00040000 0x000A0000>;
+		};
+
+		user_sketch: partition@e0000 {
+			reg = <0x000E0000 0x00120000>;
+		};
+	};
+};
+
 / {
-    soc {
-        flash-controller@52002000 {
-            flash0: flash@8000000 {
-                /delete-node/ partitions;
-                compatible = "st,stm32-nv-flash", "soc-nv-flash";
-                write-block-size = <32>;
-                erase-block-size = <DT_SIZE_K(128)>;
-                /* maximum erase time for a 128K sector */
-                max-erase-time = <4000>;
-
-                reg = <0x08000000 DT_SIZE_K(1024)>;
-                status = "okay";
-
-                partitions {
-                    compatible = "fixed-partitions";
-                    #address-cells = <1>;
-                    #size-cells = <1>;
-
-                    boot_partition: partition@0 {
-                            label = "mcuboot";
-                            reg = <0x00000000 0x00040000>;
-                            read-only;
-                    };
-
-                    slot0_partition: partition@40000 {
-                            label = "image-0";
-                            reg = <0x00040000 0x000A0000>;
-                    };
-
-                    user_sketch: partition@e0000 {
-                        reg = <0x000E0000 0x00040000>;
-                    };
-                };
-            };
-        };
-    };
-
     zephyr,user {
         digital-pin-gpios = <&gpiog 12 GPIO_ACTIVE_HIGH>,   /* D0  PG12 */
                             <&gpioa 9 GPIO_ACTIVE_HIGH>,    /* D1  PA9  */
