@@ -16,6 +16,10 @@
 #include <time.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/device.h>
+#if defined(CONFIG_MBEDTLS)
+#include <mbedtls/memory_buffer_alloc.h>
+#include <mbedtls/debug.h>
+#endif
 
 #define FORCE_EXPORT_SYM(name)                                                                     \
 	extern void name(void);                                                                        \
@@ -195,6 +199,12 @@ FORCE_EXPORT_SYM(net_mgmt_event_wait_on_iface);
 #if defined(CONFIG_MBEDTLS)
 FORCE_EXPORT_SYM(tls_credential_add);
 FORCE_EXPORT_SYM(tls_credential_get);
+#if !defined(CONFIG_MBEDTLS_INIT)
+EXPORT_SYMBOL(mbedtls_memory_buffer_alloc_init);
+#endif
+#if defined(CONFIG_MBEDTLS_DEBUG)
+EXPORT_SYMBOL(mbedtls_debug_set_threshold);
+#endif
 #endif
 
 #if defined(CONFIG_WIFI)

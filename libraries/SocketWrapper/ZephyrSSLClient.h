@@ -12,15 +12,35 @@
 #include "zephyr/sys/printk.h"
 #include "ZephyrClient.h"
 
+#if defined(CONFIG_MBEDTLS) && !defined(CONFIG_MBEDTLS_INIT)
+#define ARDUINO_MANAGES_MBEDTLS
+#endif
+
 #if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
 class ZephyrSSLClient : public ZephyrClient {
 
+private:
+#if defined(ARDUINO_MANAGES_MBEDTLS)
+	bool mbedtls_is_ready = false;
+#endif
 public:
+	ZephyrSSLClient();
+
 	int connect(const char *host, uint16_t port) override {
+#if defined(ARDUINO_MANAGES_MBEDTLS)
+		if (!mbedtls_is_ready) {
+			return 0;
+		}
+#endif
 		return connectSSL(host, port, nullptr);
 	}
 
 	int connect(const char *host, uint16_t port, const char *cert) {
+#if defined(ARDUINO_MANAGES_MBEDTLS)
+		if (!mbedtls_is_ready) {
+			return 0;
+		}
+#endif
 		return connectSSL(host, port, cert);
 	}
 };

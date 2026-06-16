@@ -20,7 +20,6 @@
 
 #pragma once
 
-#include "Arduino.h"
 #include "SocketWrapper.h"
 #include "api/Udp.h"
 #include "sys/socket.h"
