@@ -19,3 +19,5 @@ libraries/WiFi
 libraries/Zephyr_SDRAM
 libraries/RTC
 libraries/CAN
+libraries/Arduino_GigaDisplayTouch
+libraries/Arduino_Video

@@ -10,3 +10,5 @@
 
 libraries/Ethernet
 libraries/CAN
+libraries/Arduino_GigaDisplayTouch
+libraries/Arduino_Video

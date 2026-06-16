@@ -10,3 +10,5 @@
 
 libraries/Camera
 libraries/RTC
+libraries/Arduino_GigaDisplayTouch
+libraries/Arduino_Video
