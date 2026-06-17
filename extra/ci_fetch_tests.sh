@@ -66,9 +66,16 @@ get_branch_tip() {
 	echo "::endgroup::"
 }
 
+skip_for_this_board() {
+	: # no-op at fetch time
+}
+
 # Source all test_setup.sh files to pick up any package references
 # (order doesn't matter since we only gather files at fetch time)
 
 for artifact_setup in extra/artifacts/*.test_setup.sh; do
 	. "$artifact_setup"
+done
+for variant_setup in variants/*/test_setup.sh; do
+	. "$variant_setup"
 done

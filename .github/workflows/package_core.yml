@@ -361,6 +361,8 @@ jobs:
           sparse-checkout: |
             extra/ci_apply_tests.sh
             extra/artifacts/
+            variants/*/test_setup.sh
+          sparse-checkout-cone-mode: false
 
       - uses: actions/download-artifact@v8
         with:

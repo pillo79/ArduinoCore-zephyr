@@ -25,7 +25,6 @@ fi
 
 ARTIFACT=$1
 VARIANT="$2"
-VARIANT_DIR="ArduinoCore-zephyr/variants/${VARIANT}"
 
 ALL_TESTS=$(mktemp)
 
@@ -96,6 +95,11 @@ get_branch_tip() {
 		"ArduinoCore-zephyr/${folder}/${project}" "$@"
 }
 
+skip_for_this_board() {
+	local pattern="$1"
+	sed -i -e "\\|^\\(ArduinoCore-zephyr/\\)\\?${pattern}|d" "$ALL_TESTS"
+}
+
 # Collect built-in tests from the core
 search_for_sketches_in ArduinoCore-zephyr/libraries/ >> "$ALL_TESTS"
 search_for_sketches_in ArduinoCore-zephyr/examples/ >> "$ALL_TESTS"
@@ -106,6 +110,8 @@ search_for_sketches_in ArduinoCore-zephyr/examples/ >> "$ALL_TESTS"
 	. extra/artifacts/_common.test_setup.sh
 [ -f "extra/artifacts/${ARTIFACT}.test_setup.sh" ] && \
 	. "extra/artifacts/${ARTIFACT}.test_setup.sh"
+[ -f "variants/${VARIANT}/test_setup.sh" ] && \
+	. "variants/${VARIANT}/test_setup.sh"
 
 echo "ALL_LIBRARIES<<EOF" >> "$GITHUB_ENV"
 find ArduinoCore-zephyr/libraries/ -name library.properties | while read -r propfile; do
@@ -116,12 +122,6 @@ find ArduinoCore-zephyr/libraries/ -name library.properties | while read -r prop
 	done
 done
 echo "EOF" >> "$GITHUB_ENV"
-
-if [ -f $VARIANT_DIR/skip_these_examples.txt ] ; then
-	cat $VARIANT_DIR/skip_these_examples.txt | sed -e 's/\s*#.*//' -e '/^\s*$/d' | while read -r pattern; do
-		sed -i -e "\\|^\\(ArduinoCore-zephyr/\\)\\?${pattern}|d" "$ALL_TESTS"
-	done
-fi
 
 # output the collected test list for this variant to both the console and
 # the GITHUB_ENV file
