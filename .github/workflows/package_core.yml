@@ -98,6 +98,17 @@ jobs:
           # The API is only needed for packaging, not for building, so it's separate
           tar cphf - cores/arduino/api | zstd > arduino-api.tar.zstd
 
+      - name: Download test data
+        run: |
+          extra/ci_fetch_tests.sh
+
+      - name: Archive test data
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-data
+          path: test-data/
+          retention-days: 1
+
       - name: Archive build environment
         uses: actions/upload-artifact@v7
         with:
@@ -348,12 +359,17 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           sparse-checkout: |
-            extra/ci_test_list.sh
+            extra/ci_apply_tests.sh
             extra/artifacts/
 
       - uses: actions/download-artifact@v8
         with:
           name: ${{ env.CORE_ARTIFACT }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: test-data
+          path: test-data/
 
       - name: Set up core
         run: |
@@ -363,7 +379,7 @@ jobs:
       - name: Get test sketches
         run: |
           # sets ALL_TESTS and ALL_LIBRARIES env vars in GITHUB_ENV
-          extra/ci_test_list.sh ${{ matrix.artifact }} ${{ matrix.variant }}
+          extra/ci_apply_tests.sh ${{ matrix.artifact }} ${{ matrix.variant }}
 
       - name: Compile tests for ${{ matrix.board }}
         uses: pillo79/compile-sketches@next
