@@ -13,5 +13,3 @@
 
 skip_for_this_board libraries/Camera
 skip_for_this_board libraries/RTC
-skip_for_this_board libraries/Arduino_GigaDisplayTouch
-skip_for_this_board libraries/Arduino_Video

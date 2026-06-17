@@ -14,8 +14,6 @@
 skip_for_this_board libraries/Camera
 skip_for_this_board libraries/Zephyr_SDRAM
 skip_for_this_board libraries/CAN
-skip_for_this_board libraries/Arduino_GigaDisplayTouch
-skip_for_this_board libraries/Arduino_Video
 
 # no SPI on Opta
 skip_for_this_board libraries/M95M01

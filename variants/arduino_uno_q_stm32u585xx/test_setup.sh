@@ -11,6 +11,22 @@
 # (the repos must have been downloaded by ci_fetch_tests.sh first).
 # skip_for_this_board removes all tests under the given path prefix.
 
-skip_for_this_board libraries/Arduino_GigaDisplayTouch
-skip_for_this_board libraries/Arduino_Video
+# Board-specific external repos
+get_branch_tip libraries arduino-libraries/ArduinoBLE master \
+	examples/Central/LedControl \
+	examples/Central/Scan \
+	examples/Peripheral/Advertising/EnhancedAdvertising \
+	examples/Peripheral/ButtonLED \
+
+get_branch_tip libraries arduino-libraries/Arduino_RouterBridge main \
+	examples/client \
+	examples/hci \
+	examples/monitor \
+	examples/server \
+	examples/udp_ntp_client \
+
+get_branch_tip libraries arduino-libraries/Arduino_RPClite main \
+	examples/rpc_lite_client \
+	examples/rpc_lite_server \
+
 skip_for_this_board libraries/Arduino_RPClite/extras/integration_test

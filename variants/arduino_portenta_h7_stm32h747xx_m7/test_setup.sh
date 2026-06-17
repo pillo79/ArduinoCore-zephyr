@@ -11,4 +11,8 @@
 # (the repos must have been downloaded by ci_fetch_tests.sh first).
 # skip_for_this_board removes all tests under the given path prefix.
 
-skip_for_this_board libraries/Arduino_GigaDisplayTouch
+# Board-specific external repos
+get_branch_tip libraries arduino-libraries/Arduino_Video main \
+	examples/ArduinoLogoDrawing \
+	examples/ArduinoLogo \
+	examples/LVGLDemo \
