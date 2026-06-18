@@ -11,8 +11,8 @@ version=9.9.9
 
 compiler.warning_flags=-w
 compiler.warning_flags.none=-w
-compiler.warning_flags.default=
-compiler.warning_flags.more=-Wall
+compiler.warning_flags.default=-Wno-type-limits -Wno-missing-field-initializers
+compiler.warning_flags.more=-Wall -Wno-type-limits -Wno-missing-field-initializers
 compiler.warning_flags.all=-Wall -Wextra
 
 compiler.path={build.compiler_path}
