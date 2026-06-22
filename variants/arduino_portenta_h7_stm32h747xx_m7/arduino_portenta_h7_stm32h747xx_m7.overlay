@@ -309,7 +309,7 @@
 	};
 
 	/* used to overcome problems with _C analog pins */
-	gpioz: gpio@deadbeef {
+	gpio_invalid: gpio@deadbeef {
 		compatible = "vnd,gpio";
 		gpio-controller;
 		reg = <0xdeadbeef 0x1000>;
@@ -368,12 +368,12 @@ qspi_flash: &mx25l12833f {};
 				    <&gpioa 10 0>,	/* D13 */
 				    <&gpioa 9 0>,		/* D14 */
 
-				    <&gpioz 0 0>,		/* A0	 ADC2_INP0 */
-				    <&gpioz 1 0>,		/* A1	 ADC2_INP1 */
-				    <&gpioz 2 0>,		/* A2	 ADC3_INP0 */
-				    <&gpioz 3 0>,		/* A3	 ADC3_INP1 */
-				    <&gpioz 4 0>,		/* A4 hack for duplicate PC_2 */
-				    <&gpioz 5 0>,		/* A5 hack for duplicate PC_3 */
+				    <&gpio_invalid 0 0>,		/* A0	 ADC2_INP0 */
+				    <&gpio_invalid 1 0>,		/* A1	 ADC2_INP1 */
+				    <&gpio_invalid 2 0>,		/* A2	 ADC3_INP0 */
+				    <&gpio_invalid 3 0>,		/* A3	 ADC3_INP1 */
+				    <&gpio_invalid 4 0>,		/* A4 hack for duplicate PC_2 */
+				    <&gpio_invalid 5 0>,		/* A5 hack for duplicate PC_3 */
 				    /* <&gpioc 2 0>,	A4 _ALT0?   ADC1_INP12 */
 				    /* <&gpioc 3 0>,	A5 _ALT0?   ADC1_INP13 */
 				    <&gpioa 4 0>,		/* A6	 ADC1_INP18 */
@@ -400,16 +400,16 @@ qspi_flash: &mx25l12833f {};
 				<&gpioj 10 0>,
 				<&gpioh 6 0>;
 
-		adc-pin-gpios =	<&gpioz 0 0>,			/* analog only */
-				<&gpioz 1 0>,			/* analog only */
-				<&gpioz 2 0>,			/* analog only */
-				<&gpioz 3 0>,			/* analog only */
+		adc-pin-gpios =	<&gpio_invalid 0 0>,			/* analog only */
+				<&gpio_invalid 1 0>,			/* analog only */
+				<&gpio_invalid 2 0>,			/* analog only */
+				<&gpio_invalid 3 0>,			/* analog only */
 				<&gpioc 2 0>,
 				<&gpioc 3 0>,
 				<&gpioa 4 0>,
 				<&gpioa 6 0>,
-				<&gpioz 4 0>,			/* Hack for D19  */
-				<&gpioz 5 0>;			/* Hack for D20 */
+				<&gpio_invalid 4 0>,			/* Hack for D19  */
+				<&gpio_invalid 5 0>;			/* Hack for D20 */
 
 		cdc-acm-serial = <&board_cdc_acm_uart>; /* 'Serial' object is managed by SerialUSB */
 		serials = <&usart6>, <&usart1>, <&uart4>; /* 'Serial1' onwards */
