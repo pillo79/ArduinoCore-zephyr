@@ -143,13 +143,13 @@ public:
 
 	bool connect(IPAddress host, uint16_t port) {
 
-		const char *_host = host.toString().c_str();
+		const String _host = host.toString();
 		int raw_sock_fd;
 
 		struct sockaddr_in addr;
 		addr.sin_family = AF_INET;
 		addr.sin_port = htons(port);
-		inet_pton(AF_INET, _host, &addr.sin_addr);
+		inet_pton(AF_INET, _host.c_str(), &addr.sin_addr);
 
 		raw_sock_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		sock_fd =
