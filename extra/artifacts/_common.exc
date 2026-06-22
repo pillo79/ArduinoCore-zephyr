@@ -8,3 +8,4 @@
 CMakeLists.txt
 llext-edk/Makefile.cflags
 llext-edk/cmake.cflags
+test_setup.sh
