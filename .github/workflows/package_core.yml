@@ -310,12 +310,12 @@ jobs:
 
       - name: Archive artifact download URL
         run: |
-          echo '${{ steps.upload-core.outputs.download-url }}' > ${{ env.CORE_ARTIFACT }}.url
+          echo '${{ steps.upload-core.outputs.download-url }}' > ${{ matrix.artifact }}.url
 
       - uses: actions/upload-artifact@v7
         with:
           name: artifact-url-${{ matrix.artifact }}
-          path: ${{ env.CORE_ARTIFACT }}.url
+          path: ${{ matrix.artifact }}.url
 
 
 
@@ -343,14 +343,13 @@ jobs:
   # Use them to generate the final package index JSON by combining these with
   # the latest package index from ci-builds. 
 
-  prepare-jsons:
-    name: Prepare JSONs
+  pr-package-index:
+    name: Prepare temp package index JSON
     runs-on: ubuntu-latest
     needs:
       - build-env
       - package-core
     env:
-      CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
       CORE_HASH: ${{ needs.build-env.outputs.CORE_HASH }}
       CORE_BRANCH: ${{ needs.build-env.outputs.CORE_BRANCH }}
       ARTIFACTS: ${{ needs.build-env.outputs.ARTIFACTS }}
@@ -370,43 +369,21 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          name: build-metadata
-          path: snippets/metadata/
-
-      - uses: actions/download-artifact@v8
-        with:
           pattern: artifact-url-*
           path: .
           merge-multiple: true
 
-      - name: Prepare package index snippets
+      - name: Prepare PR package index
         run: |
+          wget https://arduino.github.io/core-ci-builds/package_arduino_zephyr_${{ env.CORE_BRANCH }}_ci_index.json -O ci_index.json
+
           mkdir -p snippets/platforms/
           jq -cr '.[]' <<< ${ARTIFACTS} | while read -r artifact; do
-            # note: the archive names are always hash-based so they use a
-            # predictable pattern. JSON files can use the tag for user-friendliness.
             ARTIFACT_FILE=ArduinoCore-${artifact}-${CORE_HASH}.tar.bz2
-            PACKAGE_JSON=snippets/platforms/ArduinoCore-${artifact}-${CORE_TAG}.json
+            PACKAGE_JSON=snippets/platforms/${artifact}.json
             ./extra/gen_package_index_json.sh ${artifact} ${ARTIFACT_FILE} ${PACKAGE_JSON}
-          done
-
-      - name: Archive package index snippets
-        uses: actions/upload-artifact@v7
-        with:
-          name: snippets-${{ env.CORE_TAG }}
-          path: snippets/
-
-      - name: Generate PR package index
-        run: |
-          # Get the latest package index from ci-builds, and merge it with the new snippets
-          # to produce the final package index JSON for this build.
-          wget https://arduino.github.io/core-ci-builds/package_arduino_zephyr_${{ env.CORE_BRANCH }}_ci_index.json -O ci_index.json
-          jq -cr '.[]' <<< ${ARTIFACTS} | while read -r artifact; do
-            CORE_ARTIFACT=ArduinoCore-${artifact}-${CORE_HASH}.tar.bz2 
-            PACKAGE_JSON=snippets/platforms/ArduinoCore-${artifact}-${CORE_TAG}.json
             # replace the download URL with this PR's artifact link
-            ARTIFACT_URL=$(cat ${CORE_ARTIFACT}.url)
-            sed -i -e "s/\"url\":.*/\"url\": \"${ARTIFACT_URL}\",/" ${PACKAGE_JSON}
+            sed -i -e "s/\"url\":.*/\"url\": \"$(cat ${artifact}.url)\",/" ${PACKAGE_JSON}
             # merge the new snippet into the index
             jq -s '.[0] * .[1]' ci_index.json ${PACKAGE_JSON} > ci_index_${artifact}.json
             mv ci_index_${artifact}.json ci_index.json
@@ -434,283 +411,4 @@ jobs:
     needs:
       - build-env
       - package-core
-      - prepare-jsons
-    strategy:
-      matrix:
-        include:
-          ${{ fromJSON( needs.build-env.outputs.ALL_BOARD_FQBNS ) }}
-      fail-fast: false
-    env:
-      PLAT: arduino:${{ matrix.subarch }}
-      FQBN: arduino:${{ matrix.subarch }}:${{ matrix.board }}:link_mode=${{ matrix.link_mode }}
-      CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
-      ARTIFACT_TAG: ${{ needs.build-env.outputs.CORE_HASH }}-${{ matrix.board }}-${{ matrix.link_mode }}
-    if: ${{ !cancelled() && needs.build-env.result == 'success' }}
-    steps:
-
-      # only needs the test list generator and artifact information
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          sparse-checkout: |
-            extra/ci_apply_tests.sh
-            extra/artifacts/
-            variants/*/test_setup.sh
-          sparse-checkout-cone-mode: false
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.CORE_ARTIFACT }}
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: test-data
-          path: test-data/
-
-      - name: Set up core
-        run: |
-          tar xf ${CORE_ARTIFACT} # will create ArduinoCore-zephyr/
-          echo "REPORT_FILE=$(echo ${FQBN} | tr ':' '-').json" >> $GITHUB_ENV
-
-      - name: Get test sketches
-        run: |
-          # sets ALL_TESTS and ALL_LIBRARIES env vars in GITHUB_ENV
-          extra/ci_apply_tests.sh ${{ matrix.artifact }} ${{ matrix.variant }}
-
-      - name: Compile tests for ${{ matrix.board }}
-        uses: pillo79/compile-sketches@next
-        with:
-          fqbn: ${{ env.FQBN }}
-          cli-version: nightly-latest
-          platforms: |
-            - name: ${{ env.PLAT }}
-              source-url: ${{ steps.package-index-json.outputs.download-url }}
-          sketch-paths: |
-            ${{ env.ALL_TESTS }}
-          libraries: |
-            ${{ env.ALL_LIBRARIES }}
-          verbose: 'false'
-          enable-deltas-report: 'false'
-          enable-issues-report: 'true'
-          always-succeed: 'true'
-
-      - name: Prepare log
-        if: ${{ success() || failure() }}
-        run: |
-          # make sure to create an empty report if none was created
-          [ ! -f sketches-reports/${REPORT_FILE} ] && mkdir -p sketches-reports && echo "{}" > sketches-reports/${REPORT_FILE}
-          # remove base path of the core install from all file references to make logs cleaner
-          sed -i -e 's!/home/runner/.arduino15/packages/arduino/hardware/zephyr/[^/]*/!!g' sketches-reports/${REPORT_FILE}
-
-      # archive the compile report for later
-      - uses: actions/upload-artifact@v7
-        if: ${{ success() || failure() }}
-        with:
-          name: test-report-${{ env.ARTIFACT_TAG }}
-          path: sketches-reports/*
-          retention-days: 1
-
-
-
-  # Collect all build and test reports, analyze them and produce a summary.
-  # See ci_collect_data.py and ci_generate_report.py for details.
-
-  verify-core:
-    runs-on: ubuntu-latest
-    needs:
-      - build-env
-      - package-core
-      - test-core
-    if: ${{ !cancelled() }}
-    env:
-      ALL_BOARD_DATA: ${{ needs.build-env.outputs.ALL_BOARD_DATA }}
-      CORE_VER: ${{ needs.build-env.outputs.CORE_VER }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
-    steps:
-
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          fetch-tags: true
-
-      - uses: actions/download-artifact@v8
-        with:
-          path: .
-          pattern: "*-report-*"
-          merge-multiple: true
-
-      - name: Generate workflow summary
-        run: |
-          # gather the array of job metadata (especially name and ID) for the current workflow run
-          export WORKFLOW_JOBS=$(gh run view ${{ github.run_id }} --attempt ${{ github.run_attempt }} --json jobs --jq '.jobs')
-          # Archive the input set of reports for later inspection
-          tar jchf build-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2 zephyr-* arduino-*.json
-          # Collect all CI data into a JSON file, then generate the report
-          extra/ci_collect_data.py build_info.json
-          extra/ci_generate_report.py build_info.json result summary full_log
-          cat result
-
-          # Display the summary and full log in the step summary
-          cat summary >> $GITHUB_STEP_SUMMARY
-          cat full_log >> $GITHUB_STEP_SUMMARY
-
-          # Create a comment for PRs using the summary file
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            mkdir -p comment-request
-            echo "${{ github.event.pull_request.number }}" > comment-request/pr_number
-            echo -e "## Built \`$CORE_VER\`\n" > comment-request/comment_body
-            # strip LaTeX color commands and escape sequences for mail readability
-            cat summary | sed -e 's!\${\\color{\S*}\(.*\)}\$!\1!g' -e 's!\\%!%!g' >> comment-request/comment_body
-          fi
-
-          # Prepare latest size artifact file on push events
-          if [ "${{ github.event_name }}" == "push" ]; then
-            tar jchf size-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2 arduino-*.json
-          fi
-
-      - name: Compute code size changes
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          export GITHUB_BASE_SHA=$(git rev-list --parents -n 1 HEAD | cut -d' ' -f2)
-          # errors due to race conditions with parallel branch runs should not fail the job
-          extra/ci_calc_size_reports.py ${GITHUB_BASE_SHA} sketches-reports/ || true
-
-      # upload build metadata artifact, for upload to ci-builds
-      - name: Archive build metadata information
-        uses: actions/upload-artifact@v7
-        with:
-          name: build-metadata
-          path: build_info.json
-          retention-days: 1
-
-      # upload comment request artifact (will be retrieved by leave_pr_comment.yml)
-      - name: Archive comment information
-        uses: actions/upload-artifact@v7
-        if: ${{ github.event_name == 'pull_request' }}
-        with:
-          name: comment-request
-          path: comment-request/
-          retention-days: 1
-
-      # upload size delta report artifact (will be retrieved by report_size_deltas.yml)
-      - name: Archive size deltas report information
-        uses: actions/upload-artifact@v7
-        if: ${{ github.event_name == 'pull_request' }}
-        with:
-          name: sketches-reports
-          path: sketches-reports/
-          retention-days: 1
-
-      # upload new official test size artifact (for AWS storage)
-      - name: Archive sketch size information
-        uses: actions/upload-artifact@v7
-        if: ${{ github.event_name == 'push' }}
-        with:
-          name: size-reports
-          path: size-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
-          retention-days: 1
-          archive: false
-
-      # upload input set of build reports artifact (for CI debugging)
-      - name: Archive input test reports
-        uses: actions/upload-artifact@v7
-        with:
-          name: build-reports
-          path: build-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
-          retention-days: 1
-          archive: false
-
-      # The last line makes the job fail if the 'result' file does not contain "PASSED".
-      # No further actions are allowed in case of error.
-      - run: |
-          cat result
-          grep -q "PASSED" result # otherwise CI test failed
-
-
-
-  # Clean up test results only if the verification actually passed, so that
-  # they are still available for action re-runs in case of failure.
-
-  clean-temps:
-    name: Clean up test results
-    runs-on: ubuntu-latest
-    if: ${{ needs.verify-core.result == 'success' }}
-    needs:
-      - build-env
-      - package-core
-      - verify-core
-    steps:
-
-      - name: Clean up intermediate artifacts
-        uses: geekyeggo/delete-artifact@v6
-        with:
-          name: |
-            build-report-*
-            test-report-*
-          failOnError: false
-
-
-
-  # Upload the built core packages to the S3 bucket for public distribution.
-
-  publish-core:
-    name: Publish core
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && github.repository == 'arduino/ArduinoCore-zephyr' }}
-    needs:
-      - build-env
-      - package-core
-      - verify-core
-    environment: production
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-
-      - uses: actions/download-artifact@v8
-        with:
-          path: .
-          pattern: ArduinoCore-*
-          merge-multiple: true
-
-      - uses: actions/download-artifact@v8
-        with:
-          path: .
-          pattern: size-reports-*.tar.bz2
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: ${{ secrets.IAM_ROLE }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Upload artifact
-        run: |
-          for f in ArduinoCore-*.tar.bz2 ; do
-            aws s3 cp $f s3://${{ secrets.S3_BUCKET }}/
-          done
-          aws s3 cp size-reports-*.tar.bz2 s3://${{ secrets.S3_BUCKET }}/size-reports/
-
-
-  ci-builds-upload:
-    name: Upload to ci-builds
-    if: ${{ github.event_name == 'push' && github.repository == 'arduino/ArduinoCore-zephyr' }}
-    runs-on: ubuntu-latest
-    needs:
-      - build-env
-      - verify-core
-      - prepare-jsons
-    permissions:
-      id-token: write   # required to obtain the OIDC token
-    steps:
-      # Run the composite action in this context to create a proper OIDC token
-      # for this repo and start the internal workflows.
-      - uses: arduino/core-ci-builds@main
-        with:
-          token: ${{ secrets.CI_BUILDS_TOKEN }}
-          version: ${{ needs.build-env.outputs.CORE_VER }}
-          artifact: snippets-${{ needs.build-env.outputs.CORE_TAG }}
-          base-branch: ${{ needs.build-env.outputs.CORE_BRANCH }}
+      - pr-package-index
