@@ -378,6 +378,17 @@ EXPORT_AEABI_SYM(__aeabi_idivmod);
 EXPORT_AEABI_SYM(__aeabi_uidivmod);
 EXPORT_AEABI_SYM(__aeabi_ldivmod);
 EXPORT_AEABI_SYM(__aeabi_uldivmod);
+
+#if defined(__ARM_ARCH_6M__) || (defined(__ARM_ARCH) && __ARM_ARCH < 7)
+/*
+ * Thumb1 switch-dispatch helpers.
+ */
+EXPORT_AEABI_SYM(__gnu_thumb1_case_uqi);
+EXPORT_AEABI_SYM(__gnu_thumb1_case_sqi);
+EXPORT_AEABI_SYM(__gnu_thumb1_case_uhi);
+EXPORT_AEABI_SYM(__gnu_thumb1_case_shi);
+EXPORT_AEABI_SYM(__gnu_thumb1_case_si);
+#endif
 #endif
 
 #if defined(CONFIG_CPP)
@@ -443,7 +454,7 @@ EXPORT_SYMBOL(arm_irq_is_enabled);
 EXPORT_SYMBOL(arm_irq_priority_set);
 #endif
 
-#if defined(__arm__)
+#if defined(__arm__) && !defined(CONFIG_SOC_FAMILY_RPI_PICO)
 EXPORT_SYMBOL(SystemCoreClock);
 #endif
 
@@ -454,4 +465,9 @@ STRUCT_SECTION_START_EXTERN(device);
 STRUCT_SECTION_END_EXTERN(device);
 EXPORT_SYMBOL(TYPE_SECTION_START(device));
 EXPORT_SYMBOL(TYPE_SECTION_END(device));
+#endif
+
+#if defined(CONFIG_BOARD_ARDUINO_NANO_CONNECT)
+extern uint32_t magic_location[3];
+EXPORT_SYMBOL(magic_location);
 #endif

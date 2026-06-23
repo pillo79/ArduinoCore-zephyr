@@ -74,12 +74,27 @@
  * The naked trampoline uses r12 (ip, AAPCS inter-procedure scratch register)
  * which is never an argument register, so r0–r3 and d0–d7 are untouched.
  */
+#if defined(__ARM_ARCH_6M__) || (defined(__ARM_ARCH) && __ARM_ARCH < 7)
+/* Thumb-1 (Cortex-M0/M0+): movw/movt are Thumb-2 only, use a PC-relative
+ * literal pool load via r4 (callee-saved, push/pop balanced). r0-r3 carry
+ * the RTABI double arguments and must not be touched.
+ */
+#define VN(name)                                                                                   \
+	__attribute__((naked)) void name(void) {                                                       \
+		__asm__("push {r4}\n\t"                                                                    \
+				"ldr  r4, =__real_" #name "\n\t"                                                   \
+				"mov  r12, r4\n\t"                                                                 \
+				"pop  {r4}\n\t"                                                                    \
+				"bx   r12");                                                                       \
+	}
+#else
 #define VN(name)                                                                                   \
 	__attribute__((naked)) void name(void) {                                                       \
 		__asm__("movw r12, #:lower16:__real_" #name "\n\t"                                         \
 				"movt r12, #:upper16:__real_" #name "\n\t"                                         \
 				"bx   r12");                                                                       \
 	}
+#endif
 #endif
 
 /* string.h */
@@ -203,6 +218,16 @@ VN(__aeabi_idivmod)
 VN(__aeabi_uidivmod)
 VN(__aeabi_ldivmod)
 VN(__aeabi_uldivmod)
+#if defined(__ARM_ARCH_6M__) || (defined(__ARM_ARCH) && __ARM_ARCH < 7)
+/*
+ * Thumb1 switch-dispatch helpers.
+ */
+VN(__gnu_thumb1_case_uqi)
+VN(__gnu_thumb1_case_sqi)
+VN(__gnu_thumb1_case_uhi)
+VN(__gnu_thumb1_case_shi)
+VN(__gnu_thumb1_case_si)
+#endif
 #endif
 
 /* stdio.h */
