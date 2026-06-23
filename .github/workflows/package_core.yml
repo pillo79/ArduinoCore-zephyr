@@ -339,9 +339,8 @@ jobs:
 
 
 
-  # Prepare the package index JSON snippets for the newly built core packages.
-  # Use them to generate the final package index JSON by combining these with
-  # the latest package index from ci-builds. 
+  # Prepare this PR's temporary package index JSON by merging the newly
+  # built core packages with the latest package index from ci-builds. 
 
   package-index:
     name: Prepare temp package index JSON
@@ -671,6 +670,54 @@ jobs:
           done
           aws s3 cp size-reports-*.tar.bz2 s3://${{ secrets.S3_BUCKET }}/size-reports/
 
+  # Prepare the package index JSON snippets for the newly built core packages.
+
+  prepare-json:
+    name: Prepare jsons
+    runs-on: ubuntu-latest
+    needs:
+      - build-env
+      - package-core
+      - verify-core
+    env:
+      CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
+      CORE_HASH: ${{ needs.build-env.outputs.CORE_HASH }}
+      ARTIFACTS: ${{ needs.build-env.outputs.ARTIFACTS }}
+    steps:
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          fetch-tags: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: ArduinoCore-*.tar.bz2
+          path: .
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: build-metadata
+          path: snippets/metadata/
+
+      - name: Prepare package index snippets
+        run: |
+          mkdir -p snippets/platforms/
+          jq -cr '.[]' <<< ${ARTIFACTS} | while read -r artifact; do
+            # note: the archive names are always hash-based so they use a
+            # predictable pattern. JSON files can use the tag for user-friendliness.
+            ARTIFACT_FILE=ArduinoCore-${artifact}-${CORE_HASH}.tar.bz2
+            PACKAGE_JSON=snippets/platforms/ArduinoCore-${artifact}-${CORE_TAG}.json
+            ./extra/gen_package_index_json.sh ${artifact} ${ARTIFACT_FILE} ${PACKAGE_JSON}
+          done
+
+      - name: Archive package index snippets
+        uses: actions/upload-artifact@v7
+        with:
+          name: snippets-${{ env.CORE_TAG }}
+          path: snippets/
 
   ci-builds-upload:
     name: Upload to ci-builds
