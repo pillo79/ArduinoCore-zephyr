@@ -301,11 +301,21 @@ jobs:
           ./extra/package_core.sh ${{ matrix.artifact }} ${CORE_TAG} distrib/${CORE_ARTIFACT}
 
       - uses: actions/upload-artifact@v7
+        id: upload-core
         if: ${{ success() || failure() }}
         with:
           name: ${{ env.CORE_ARTIFACT }}
           path: distrib/${{ env.CORE_ARTIFACT }}
           archive: false
+
+      - name: Archive artifact download URL
+        run: |
+          echo '${{ steps.upload-core.outputs.download-url }}' > ${{ env.CORE_ARTIFACT }}.url
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: artifact-url-${{ matrix.artifact }}
+          path: ${{ env.CORE_ARTIFACT }}.url
 
 
 
@@ -326,6 +336,90 @@ jobs:
             binaries-*
             build-env.tar.zstd
           failOnError: false
+
+
+
+  # Prepare the package index JSON snippets for the newly built core packages.
+  # Use them to generate the final package index JSON by combining these with
+  # the latest package index from ci-builds. 
+
+  prepare-json:
+    name: Prepare jsons
+    runs-on: ubuntu-latest
+    needs:
+      - build-env
+      - package-core
+    env:
+      CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
+      CORE_HASH: ${{ needs.build-env.outputs.CORE_HASH }}
+      CORE_BRANCH: ${{ needs.build-env.outputs.CORE_BRANCH }}
+      ARTIFACTS: ${{ needs.build-env.outputs.ARTIFACTS }}
+    steps:
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          fetch-tags: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: ArduinoCore-*.tar.bz2
+          path: .
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: build-metadata
+          path: snippets/metadata/
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: artifact-url-*
+          path: .
+          merge-multiple: true
+
+      - name: Prepare package index snippets
+        run: |
+          mkdir -p snippets/platforms/
+          jq -cr '.[]' <<< ${ARTIFACTS} | while read -r artifact; do
+            # note: the archive names are always hash-based so they use a
+            # predictable pattern. JSON files can use the tag for user-friendliness.
+            ARTIFACT_FILE=ArduinoCore-${artifact}-${CORE_HASH}.tar.bz2
+            PACKAGE_JSON=snippets/platforms/ArduinoCore-${artifact}-${CORE_TAG}.json
+            ./extra/gen_package_index_json.sh ${artifact} ${ARTIFACT_FILE} ${PACKAGE_JSON}
+          done
+
+      - name: Archive package index snippets
+        uses: actions/upload-artifact@v7
+        with:
+          name: snippets-${{ env.CORE_TAG }}
+          path: snippets/
+
+      - name: Generate PR package index
+        run: |
+          # Get the latest package index from ci-builds, and merge it with the new snippets
+          # to produce the final package index JSON for this build.
+          wget https://arduino.github.io/core-ci-builds/package_arduino_zephyr_${{ env.CORE_BRANCH }}_ci_index.json -O ci_index.json
+          jq -cr '.[]' <<< ${ARTIFACTS} | while read -r artifact; do
+            CORE_ARTIFACT=ArduinoCore-${artifact}-${CORE_HASH}.tar.bz2 
+            PACKAGE_JSON=snippets/platforms/ArduinoCore-${artifact}-${CORE_TAG}.json
+            # replace the download URL with this PR's artifact link
+            ARTIFACT_URL=$(cat ${CORE_ARTIFACT}.url)
+            sed -i -e "s/\"url\":.*/\"url\": \"${ARTIFACT_URL}\",/" ${PACKAGE_JSON}
+            # merge the new snippet into the index
+            jq -s '.[0] * .[1]' ci_index.json ${PACKAGE_JSON} > ci_index_${artifact}.json
+            mv ci_index_${artifact}.json ci_index.json
+          done
+          mv ci_index.json package_arduino_zephyr_${{ env.CORE_HASH }}_pr_index.json
+
+      - name: Archive PR package index
+        id: package-index-json
+        uses: actions/upload-artifact@v7
+        with:
+          name: package_arduino_zephyr_${{ env.CORE_HASH }}_pr_index.json
+          path: package_arduino_zephyr_${{ env.CORE_HASH }}_pr_index.json
+          archive: false
 
 
 
@@ -387,12 +481,10 @@ jobs:
         uses: pillo79/compile-sketches@next
         with:
           fqbn: ${{ env.FQBN }}
+          cli-version: nightly-latest
           platforms: |
-            # Use Board Manager version first to install the tools
             - name: ${{ env.PLAT }}
-            # ... then replace that with the local version
-            - name: ${{ env.PLAT }}
-              source-path: "ArduinoCore-zephyr"
+              source-url: ${{ steps.package-index-json.outputs.download-url }}
           sketch-paths: |
             ${{ env.ALL_TESTS }}
           libraries: |
@@ -601,54 +693,6 @@ jobs:
           done
           aws s3 cp size-reports-*.tar.bz2 s3://${{ secrets.S3_BUCKET }}/size-reports/
 
-  # Prepare the package index JSON snippets for the newly built core packages.
-
-  prepare-json:
-    name: Prepare jsons
-    runs-on: ubuntu-latest
-    needs:
-      - build-env
-      - package-core
-      - verify-core
-    env:
-      CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
-      CORE_HASH: ${{ needs.build-env.outputs.CORE_HASH }}
-      ARTIFACTS: ${{ needs.build-env.outputs.ARTIFACTS }}
-    steps:
-
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          fetch-tags: true
-
-      - uses: actions/download-artifact@v8
-        with:
-          pattern: ArduinoCore-*.tar.bz2
-          path: .
-          merge-multiple: true
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: build-metadata
-          path: snippets/metadata/
-
-      - name: Prepare package index snippets
-        run: |
-          mkdir -p snippets/platforms/
-          jq -cr '.[]' <<< ${ARTIFACTS} | while read -r artifact; do
-            # note: the archive names are always hash-based so they use a
-            # predictable pattern. JSON files can use the tag for user-friendliness.
-            ARTIFACT_FILE=ArduinoCore-${artifact}-${CORE_HASH}.tar.bz2
-            PACKAGE_JSON=snippets/platforms/ArduinoCore-${artifact}-${CORE_TAG}.json
-            ./extra/gen_package_index_json.sh ${artifact} ${ARTIFACT_FILE} ${PACKAGE_JSON}
-          done
-
-      - name: Archive package index snippets
-        uses: actions/upload-artifact@v7
-        with:
-          name: snippets-${{ env.CORE_TAG }}
-          path: snippets/
 
   ci-builds-upload:
     name: Upload to ci-builds
