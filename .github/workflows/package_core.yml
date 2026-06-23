@@ -343,8 +343,8 @@ jobs:
   # Use them to generate the final package index JSON by combining these with
   # the latest package index from ci-builds. 
 
-  prepare-json:
-    name: Prepare jsons
+  prepare-jsons:
+    name: Prepare JSONs
     runs-on: ubuntu-latest
     needs:
       - build-env
@@ -434,6 +434,7 @@ jobs:
     needs:
       - build-env
       - package-core
+      - prepare-jsons
     strategy:
       matrix:
         include:
@@ -701,7 +702,7 @@ jobs:
     needs:
       - build-env
       - verify-core
-      - prepare-json
+      - prepare-jsons
     permissions:
       id-token: write   # required to obtain the OIDC token
     steps:
