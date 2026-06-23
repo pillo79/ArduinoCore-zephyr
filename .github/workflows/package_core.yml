@@ -679,7 +679,7 @@ jobs:
     needs:
       - build-env
       - verify-core
-      - prepare-jsons
+      - prepare-json
     permissions:
       id-token: write   # required to obtain the OIDC token
     steps:
