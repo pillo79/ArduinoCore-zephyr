@@ -11,6 +11,19 @@
 # (the repos must have been downloaded by ci_fetch_tests.sh first).
 # skip_for_this_board removes all tests under the given path prefix.
 
+# Board-specific external repos
+get_branch_tip libraries arduino-libraries/Arduino_BMI270_BMM150 master \
+	examples/SimpleAccelerometer \
+
+get_branch_tip libraries arduino-libraries/Arduino_APDS9960 master \
+	examples/ColorSensor \
+
+get_branch_tip libraries arduino-libraries/Arduino_LPS22HB master \
+	examples/ReadPressure \
+
+get_branch_tip libraries arduino-libraries/Arduino_HS300x master \
+	examples/ReadSensors \
+
 skip_for_this_board libraries/Arduino_SecureElement
 skip_for_this_board libraries/Camera
 skip_for_this_board libraries/Ethernet
