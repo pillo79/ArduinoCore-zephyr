@@ -78,6 +78,11 @@ To get started with your board:
 **A:** If you have installed the core locally in your Arduino sketchbook, make sure the Zephyr core is installed in a folder named `zephyr` (`${sketchbook}/hardware/arduino-git/zephyr`).
 See the [Using the Core in Arduino IDE/CLI](#using-the-core-in-arduino-idecli) section for further details on the installation.
 
+---
+
+#### **Q: Wi-Fi is not working, or I get `Communication with WiFi module failed!` in the Serial Monitor**
+**A:** You are probably missing the Wi-Fi firmware, or the firmware is corrupted. Boards should come with the Wi-Fi firmware already flashed, but in case Wi-Fi is not working run the [`FlashFormat`](libraries/Storage/examples/FlashFormat/FlashFormat.ino) sketch to restore the firmware.
+
 ## 📚 Libraries
 
 ### Included with the core: ###
