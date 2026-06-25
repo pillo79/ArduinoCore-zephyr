@@ -53,6 +53,8 @@ jobs:
       ARTIFACTS: ${{ env.ARTIFACTS }}
       # List of architectures the artifacts will be built for
       SUB_ARCHES: ${{ env.SUB_ARCHES }}
+      # URL of the latest ci-builds index for this branch, if any
+      CI_BUILDS_URL: ${{ env.CI_BUILDS_URL }}
     steps:
 
       - name: Install OS dependencies
@@ -97,6 +99,25 @@ jobs:
           (cd && tar cphf - .cmake work zephyr-sdk-* | zstd > build-env.tar.zstd)
           # The API is only needed for packaging, not for building, so it's separate
           tar cphf - cores/arduino/api | zstd > arduino-api.tar.zstd
+
+      - name: Get ci-builds package index link
+        if: ${{ github.repository == 'arduino/ArduinoCore-zephyr' }}
+        run: |
+          # for pull requests and pushes to the official Arduino repo, use the latest ci-built core as a reference
+          CI_BUILDS_URL="https://arduino.github.io/core-ci-builds/package_arduino_zephyr_${CORE_BRANCH}_ci_index.json"
+          if ! wget -q --method=HEAD "$CI_BUILDS_URL" >& /dev/null ; then
+            CLOSEST_BRANCH=$(git branch -r | grep -vE "HEAD|/$(git branch --show-current)$" | while read -r b; do \
+                               echo "$(git rev-list --count $b..HEAD) $b" ; \
+                             done | sort -n | head -n 1 | awk '{print $2}' | cut -d / -f 2)
+            [ -z "$CLOSEST_BRANCH" ] && CLOSEST_BRANCH="main"
+            echo "::warning::No ci-builds index found for branch $CORE_BRANCH, using $CLOSEST_BRANCH"
+            CI_BUILDS_URL="https://arduino.github.io/core-ci-builds/package_arduino_zephyr_${CLOSEST_BRANCH}_ci_index.json"
+            if ! wget -q --method=HEAD "$CI_BUILDS_URL" >& /dev/null ; then
+              echo "::warning::No ci-builds index found for branch $CLOSEST_BRANCH, using main"
+              CI_BUILDS_URL="https://arduino.github.io/core-ci-builds/package_arduino_zephyr_main_ci_index.json"
+            fi
+          fi
+          echo "CI_BUILDS_URL=$CI_BUILDS_URL" >> "$GITHUB_ENV"
 
       - name: Download test data
         run: |
@@ -350,6 +371,7 @@ jobs:
       FQBN: arduino:${{ matrix.subarch }}:${{ matrix.board }}:link_mode=${{ matrix.link_mode }}
       CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
       ARTIFACT_TAG: ${{ needs.build-env.outputs.CORE_HASH }}-${{ matrix.board }}-${{ matrix.link_mode }}
+      CI_BUILDS_URL: ${{ needs.build-env.outputs.CI_BUILDS_URL }}
     if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     steps:
 
@@ -386,7 +408,8 @@ jobs:
       - name: Compile tests for ${{ matrix.board }}
         uses: pillo79/compile-sketches@next
         with:
-          fqbn: ${{ env.FQBN }}
+          # Use ci-builds core, if possible, to use the exact set of tools required by the source
+          fqbn: ${{ env.FQBN }} ${{ env.CI_BUILDS_URL }}
           platforms: |
             # Use Board Manager version first to install the tools
             - name: ${{ env.PLAT }}
