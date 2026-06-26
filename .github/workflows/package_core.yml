@@ -325,22 +325,112 @@ jobs:
           ./extra/package_core.sh ${{ matrix.artifact }} ${CORE_TAG} distrib/${CORE_ARTIFACT}
 
       - uses: actions/upload-artifact@v7
+        id: upload-core
         if: ${{ success() || failure() }}
         with:
           name: ${{ env.CORE_ARTIFACT }}
           path: distrib/${{ env.CORE_ARTIFACT }}
           archive: false
 
+      - name: Archive artifact ID
+        run: |
+          echo '${{ steps.upload-core.outputs.artifact-id }}' > ${{ matrix.artifact }}.id
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: artifact-id-${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.id
 
 
-  # After generating the final cores, the API and per-board binary archives are no longer needed.
-  # The build environment archive can also be removed.
+
+  # Prepare this PR's temporary package index JSON by merging the newly
+  # built core packages with the latest package index from ci-builds.
+
+  package-index:
+    name: Prepare temp package index JSON
+    runs-on: ubuntu-latest
+    needs:
+      - build-env
+      - package-core
+    if: ${{ github.event_name == 'pull_request' && needs.build-env.outputs.CI_BUILDS_URL != '' }}
+    env:
+      CORE_HASH: ${{ needs.build-env.outputs.CORE_HASH }}
+      CORE_BRANCH: ${{ needs.build-env.outputs.CORE_BRANCH }}
+      ARTIFACTS: ${{ needs.build-env.outputs.ARTIFACTS }}
+      CI_BUILDS_URL: ${{ needs.build-env.outputs.CI_BUILDS_URL }}
+    steps:
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          fetch-tags: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: ArduinoCore-*.tar.bz2
+          path: .
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: artifact-id-*
+          path: .
+          merge-multiple: true
+
+      - name: Prepare PR package index
+        run: |
+          wget ${CI_BUILDS_URL} -O ci_index.json
+          # clear other platforms from the index
+          jq '.packages[0].platforms = []' ci_index.json > ci_index.tmp && mv ci_index.tmp ci_index.json
+
+          mkdir -p snippets/platforms/
+          jq -cr '.[]' <<< ${ARTIFACTS} | while read -r artifact; do
+            [ $artifact == "zephyr" ] && continue
+            ARTIFACT_FILE=ArduinoCore-${artifact}-${CORE_HASH}.tar.bz2
+            PACKAGE_JSON=snippets/platforms/${artifact}.json
+            ./extra/gen_package_index_json.sh ${artifact} ${ARTIFACT_FILE} ${PACKAGE_JSON}
+            # replace the download URL with this PR's artifact link
+            ARTIFACT_ID=$(cat ${artifact}.id)
+            ARTIFACT_URL="https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
+            sed -i -e "s!\"url\":.*!\"url\": \"${ARTIFACT_URL}\",!" ${PACKAGE_JSON}
+            # append the new snippet to the index
+            jq -s '.[0].packages[0].platforms += .[1].packages[0].platforms | .[0]' \
+                    ci_index.json ${PACKAGE_JSON} > ci_index.tmp && mv ci_index.tmp ci_index.json
+          done
+          PACKAGE_INDEX_FILE="package_arduino_zephyr_pr_${{ github.event.pull_request.number }}_ci_index.json"
+          echo "PACKAGE_INDEX_FILE=${PACKAGE_INDEX_FILE}" >> $GITHUB_ENV
+          mv ci_index.json ${PACKAGE_INDEX_FILE}
+
+      - name: Archive PR package index
+        id: package-index-json
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.PACKAGE_INDEX_FILE }}
+          path: ${{ env.PACKAGE_INDEX_FILE }}
+          archive: false
+
+      - run: |
+          ARTIFACT_ID=${{ steps.package-index-json.outputs.artifact-id }}
+          PACKAGE_INDEX_URL="https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
+          PACKAGE_INDEX_URL="${PACKAGE_INDEX_URL}#${{ env.PACKAGE_INDEX_FILE }}"
+          echo "::notice title=Package index URL for offline tests::${PACKAGE_INDEX_URL}"
+
+
+
+  # After generating the final cores, the following temporary artifacts are
+  # no longer used and can be removed:
+  #
+  #  - the Zephyr build environment
+  #  - the API and per-board binaries
+  #  - the artifact download URLs
 
   cleanup-build:
     name: Clean up intermediates
     runs-on: ubuntu-latest
     needs:
       - package-core
+      - package-index
     steps:
 
       - uses: geekyeggo/delete-artifact@v6
@@ -349,6 +439,7 @@ jobs:
             arduino-api.tar.zstd
             binaries-*
             build-env.tar.zstd
+            artifact-id-*
           failOnError: false
 
 
@@ -627,6 +718,8 @@ jobs:
           done
           aws s3 cp size-reports-*.tar.bz2 s3://${{ secrets.S3_BUCKET }}/size-reports/
 
+
+
   # Prepare the package index JSON snippets for the newly built core packages.
 
   prepare-json:
@@ -675,6 +768,12 @@ jobs:
         with:
           name: snippets-${{ env.CORE_TAG }}
           path: snippets/
+
+
+
+  # Upload the newly built core packages and package index snippets to the
+  # ci-builds repository so the build is fully logged and the next PRs can
+  # use them as a reference for testing.
 
   ci-builds-upload:
     name: Upload to ci-builds
