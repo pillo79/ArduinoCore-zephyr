@@ -69,10 +69,8 @@ jobs:
           persist-credentials: false
           fetch-tags: true # needed for get_core_version.sh
 
-      - name: Initialize Zephyr environment
+      - name: Identify current version and board set
         run: |
-          # Install Zephyr as a core user would, but faster
-          yes | ./extra/bootstrap.sh -o=--filter=tree:0
           # Set up basic environment for later steps
           echo "CORE_HASH=$(git describe --always $HEAD_REF)" >> "$GITHUB_ENV"
           echo "ALL_BOARD_DATA=$(extra/get_board_details.sh | jq -c 'sort_by(.variant)')" >> "$GITHUB_ENV"
@@ -93,6 +91,11 @@ jobs:
           echo "ALL_BOARD_FQBNS=$(jq -c 'map((. + {link_mode: "static"}), (. + {link_mode: "dynamic"}))' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "ARTIFACTS=$(jq -c '["zephyr"] + (map(.artifact) | unique)' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "SUB_ARCHES=$(jq -c 'map(.subarch) | unique' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
+
+      - name: Initialize Zephyr environment
+        run: |
+          # Install Zephyr as a core user would, but faster
+          yes | ./extra/bootstrap.sh -o=--filter=tree:0
           # Archive the build environment for later jobs
           (cd && tar cphf - .cmake work zephyr-sdk-* | zstd > build-env.tar.zstd)
           # The API is only needed for packaging, not for building, so it's separate
