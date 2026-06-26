@@ -136,6 +136,8 @@ EXPORT_SYMBOL(k_msgq_put);
 EXPORT_SYMBOL(k_msgq_get);
 EXPORT_SYMBOL(k_msgq_num_used_get);
 EXPORT_SYMBOL(k_sys_work_q);
+EXPORT_SYMBOL(k_mem_slab_init);
+EXPORT_SYMBOL(k_mem_slab_free);
 
 #if defined(CONFIG_PINCTRL)
 EXPORT_SYMBOL(pinctrl_lookup_state);
@@ -470,4 +472,9 @@ EXPORT_SYMBOL(TYPE_SECTION_END(device));
 #if defined(CONFIG_BOARD_ARDUINO_NANO_CONNECT)
 extern uint32_t magic_location[3];
 EXPORT_SYMBOL(magic_location);
+#endif
+
+#if defined(CONFIG_REGULATOR)
+FORCE_EXPORT_SYM(regulator_enable);
+FORCE_EXPORT_SYM(regulator_disable);
 #endif
