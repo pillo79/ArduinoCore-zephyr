@@ -420,6 +420,11 @@ jobs:
             ${{ env.ALL_TESTS }}
           libraries: |
             ${{ env.ALL_LIBRARIES }}
+          cli-compile-flags: |
+            - '--build-property'
+            - 'compiler.c.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
+            - '--build-property'
+            - 'compiler.cpp.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
           verbose: 'false'
           enable-deltas-report: 'false'
           enable-issues-report: 'true'
