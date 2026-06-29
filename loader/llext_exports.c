@@ -196,6 +196,7 @@ FORCE_EXPORT_SYM(net_dhcpv4_server_start);
 #if defined(CONFIG_NET_MGMT_EVENT)
 FORCE_EXPORT_SYM(net_mgmt_add_event_callback);
 FORCE_EXPORT_SYM(net_mgmt_event_wait_on_iface);
+FORCE_EXPORT_SYM(net_mgmt_del_event_callback);
 #endif
 
 #if defined(CONFIG_MBEDTLS)
@@ -213,6 +214,7 @@ EXPORT_SYMBOL(mbedtls_debug_set_threshold);
 FORCE_EXPORT_SYM(net_if_get_wifi_sta);
 FORCE_EXPORT_SYM(net_if_get_wifi_sap);
 FORCE_EXPORT_SYM(net_mgmt_NET_REQUEST_WIFI_CONNECT);
+FORCE_EXPORT_SYM(net_mgmt_NET_REQUEST_WIFI_SCAN);
 FORCE_EXPORT_SYM(net_mgmt_NET_REQUEST_WIFI_IFACE_STATUS);
 FORCE_EXPORT_SYM(net_mgmt_NET_REQUEST_WIFI_AP_ENABLE);
 FORCE_EXPORT_SYM(net_mgmt_NET_REQUEST_WIFI_DISCONNECT);
