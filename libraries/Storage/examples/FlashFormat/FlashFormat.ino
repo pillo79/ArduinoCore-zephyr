@@ -16,6 +16,10 @@
 #include <zephyr/storage/flash_map.h>
 #include "certificates.h"
 
+#if defined(CONFIG_AIROC_WIFI_CUSTOM)
+#include "4343WA1_bin.h"
+#endif
+
 // MBR structures
 struct __attribute__((packed)) mbrEntry {
     uint8_t status;
@@ -117,6 +121,44 @@ int flashCertificates() {
     Serial.println("Certificates written successfully!");
     return 0;
 }
+
+#if defined(CONFIG_AIROC_WIFI_CUSTOM)
+int flashWiFiFirmware() {
+    Serial.print("WiFi firmware size: ");
+    Serial.print(sizeof(wifi_firmware_image_data));
+    Serial.println(" bytes");
+
+    const struct flash_area *fa;
+    int ret = flash_area_open(FIXED_PARTITION_ID(airoc_firmware), &fa);
+    if (ret) {
+        Serial.print("Error opening airoc_firmware partition: ");
+        Serial.println(ret);
+        return ret;
+    }
+
+    Serial.println("Erasing WiFi firmware partition...");
+    ret = flash_area_erase(fa, 0, fa->fa_size);
+    if (ret) {
+        Serial.print("Error erasing airoc_firmware partition: ");
+        Serial.println(ret);
+        flash_area_close(fa);
+        return ret;
+    }
+
+    Serial.println("Writing WiFi firmware...");
+    ret = flash_area_write(fa, 0, wifi_firmware_image_data, sizeof(wifi_firmware_image_data));
+    if (ret) {
+        Serial.print("Error writing WiFi firmware: ");
+        Serial.println(ret);
+        flash_area_close(fa);
+        return ret;
+    }
+
+    flash_area_close(fa);
+    Serial.println("WiFi firmware written successfully!");
+    return 0;
+}
+#endif
 
 int flashMBR() {
     Serial.println("Creating MBR partition table...");
@@ -279,6 +321,14 @@ void setup() {
             Serial.println("Please use LittleFS or update device tree configuration.");
         }
     }
+
+    // Memory Mapped Wi-Fi firmware
+#if defined(CONFIG_AIROC_WIFI_CUSTOM)
+    Serial.println("\nDo you want to restore the WiFi firmware? Y/[n]");
+    if (waitResponse() && flashWiFiFirmware()) {
+        return;
+    }
+#endif
 
     Serial.println("\nFlash storage formatted!");
     Serial.println("It's now safe to reboot or disconnect your board.");
