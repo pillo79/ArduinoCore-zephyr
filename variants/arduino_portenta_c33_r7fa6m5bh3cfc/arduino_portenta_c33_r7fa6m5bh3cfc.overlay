@@ -488,3 +488,25 @@
 /* Include common flash filesystem configuration */
 qspi_flash: &at25sf128a {};
 #include "../common/arduino_flash_fs.dtsi"
+
+/* Enable SDHC0 controller */
+&sdhc0 {
+	pinctrl-0 = <&sdhc0_default>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	sdmmc {
+		compatible = "zephyr,sdmmc-disk";
+		disk-name = "SD";
+		status = "okay";
+	};
+};
+
+&fstab {
+	sd_fs: sd_fs {
+		compatible = "zephyr,fstab,fatfs";
+		automount;
+		disk-access;
+		mount-point = "/SD:";
+	};
+};
