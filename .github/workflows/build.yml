@@ -54,6 +54,10 @@ jobs:
         run: |
           echo EXTRA_ZEPHYR_MODULES="$(pwd)/$MODULE_PATH" >> $GITHUB_ENV
 
+      - name: Fetch the Arduino API
+        run: |
+          west blobs --auto-accept fetch arduino-api
+
       - name: Build fade
         run: |
           west build -p -b arduino_nano_33_ble//sense $MODULE_PATH/samples/fade
