@@ -39,6 +39,7 @@ giga.menu.link_mode.static.upload.extension=bin-zsk.bin
 giga.build.zephyr_target=arduino_giga_r1//m7
 giga.build.zephyr_args=--shield arduino_giga_display_shield
 giga.build.zephyr_hals=hal_stm32 hal_infineon
+giga.build.zephyr_toolchain=arm-zephyr-eabi
 giga.build.variant=arduino_giga_r1_stm32h747xx_m7
 giga.build.artifact=zephyr_main
 
@@ -90,6 +91,7 @@ nano33ble.menu.link_mode.static.upload.extension=bin-zsk.bin
 nano33ble.build.zephyr_target=arduino_nano_33_ble//sense
 nano33ble.build.zephyr_args=
 nano33ble.build.zephyr_hals=hal_nordic
+nano33ble.build.zephyr_toolchain=arm-zephyr-eabi
 nano33ble.build.artifact=zephyr_main
 nano33ble.build.variant=arduino_nano_33_ble_nrf52840_sense
 
@@ -138,6 +140,7 @@ ek_ra8d1.menu.link_mode.static.upload.extension=bin-zsk.bin
 ek_ra8d1.build.zephyr_target=ek_ra8d1
 ek_ra8d1.build.zephyr_args=
 ek_ra8d1.build.zephyr_hals=hal_renesas
+ek_ra8d1.build.zephyr_toolchain=arm-zephyr-eabi
 ek_ra8d1.build.variant=ek_ra8d1_r7fa8d1bhecbd
 
 ek_ra8d1.build.extra_flags=
@@ -184,6 +187,7 @@ frdm_mcxn947.menu.link_mode.static.upload.extension=bin-zsk.bin
 frdm_mcxn947.build.zephyr_target=frdm_mcxn947//cpu0
 frdm_mcxn947.build.zephyr_args=
 frdm_mcxn947.build.zephyr_hals=hal_nxp
+frdm_mcxn947.build.zephyr_toolchain=arm-zephyr-eabi
 frdm_mcxn947.build.variant=frdm_mcxn947_mcxn947_cpu0
 
 frdm_mcxn947.build.extra_flags=
@@ -226,6 +230,7 @@ portentah7.menu.link_mode.static.upload.extension=bin-zsk.bin
 portentah7.build.zephyr_target=arduino_portenta_h7@1.0.0//m7
 portentah7.build.zephyr_args=
 portentah7.build.zephyr_hals=hal_stm32 hal_infineon
+portentah7.build.zephyr_toolchain=arm-zephyr-eabi
 portentah7.build.artifact=zephyr_main
 portentah7.build.variant=arduino_portenta_h7_stm32h747xx_m7
 
@@ -277,6 +282,7 @@ nicla_vision.menu.link_mode.static.upload.extension=bin-zsk.bin
 nicla_vision.build.zephyr_target=arduino_nicla_vision//m7
 nicla_vision.build.zephyr_args=
 nicla_vision.build.zephyr_hals=hal_stm32 hal_infineon
+nicla_vision.build.zephyr_toolchain=arm-zephyr-eabi
 nicla_vision.build.artifact=zephyr_main
 nicla_vision.build.variant=arduino_nicla_vision_stm32h747xx_m7
 
@@ -328,6 +334,7 @@ frdm_rw612.menu.link_mode.static.upload.extension=bin-zsk.bin
 frdm_rw612.build.zephyr_target=frdm_rw612
 frdm_rw612.build.zephyr_args=
 frdm_rw612.build.zephyr_hals=hal_stm32
+frdm_rw612.build.zephyr_toolchain=arm-zephyr-eabi
 frdm_rw612.build.variant=frdm_rw612_rw612
 
 frdm_rw612.build.extra_flags=
@@ -365,6 +372,7 @@ nicla_sense.menu.link_mode.static.upload.extension=bin-zsk.bin
 nicla_sense.build.zephyr_target=arduino_nicla_sense_me
 nicla_sense.build.zephyr_args=
 nicla_sense.build.zephyr_hals=hal_nordic
+nicla_sense.build.zephyr_toolchain=arm-zephyr-eabi
 nicla_sense.build.artifact=zephyr_main
 nicla_sense.build.variant=arduino_nicla_sense_me_nrf52832
 
@@ -416,6 +424,7 @@ portentac33.menu.link_mode.static.upload.extension=bin-zsk.bin
 portentac33.build.zephyr_target=arduino_portenta_c33
 portentac33.build.zephyr_args=
 portentac33.build.zephyr_hals=hal_renesas nanopb
+portentac33.build.zephyr_toolchain=arm-zephyr-eabi
 portentac33.build.artifact=zephyr_main
 portentac33.build.variant=arduino_portenta_c33_r7fa6m5bh3cfc
 
@@ -466,6 +475,7 @@ opta.menu.link_mode.static.upload.extension=bin-zsk.bin
 opta.build.zephyr_target=arduino_opta//m7
 opta.build.zephyr_args=
 opta.build.zephyr_hals=hal_stm32 hal_infineon
+opta.build.zephyr_toolchain=arm-zephyr-eabi
 opta.build.artifact=zephyr_main
 opta.build.variant=arduino_opta_stm32h747xx_m7
 
@@ -513,6 +523,7 @@ nano_matter.menu.link_mode.static.upload.extension=bin-zsk.bin
 nano_matter.build.zephyr_target=arduino_nano_matter
 nano_matter.build.zephyr_args=
 nano_matter.build.zephyr_hals=hal_silabs
+nano_matter.build.zephyr_toolchain=arm-zephyr-eabi
 nano_matter.build.artifact=zephyr_main
 nano_matter.build.variant=arduino_nano_matter_mgm240sd22vna
 
@@ -571,6 +582,8 @@ unoq.menu.wait_linux_boot.app.build.boot_mode=app
 
 unoq.build.zephyr_target=arduino_uno_q
 unoq.build.zephyr_args=
+unoq.build.zephyr_hals=hal_stm32
+unoq.build.zephyr_toolchain=arm-zephyr-eabi
 unoq.build.variant=arduino_uno_q_stm32u585xx
 unoq.build.artifact=zephyr_unoq
 unoq.build.subarch=zephyr
@@ -579,8 +592,6 @@ unoq.openocd_cfg=flash_sketch.cfg
 unoq.build.extra_flags=
 unoq.build.postbuild.cmd="{tools.imgtool.path}/{tools.imgtool.cmd}" exit
 unoq.build.board=UNO_Q
-unoq.build.zephyr_hals=hal_stm32
-unoq.build.zephyr_toolchain=arm-zephyr-eabi
 unoq.upload_port.0.vid=0x2341
 unoq.upload_port.0.pid=0x0078
 unoq.upload.target=stm32u585zitxq
@@ -618,6 +629,7 @@ nano_connect.menu.link_mode.static.upload.extension=bin-zsk.bin
 nano_connect.build.zephyr_target=arduino_nano_connect
 nano_connect.build.zephyr_args=
 nano_connect.build.zephyr_hals=hal_rpi_pico
+nano_connect.build.zephyr_toolchain=arm-zephyr-eabi
 nano_connect.build.artifact=zephyr_main
 nano_connect.build.variant=arduino_nano_connect_rp2040
 
