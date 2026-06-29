@@ -55,6 +55,20 @@ def color_entry(values, full=True):
     else:
         return f"{'' if percent < 0.85 else ':warning:'} ${{{color_cmd(percent)}{percent*100:0.1f}\\\\%}}$"
 
+def wrap_link(text, url):
+    """
+    If an URL is provided, wraps the given text in an HTML link, otherwise
+    returns the text as is.
+    """
+    return f"<a href='{url}' target='_blank'>{text}</a>" if url else text
+
+def log_link(url):
+    """
+    When an URL is provided, returns an HTML-formatted log link, otherwise
+    returns an empty string.
+    """
+    return f" (<a href='{url}' target='_blank'>full log</a>)" if url else ""
+
 def print_summary():
     """
     Prints the summary section of the report, including overall status and a recap table.
@@ -85,7 +99,8 @@ def print_summary():
         artifact_boards = sorted(ARTIFACT_TESTS[artifact].boards)
         artifact_status = ARTIFACT_TESTS[artifact].status
 
-        first_row_text = f"<td rowspan='{len(artifact_boards)}'>{artifact_status.board_icon} <a href='{JOB_LINK_STEM}#user-content-{artifact}'><code>{artifact}</code></a></td>"
+        link_target = f"{JOB_LINK_STEM}#user-content-{artifact}"
+        first_row_text = f"<td rowspan='{len(artifact_boards)}'>{artifact_status.board_icon} <code>{wrap_link(artifact, link_target)}</code></td>"
         for board in artifact_boards:
             # Artifact name (multi-row)
             f_print(f"<tr>{first_row_text}")
@@ -93,25 +108,22 @@ def print_summary():
 
             # Board name
             res = BOARD_LOADERS[board]
-            if res.job_link:
-                f_print(f"<td><code><a href='{res.job_link}'>{board}</a></code>")
-            else:
-                f_print(f"<td><code>{board}</code>")
+            f_print(f"<td><code>{board}</code></td>")
 
             # Core build status + message on failure
             if res.status == FAILURE:
-                f_print(f"<td align='center'>{res.status.board_icon}</td><td colspan='6'>Core build failed!</td></tr>")
+                f_print(f"<td align='center'>{res.status.loader_icon}</td><td colspan='6'>Core build {wrap_link('failed', res.job_link)}!</td></tr>")
                 continue
 
-            pin = f"{len(res.warnings)} :label:" if res.status == WARNING else ":green_book:"
-            f_print(f"</td><td align='center'>{pin}</td>")
+            count = len(res.warnings) if res.status == WARNING else ""
+            f_print(f"<td align='center'>{count} {res.status.loader_icon}</td>")
 
             # Sketch build status + message on failure
             res = BOARD_TESTS[board]
             f_print(f"<td align='center'>{res.status.board_icon}</td>")
             if res.status == FAILURE:
                 f_print(f"<td colspan='5'>")
-                f_print("<br>".join(f"{test.issues[0]} (<a href='{test.job_link}'>full log</a>)" for test in res.tests))
+                f_print("<br>".join(f"{test.issues[0]}{log_link(test.job_link)}" for test in res.tests))
                 f_print("</td></tr>")
                 continue
 
@@ -132,9 +144,10 @@ def print_summary():
 
     # Print the legend
     f_print("<details><summary>Legend</summary>")
-    f_print("<blockquote><br><table><tr><th align='center'>Board</th><th align='center'>Test</th><th>Status description</th></tr>")
+    f_print("<blockquote><br><table><tr><th>Loader</th><th>Board</th><th>Test</th><th>Status description</th></tr>")
     for status in reversed(TestStatus): # worst errors first
-        f_print(f"<tr><td align='center'>{status.board_icon}</td>")
+        f_print(f"<tr><td align='center'>{status.loader_icon}</td>")
+        f_print(f"<td align='center'>{status.board_icon}</td>")
         f_print(f"<td align='center'>{status.test_icon}</td>")
         f_print(f"<td>{status.legend}</td></tr>")
     f_print("</table></blockquote></details>\n")
@@ -189,7 +202,8 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
             if res.tests_with_issues:
                 sketch = next(iter(res.sketches)) # only one
                 sketch_id = sketch.replace('/', '_').replace(' ', '_').replace('-', '_')
-                name_link = f"<a href='{JOB_LINK_STEM}#user-content-{artifact}_{sketch_id}'>{name_link}</a>"
+                link_target = f"{JOB_LINK_STEM}#user-content-{artifact}_{sketch_id}"
+                name_link = wrap_link(name_link, link_target)
             row_data += f"<td>{name_link}</td>"
 
             for board in artifact_boards:
@@ -239,11 +253,7 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
             # Test logs by board, group similar messages
             boards_by_issues = defaultdict(list)   # { issues: list of boards }
             for test in sorted(res.tests_with_issues, key=lambda x: x.status, reverse=True):
-                test_text = f"<code>{test.board}:{test.link_mode}</code>"
-                if test.job_link:
-                    test_text += f" (<a href='{test.job_link}'>full log</a>)"
-                test_text = f"{test.status.test_icon} {test_text}"
-
+                test_text = f"{test.status.test_icon} <code>{test.board}:{test.link_mode}</code>{log_link(test.job_link)}"
                 boards_by_issues[tuple(test.issues)].append(test_text)
 
             for issues, board_texts in boards_by_issues.items():
@@ -408,21 +418,25 @@ with open(full_report_file, 'w') as f:
         f_print(f"<a name='{artifact}'></a>")
         f_print("\n---\n")
 
-        # print loader build warnings, if any
-        if any(BOARD_LOADERS[board].status != PASS for board in artifact_boards):
-            summary = f"<code>{artifact}</code> loader build warnings"
-            f_print(f"<details><summary>{summary}</summary><blockquote><br>\n")
-            f_print("<table>")
-            f_print("<tr><th>Board</th><th>Warnings</th></tr>")
-            for board in artifact_boards:
-                if BOARD_LOADERS[board].status == PASS:
-                    continue
-                f_print(f"<tr><td><code>{board}</code></td><td><pre>")
-                for warning in BOARD_LOADERS[board].warnings:
+        # print loader build warnings and build log links
+        summary = f"<code>{artifact}</code> loader build status"
+        f_print(f"<details><summary>{summary}</summary><blockquote><br>\n")
+        f_print("<table>")
+        f_print("<tr><th colspan='2'>Board</th><th>Warnings</th></tr>")
+        for board in artifact_boards:
+            res = BOARD_LOADERS[board]
+            f_print(f"<tr><td>{res.status.loader_icon}</td><td><code>{board}</code><br>{log_link(res.job_link)}</td>")
+            if res.status == PASS:
+                f_print("<td>No issues detected.</td></tr>")
+            elif res.warnings:
+                f_print(f"<td><pre>")
+                for warning in res.warnings:
                     f_print(warning)
                 f_print("</pre></td></tr>")
-            f_print("</table>\n")
-            f_print("</blockquote></details>\n")
+            else:
+                f_print(f"<td>Loader build failed, no logs available!</td></tr>")
+        f_print("</table>\n")
+        f_print("</blockquote></details>\n")
 
         # print failed tests matrix
         print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status >= EXPECTED_ERROR)

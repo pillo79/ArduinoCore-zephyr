@@ -11,27 +11,28 @@ import json
 class TestStatus(enum.IntEnum):
     """
     Test result status codes, in increasing order of severity.
-    Each member carries display metadata: test_icon, board_icon, legend.
+    Each member carries display metadata: test_icon, board_icon, loader_icon, legend.
     passed is True for statuses that do not represent a build/test failure.
     built is True for statuses that represent a build that completed successfully.
     """
-    def __new__(cls, value, passed, built, test_icon, board_icon, legend):
+    def __new__(cls, value, passed, built, test_icon, board_icon, loader_icon, legend):
         obj = int.__new__(cls, value)
         obj._value_ = value
         obj.passed = passed
         obj.built = built
         obj.test_icon = test_icon
         obj.board_icon = board_icon
+        obj.loader_icon = loader_icon
         obj.legend = legend
         return obj
 
-    SKIP              = (-1, True,  False, ":new_moon:",      ":new_moon:",          "Test was skipped.")
-    PASS              = ( 0, True,  True,  ":green_circle:",  ":white_check_mark:",  "Test passed successfully, with no warnings or errors.")
-    WARNING           = ( 1, True,  True,  ":yellow_circle:", ":white_check_mark:*", "Test completed with some warnings; no errors detected.")
-    EXPECTED_ERROR    = ( 2, True,  False, ":no_entry_sign:", ":heavy_check_mark:*", "Test completed with errors, but all are known/expected.")
-    INVALID_EXCEPTION = ( 3, False, False, ":interrobang:",   ":interrobang:",       "Test was expected to fail but passed; exception entry is outdated.")
-    ERROR             = ( 4, False, False, ":red_circle:",    ":x:",                 "Test completed with unexpected errors.")
-    FAILURE           = ( 5, False, False, ":fire:",          ":fire:",              "Test run failed to complete.")
+    SKIP              = (-1, True,  False, ":new_moon:",      ":new_moon:",          "-",            "Skipped.")
+    PASS              = ( 0, True,  True,  ":green_circle:",  ":white_check_mark:",  ":green_book:", "Completed successfully, with no warnings or errors.")
+    WARNING           = ( 1, True,  True,  ":yellow_circle:", ":white_check_mark:*", ":label:",      "Completed with some warnings; no errors detected.")
+    EXPECTED_ERROR    = ( 2, True,  False, ":no_entry_sign:", ":heavy_check_mark:*", "-",            "Completed with known/expected errors.")
+    INVALID_EXCEPTION = ( 3, False, False, ":interrobang:",   ":interrobang:",       "-",            "Expected to fail but passed; exception entry is outdated.")
+    ERROR             = ( 4, False, False, ":red_circle:",    ":x:",                 "-",            "Completed with unexpected errors.")
+    FAILURE           = ( 5, False, False, ":fire:",          ":fire:",              ":fire:",       "Job failed to complete.")
 
 # Module-level aliases so consumers can import status constants directly
 SKIP, PASS, WARNING, EXPECTED_ERROR, INVALID_EXCEPTION, ERROR, FAILURE = TestStatus
