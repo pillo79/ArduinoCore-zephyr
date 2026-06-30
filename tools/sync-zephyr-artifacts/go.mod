@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/codeclysm/extract/v4 v4.0.0
 	github.com/otiai10/copy v1.14.1
+	github.com/ulikunitz/xz v0.5.15
 )
 
 require (
@@ -16,7 +17,6 @@ require (
 	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
-	github.com/ulikunitz/xz v0.5.14 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
