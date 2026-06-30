@@ -39,6 +39,7 @@ jobs:
             libraries/examples/**
             libraries/extras/**
             libraries/ea_malloc/**
+            libraries/Storage/examples/FlashFormat/4343WA1_bin.h
           json: true
       - name: Export changed files in a text file, one per line
         if: steps.changed-files.outputs.any_changed == 'true'
