@@ -48,6 +48,22 @@ protected:
 
 		size_t file_size = entry.size;
 
+		// The new CA bundle (the one uploaded via the FlashFormat sketch) is
+		// around 21 KB and fits in RAM. The old bundle shipped with the mbed
+		// core is much larger and won't fit. Warn the user if the file looks
+		// too big so they know they need to upload the new bundle.
+		if (file_size > 32 * 1024 && Serial) {
+			Serial.print("WARNING: ");
+			Serial.print(cert_path);
+			Serial.print(" is ");
+			Serial.print((unsigned int)file_size);
+			Serial.println(" bytes, which is larger than expected.");
+			Serial.println("It looks like the board still has the old CA bundle (the one");
+			Serial.println("that comes with the mbed core) loaded. That bundle is too big");
+			Serial.println("and won't fit in RAM, so TLS will not work.");
+			Serial.println("Please upload the new bundle using the FlashFormat sketch.");
+		}
+
 		// Allocate buffer for entire file (+1 for NULL terminator)
 		cadata = (char *)malloc(file_size + 1);
 		if (!cadata) {
