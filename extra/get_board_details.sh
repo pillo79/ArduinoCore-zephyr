@@ -6,13 +6,13 @@
 set -e
 
 get_boards() {
-	cat boards.txt | sed -e 's/\s*#.*//' | grep -E '^.*\.build\.variant=' | sed -e 's/\.build\.variant=.*//'
+	cat boards.txt | sed -e 's/\s*#.*//' | grep -E '^.*\.build\.variant=' | sed -e 's/\.build\.variant=.*//' -e 's/["\\]/\\&/g'
 }
 
 get_board_field() {
 	board=$1
 	field=$2
-	cat boards.txt | sed -e 's/\s*#.*//' | grep -E "^$board\\.$field=" | cut -d '=' -f2- | sed -e 's/"/\"/g'
+	cat boards.txt | sed -e 's/\s*#.*//' | grep -E "^$board\\.$field=" | cut -d '=' -f2- | sed -e 's/["\\]/\\&/g'
 }
 
 for BOARD in $(get_boards); do
