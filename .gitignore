@@ -3,6 +3,7 @@
 /firmwares/*
 /venv/
 /boards.local.txt
+/platform.local.txt
 
 llext-edk/
 cflags.txt

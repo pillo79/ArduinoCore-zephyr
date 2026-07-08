@@ -138,31 +138,18 @@ update_local_field() {
 	local field=$1
 	local value="$2"
 	local comment="$3"
-	local full_field_name="${board}.${field}"
+
+	if [ -z "$board" ]; then
+		local file="platform.local.txt"
+		local full_field_name="${field}"
+	else
+		local file="boards.local.txt"
+		local full_field_name="${board}.${field}"
+	fi
 	local match_regexp="${full_field_name//./\\.}" # escape dots
 
-	if [ -n "$comment" ]; then
-		# if there's a comment, add/update it as a commented-out line above the actual field
-		if grep -qE "^# ${match_regexp}:" boards.local.txt; then
-			sed -i -e "s/^# ${match_regexp}:.*/# ${full_field_name}: ${comment}/" boards.local.txt
-		else
-			echo "# ${full_field_name}: ${comment}" >> boards.local.txt
-		fi
-	fi
-
-	# update the actual field line
-	if grep -qE "^${match_regexp}" boards.local.txt; then
-		sed -i -e "s/^${match_regexp}=.*/${full_field_name}=${value}/" boards.local.txt
-	else
-		echo "${full_field_name}=${value}" >> boards.local.txt
-	fi
-}
-
-# update properties on boards.local.txt from the generated files
-if [ ! -z "$board" ]; then
-
-	if [ ! -f boards.local.txt ] ; then
-		cat << EOF > boards.local.txt
+	if [ ! -f $file ] ; then
+		cat << EOF > $file
 #########################################################################################
 #
 # AUTO GENERATED FILE - DO NOT EDIT
@@ -172,6 +159,26 @@ if [ ! -z "$board" ]; then
 
 EOF
 	fi
+
+	if [ -n "$comment" ]; then
+		# if there's a comment, add/update it as a commented-out line above the actual field
+		if grep -qE "^# ${match_regexp}:" $file; then
+			sed -i -e "s/^# ${match_regexp}:.*/# ${full_field_name}: ${comment}/" $file
+		else
+			echo "# ${full_field_name}: ${comment}" >> $file
+		fi
+	fi
+
+	# update the actual field line
+	if grep -qE "^${match_regexp}" $file; then
+		sed -i -e "s/^${match_regexp}=.*/${full_field_name}=${value}/" $file
+	else
+		echo "${full_field_name}=${value}" >> $file
+	fi
+}
+
+# update properties on boards.local.txt from the generated files
+if [ ! -z "$board" ]; then
 
 	# sketch load address: start of sketch partition, hex (exact)
 	CODE_ADDR=$(get_value_from_text_file variants/${variant}/syms-static.ld '_sketch_start')
