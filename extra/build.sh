@@ -68,7 +68,11 @@ else
 	fi
 fi
 
+# Save the build version to loader/VERSION and for later use in local files
+build_version=$(extra/get_core_version.sh loader/VERSION)
+
 echo
+echo "Build version: $build_version"
 echo "Build target: $target $args"
 
 # Get the variant name (NORMALIZED_BOARD_TARGET in Zephyr)
@@ -179,6 +183,13 @@ EOF
 
 # update properties on boards.local.txt from the generated files
 if [ ! -z "$board" ]; then
+
+	# save version to both platform.local.txt and boards.local.txt:
+	# - the platform one is reported by the IDE as _the_ core version;
+	# - the board-specific one is used by the auto-update-loader feature
+	#   (when developing, each board build should be tracked separately).
+	board="" update_local_field "version" "$build_version"
+	update_local_field "version" "$build_version"
 
 	# sketch load address: start of sketch partition, hex (exact)
 	CODE_ADDR=$(get_value_from_text_file variants/${variant}/syms-static.ld '_sketch_start')

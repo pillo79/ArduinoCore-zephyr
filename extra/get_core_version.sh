@@ -69,51 +69,69 @@ else
 	exit 1
 fi
 
-# Get the current version from git describe.
-exact_version=$(git describe --tags --exact-match --exclude '*/*' 2>/dev/null)
-if [ -n "$exact_version" ] ; then
-	# must match <maj>.<min>.<patch>(-<prerel>)
-	if [[ $exact_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-.*)? ]] ; then
+if [ -n "$PINNED_CORE_VERSION" ] ; then
+	# If PINNED_CORE_VERSION is set, use it as the version (extract fields)
+	# must match <maj>.<min>.<patch>(-<prerel>)(+<buildinfo>)
+	pattern='^([0-9]+)\.([0-9]+)\.([0-9]+)(-[^+]*)?(\+.*)?'
+	if [[ $PINNED_CORE_VERSION =~ $pattern ]]; then
 		v_maj="${BASH_REMATCH[1]}"
 		v_min="${BASH_REMATCH[2]}"
-		v_patch="${BASH_REMATCH[3]#-}"
-		v_extra="${BASH_REMATCH[4]}" # optional
+		v_patch="${BASH_REMATCH[3]}"
+		v_extra="${BASH_REMATCH[4]}" # optional, lead -
+		v_tweak="${BASH_REMATCH[5]}" # optional, lead +
 	else
-		echo "Error: unexpected tag '$exact_version'" >&2
+		echo "Error: unexpected pinned ver '$PINNED_CORE_VERSION'" >&2
 		exit 1
 	fi
-
-	# no additional information
-	v_tweak=""
 else
-	version_from_git=$(git describe --tags --long --exclude '*/*' 2>/dev/null)
-	# must match <maj>.<min>.<patch>(-<prerel>)-<number-of-commits-since-tag>-g<commit-hash>
-	if [[ $version_from_git =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-.*)?-([0-9]+)-g.* ]]; then
-		v_maj="${BASH_REMATCH[1]}"
-		v_min="${BASH_REMATCH[2]}"
-		v_patch="${BASH_REMATCH[3]#-}"
-		v_extra="${BASH_REMATCH[4]}" # optional
-		count="${BASH_REMATCH[5]}"
+	exact_version=$(git describe --tags --exact-match --exclude '*/*' 2>/dev/null)
+	if [ -n "$exact_version" ] ; then
+		# this is a tagged build, extract the version components from the tag
+		# must match <maj>.<min>.<patch>(-<prerel>)
+		pattern='^([0-9]+)\.([0-9]+)\.([0-9]+)(-.*)?'
+		if [[ $exact_version =~ $pattern ]]; then
+			v_maj="${BASH_REMATCH[1]}"
+			v_min="${BASH_REMATCH[2]}"
+			v_patch="${BASH_REMATCH[3]}"
+			v_extra="${BASH_REMATCH[4]}" # optional, lead -
+		else
+			echo "Error: unexpected tag '$exact_version'" >&2
+			exit 1
+		fi
+
+		# no additional information
+		v_tweak=""
 	else
-		echo "Error: unexpected git describe output '$version_from_git'" >&2
-		exit 1
-	fi
+		version_from_git=$(git describe --tags --long --exclude '*/*' 2>/dev/null)
+		# must match <maj>.<min>.<patch>(-<prerel>)-<number-of-commits-since-tag>-g<commit-hash>
+		pattern='^([0-9]+)\.([0-9]+)\.([0-9]+)(-.*)?-([0-9]+)-g.*'
+		if [[ $version_from_git =~ $pattern ]]; then
+			v_maj="${BASH_REMATCH[1]}"
+			v_min="${BASH_REMATCH[2]}"
+			v_patch="${BASH_REMATCH[3]}"
+			v_extra="${BASH_REMATCH[4]}" # optional, lead -
+			count="${BASH_REMATCH[5]}"
+		else
+			echo "Error: unexpected git describe output '$version_from_git'" >&2
+			exit 1
+		fi
 
-	if [ -z "${v_extra}" ]; then
-		v_patch=$((v_patch+1))
-		v_extra="-0"
-	fi
+		if [ -z "${v_extra}" ]; then
+			v_patch=$((v_patch+1))
+			v_extra="-0"
+		fi
 
-	if [ "$KIND" == "tag" ] ; then
-		# number of commits since tag is irrelevant for a tag push
-		v_extra="${v_extra}.${KIND}.${NAME}"
-	else
-		v_extra="${v_extra}.${KIND}.${NAME}.${count}"
-	fi
+		if [ "$KIND" == "tag" ] ; then
+			# number of commits since tag is irrelevant for a tag push
+			v_extra="${v_extra}.${KIND}.${NAME}"
+		else
+			v_extra="${v_extra}.${KIND}.${NAME}.${count}"
+		fi
 
-	# If HEAD_REF is not set, we're not in CI but in a local clone. Use the
-	# implicit HEAD and include --dirty to test for uncommitted changes.
-	v_tweak="+$(git describe --always ${HEAD_REF:---dirty})"
+		# If HEAD_REF is not set, we're not in CI but in a local clone. Use the
+		# implicit HEAD and include --dirty to test for uncommitted changes.
+		v_tweak="+$(git describe --always ${HEAD_REF:---dirty})"
+	fi
 fi
 
 VERSION="${v_maj}.${v_min}.${v_patch}${v_extra}${v_tweak}"

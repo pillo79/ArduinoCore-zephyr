@@ -27,6 +27,9 @@ if [ ! -z "$GITHUB_STEP_SUMMARY" ] ; then
 	echo "### Variant build results:" >> "$GITHUB_STEP_SUMMARY"
 fi
 
+# This will force all boards to share the same build version
+export PINNED_CORE_VERSION=$(extra/get_core_version.sh)
+
 final_result=0
 while read -r item; do
 	board=$(jq -cr '.board' <<< "$item")

@@ -54,6 +54,8 @@ for board in $EXCLUDED_BOARDS ; do
 	# remove (even commented) lines for excluded boards
 	sed -i "/^\(\s*#\s*\)\?${board}\./d" $TEMP_BOARDS
 done
+# remove any per-board version lines
+sed -i '/^\S*\.version=/d' $TEMP_BOARDS
 # remove multiple empty lines
 sed -i '/^$/N;/^\n$/D' $TEMP_BOARDS
 
