@@ -171,10 +171,16 @@ erase.pattern=
 upload.artifacts.loader={runtime.platform.path}/firmwares/{bootloader.file}
 upload.artifacts.sketch={build.path}/{build.project_name}.{upload.extension}
 
+# Expects a {loader.cmd} and a {sketch.cmd} to be defined in the tool's
+# section. The loader is flashed if it does not match the current (maybe
+# board-specific) core version. The sketch is then flashed in any case.
+tools.patterns.upload-loader-and-sketch="{runtime.tools.scripting-tools.path}/scripting-tools" if not eq "v{upload.port.properties.configuration}" "v{version}" {loader.cmd} :: run {sketch.cmd}
 
 #
 # OpenOCD
 #
+
+# Special handling of loader and sketch via cfg file
 
 tools.openocd.path={runtime.tools.openocd-0.12.0-arduino1-static.path}
 tools.openocd.cmd=bin/openocd
@@ -201,46 +207,57 @@ tools.bossac.path={runtime.tools.bossac-1.9.1-arduino2.path}
 tools.bossac.cmd=bossac
 tools.bossac.cmd.windows=bossac.exe
 
+tools.bossac.sketch.cmd="{path}/{cmd}" {upload.verbose} --port={serial.port.file} -U -i -e -w "{upload.artifacts.sketch}" --offset {upload.address} -R
+tools.bossac.loader.cmd="{path}/{cmd}" {upload.verbose} --port={serial.port.file} -U -i -e -w "{upload.artifacts.loader}" --offset {bootloader.address}
+
 tools.bossac.upload.params.verbose=-d
 tools.bossac.upload.params.quiet=
-tools.bossac.upload.pattern="{path}/{cmd}" {upload.verbose} --port={serial.port.file} -U -i -e -w "{upload.artifacts.sketch}" --offset {upload.address} -R
+tools.bossac.upload.pattern={tools.patterns.upload-loader-and-sketch}
 
 tools.bossac.bootloader.params.verbose=-d
 tools.bossac.bootloader.params.quiet=
-tools.bossac.bootloader.pattern="{path}/{cmd}" {upload.verbose} --port={serial.port.file} -U -i -e -w "{upload.artifacts.loader}" --offset {bootloader.address} -R
+tools.bossac.bootloader.pattern={loader.cmd} -R
 
 
 #
 # DFU_UTIL
 #
 
-upload.dfuse=--dfuse-address={upload.address}:leave
-bootloader.dfuse=--dfuse-address={bootloader.address}:leave
+# overridable by boards.txt
+leave.dfuse=:leave
+upload.dfuse=--dfuse-address={upload.address}
+bootloader.dfuse=--dfuse-address={bootloader.address}
 
 tools.dfu-util.path={runtime.tools.dfu-util.path}
 tools.dfu-util.cmd=dfu-util
+tools.dfu-util.sketch.cmd="{path}/{cmd}" --device ,{upload.vid}:{upload.pid} -D "{upload.artifacts.sketch}" -a{upload.interface} {upload.dfuse}{leave.dfuse}
+tools.dfu-util.loader.cmd="{path}/{cmd}" --device ,{bootloader.vid}:{bootloader.pid} -D "{upload.artifacts.loader}" -a{bootloader.interface} {bootloader.dfuse}
+
 tools.dfu-util.upload.params.verbose=-d
 tools.dfu-util.upload.params.quiet=
-tools.dfu-util.upload.pattern="{path}/{cmd}" --device ,{upload.vid}:{upload.pid} -D "{upload.artifacts.sketch}" -a{upload.interface} {upload.dfuse}
+tools.dfu-util.upload.pattern={tools.patterns.upload-loader-and-sketch}
 
 tools.dfu-util.bootloader.params.verbose=-d
 tools.dfu-util.bootloader.params.quiet=
-tools.dfu-util.bootloader.pattern="{path}/{cmd}" --device ,{bootloader.vid}:{bootloader.pid} -D "{upload.artifacts.loader}" -a{bootloader.interface} {bootloader.dfuse}
+tools.dfu-util.bootloader.pattern={loader.cmd}{leave.dfuse}
 
 
 #
 # PICOTOOL
 #
 
+tools.picotool.sketch.cmd="{path}/{cmd}" {upload.verbose} -D "{upload.artifacts.sketch}"
+tools.picotool.loader.cmd="{path}/{cmd}" {upload.verbose} -D "{upload.artifacts.loader}"
+
 tools.picotool.path={runtime.tools.rp2040tools.path}
 tools.picotool.cmd=rp2040load
 tools.picotool.upload.params.verbose=-v
 tools.picotool.upload.params.quiet=
-tools.picotool.upload.pattern="{path}/{cmd}" {upload.verbose} -D "{upload.artifacts.sketch}"
+tools.picotool.upload.pattern={tools.patterns.upload-loader-and-sketch}
 
 tools.picotool.bootloader.params.verbose=-v
 tools.picotool.bootloader.params.quiet=
-tools.picotool.bootloader.pattern="{path}/{cmd}" {upload.verbose} -D "{upload.artifacts.loader}"
+tools.picotool.bootloader.pattern={loader.cmd}
 
 
 #
@@ -255,6 +272,8 @@ tools.imgtool.flags=sign --key "{build.keys.keychain}/{build.keys.sign_key}" --e
 #
 # REMOTEOCD
 #
+
+# Special handling of loader and sketch via upload command
 
 tools.remoteocd.path={runtime.tools.remoteocd.path}
 tools.remoteocd.cmd=remoteocd
