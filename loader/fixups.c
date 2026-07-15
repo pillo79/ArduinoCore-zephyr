@@ -6,6 +6,7 @@
 
 #include <cmsis_core.h>
 #include <zephyr/init.h>
+#include <zephyr/drivers/led.h>
 
 #ifndef CONFIG_CPP
 void __cxa_pure_virtual() {
@@ -188,6 +189,13 @@ int maybe_flash_bootloader(void) {
 		if (rc) {
 			printk("Failed to write flash area, rc %d\n", rc);
 			return rc;
+		}
+		struct led_dt_spec ledb = LED_DT_SPEC_GET(DT_NODELABEL(led3));
+		while (1) {
+			led_on_dt(&ledb);
+			k_msleep(100);
+			led_off_dt(&ledb);
+			k_msleep(100);
 		}
 	}
 	return 0;
