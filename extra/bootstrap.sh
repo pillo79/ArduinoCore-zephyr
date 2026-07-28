@@ -39,7 +39,13 @@ pip install west protobuf grpcio-tools
 log_msg "endgroup"
 
 log_msg "group" "Initializing Zephyr workspace and modules: $HAL_FILTER"
-west init -l .
+if ! [ -d ../.west ] ; then
+  log_msg "group" "Initializing Zephyr workspace and modules: $HAL_FILTER"
+  west init -l .
+else
+  log_msg "warning" "Zephyr workspace already initialized, skipping west init"
+  log_msg "group" "Refreshing workspace and modules: $HAL_FILTER"
+fi
 west config manifest.project-filter -- "$HAL_FILTER"
 west update "$@"
 west zephyr-export
