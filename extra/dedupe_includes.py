@@ -3,18 +3,19 @@
 # Copyright (c) Arduino s.r.l. and/or its affiliated companies
 # SPDX-License-Identifier: Apache-2.0
 
-# Finds files that are byte-identical, at the same relative path, across every
-# one of a set of input directories, copies one canonical copy of each into a
-# separate output directory (preserving its relative path), then deletes the
-# duplicate copies from the input directories.
+# Finds files that are byte-identical, at the same relative path, in the
+# 'llext-edk/include' directory of every given variant, copies one canonical
+# copy of each into a common variant's directory (dropping the
+# 'llext-edk/include' part of the path), then deletes the duplicate copies
+# from the variants' directories.
 #
-# If a directory sits under a "variants/<board>/" tree with a sibling
-# "includes.txt" (a list of "-iwithprefixbefore<path>" compiler flags, each
-# path relative to the variant's own directory), that file is updated to
-# match: entries fully emptied by the move are repointed at the mirrored
-# common directory and their now-empty source directory is deleted; entries
-# only partially emptied get an extra entry added for the common directory
-# alongside the original. This only happens when not running with --dry-run.
+# Each variant's "includes.txt" (a list of "-iwithprefixbefore<path>"
+# compiler flags, each path relative to the variant's own directory) is
+# updated to match: entries fully emptied by the move are repointed at the
+# common variant's directory and their now-empty source directory is removed
+# from disk; entries only partially emptied get an extra entry added for the
+# common directory alongside the original. This only happens when not
+# running with --dry-run.
 
 import argparse
 import hashlib
@@ -24,6 +25,19 @@ import sys
 from pathlib import Path
 
 INCLUDE_FLAG = "-iwithprefixbefore"
+VARIANTS_DIR = Path("variants")
+LLEXT_INCLUDE = Path("llext-edk/include")
+
+
+def input_path(name: str) -> Path:
+    return VARIANTS_DIR / name / LLEXT_INCLUDE
+
+
+def strip_variants_prefix(name: str) -> str:
+    name = name.rstrip("/")
+    if name.startswith(f"{VARIANTS_DIR}/"):
+        name = name[len(f"{VARIANTS_DIR}/") :]
+    return name
 
 
 def hash_file(path: Path) -> str:
@@ -51,17 +65,9 @@ def find_common_files(per_dir_hashes: list[dict[Path, str]]) -> dict[Path, str]:
     return common
 
 
-def find_variant_root(path: Path) -> Path | None:
-    parts = path.parts
-    for i, part in enumerate(parts):
-        if part == "variants" and i + 1 < len(parts):
-            return Path(*parts[: i + 2])
-    return None
-
-
-def update_includes_txt(
-    variant_root: Path, input_dir: Path, common_dir: Path, common_rel_paths
-) -> None:
+def update_includes_txt(name: str, common_dir: Path, common_rel_paths) -> None:
+    variant_root = VARIANTS_DIR / name
+    input_dir = input_path(name)
     includes_txt = variant_root / "includes.txt"
     if not includes_txt.is_file():
         return
@@ -128,8 +134,8 @@ def main() -> int:
     parser.add_argument(
         "--common-dir",
         required=True,
-        type=Path,
-        help="output directory to mirror common files into; must not already exist",
+        help="name of the common variant to mirror files into "
+        "(created at variants/<name>; must not already exist)",
     )
     parser.add_argument(
         "--dry-run",
@@ -137,39 +143,44 @@ def main() -> int:
         help="report what would be done, without touching the filesystem",
     )
     parser.add_argument(
-        "directories",
+        "variant_names",
         nargs="+",
-        type=Path,
-        help="two or more directories to compare",
+        help="two or more variant names to compare (a leading 'variants/' is ignored)",
     )
     args = parser.parse_args()
 
-    if len(args.directories) < 2:
-        parser.error("need at least 2 directories to compare")
+    variant_names = [strip_variants_prefix(v) for v in args.variant_names]
+    if len(variant_names) < 2:
+        parser.error("need at least 2 variants to compare")
 
-    if args.common_dir.exists():
-        parser.error(f"--common-dir {args.common_dir} already exists")
+    for name in variant_names:
+        if not (VARIANTS_DIR / name).is_dir():
+            parser.error(f"{VARIANTS_DIR / name} does not exist")
 
-    per_dir_hashes = [scan_directory(d) for d in args.directories]
+    common_dir = VARIANTS_DIR / strip_variants_prefix(args.common_dir)
+    if common_dir.exists():
+        parser.error(f"--common-dir {common_dir} already exists")
+
+    per_dir_hashes = [scan_directory(input_path(name)) for name in variant_names]
     common = find_common_files(per_dir_hashes)
 
     total_size = sum(
-        (args.directories[0] / rel_path).stat().st_size for rel_path in common
+        (input_path(variant_names[0]) / rel_path).stat().st_size for rel_path in common
     )
-    freed = total_size * (len(args.directories) - 1)
+    freed = total_size * (len(variant_names) - 1)
 
-    print(f"{len(args.directories)} directories compared")
-    for d, hashes in zip(args.directories, per_dir_hashes):
-        print(f"  {d}: {len(hashes)} files")
-    print(f"{len(common)} files common to all directories")
+    print(f"{len(variant_names)} variants compared")
+    for name, hashes in zip(variant_names, per_dir_hashes):
+        print(f"  {input_path(name)}: {len(hashes)} files")
+    print(f"{len(common)} files common to all variants")
     print(f"{freed} bytes would be freed" if args.dry_run else f"{freed} bytes freed")
 
     if args.dry_run:
         return 0
 
     for rel_path in common:
-        src = args.directories[0] / rel_path
-        dst = args.common_dir / rel_path
+        src = input_path(variant_names[0]) / rel_path
+        dst = common_dir / rel_path
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_bytes(src.read_bytes())
         if hash_file(dst) != common[rel_path]:
@@ -177,13 +188,11 @@ def main() -> int:
             return 1
 
     for rel_path in common:
-        for d in args.directories:
-            (d / rel_path).unlink()
+        for name in variant_names:
+            (input_path(name) / rel_path).unlink()
 
-    for d in args.directories:
-        variant_root = find_variant_root(d)
-        if variant_root is not None:
-            update_includes_txt(variant_root, d, args.common_dir, common.keys())
+    for name in variant_names:
+        update_includes_txt(name, common_dir, common.keys())
 
     return 0
 
