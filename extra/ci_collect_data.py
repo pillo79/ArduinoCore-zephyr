@@ -81,6 +81,41 @@ def log_test(artifact, board, sketch, link_mode, exceptions, status, issues, job
 # Main Logic
 # ---------------------------------------------------------------------------
 
+def parse_known_issues(lines):
+    """
+    Parses a "known example issues" list, in the format used by
+    variants/<variant>/known_example_issues.txt: one entry per line, '#'
+    starts a comment, blank lines are ignored.
+
+    A plain line is a regular expression matched against a sketch path; a
+    match means the sketch's compilation errors are expected (an "exception").
+
+    A line containing a '|' (pipe) is a warning filter: the part before the
+    '|' is a regular expression matched against the sketch path, and the part
+    after it is a regular expression matched against a reported issue; if
+    both match, that issue is ignored.
+
+    Returns a tuple (exceptions, warning_filters):
+     - exceptions: [ compiled_sketch_pattern, ... ]
+     - warning_filters: [ (compiled_sketch_pattern, compiled_warning_pattern), ... ]
+    """
+    exceptions = []
+    warning_filters = []
+    for line in lines:
+        line = line.split('#')[0].strip()
+        if not line:
+            continue
+        elif '|' in line:
+            # this is a warning filter, not an exception
+            sketch_pattern, warning_pattern = line.split('|', 1)
+            sketch_pattern = re.compile(f"^(ArduinoCore-zephyr/)?{sketch_pattern}")
+            warning_pattern = re.compile(warning_pattern)
+            warning_filters.append(( sketch_pattern, warning_pattern ))
+        else:
+            # this is an exception
+            exceptions.append(re.compile(f"^(ArduinoCore-zephyr/)?{line}"))
+    return exceptions, warning_filters
+
 # Environment Variable Checks
 ALL_BOARD_DATA_STR = os.environ.get('ALL_BOARD_DATA')
 WORKFLOW_JOBS_STR = os.environ.get('WORKFLOW_JOBS')
@@ -137,19 +172,7 @@ for board_data in ALL_BOARD_DATA.values():
     warning_filters = [] # [ (sketch_pattern, regex), ...]
     if os.path.exists(f"variants/{variant}/known_example_issues.txt"):
         with open(f"variants/{variant}/known_example_issues.txt", 'r') as f:
-            for line in f:
-                line = line.split('#')[0].strip()
-                if not line:
-                    continue
-                elif '|' in line:
-                    # this is a warning filter, not an exception
-                    sketch_pattern, warning_pattern = line.split('|', 1)
-                    sketch_pattern = re.compile(f"^(ArduinoCore-zephyr/)?{sketch_pattern}")
-                    warning_pattern = re.compile(warning_pattern)
-                    warning_filters.append(( sketch_pattern, warning_pattern ))
-                else:
-                    # this is an exception
-                    exceptions.append(re.compile(f"^(ArduinoCore-zephyr/)?{line}"))
+            exceptions, warning_filters = parse_known_issues(f)
 
     # Get raw data from report files for both static and dynamic linking modes
     for link_mode in ("static", "dynamic"):
