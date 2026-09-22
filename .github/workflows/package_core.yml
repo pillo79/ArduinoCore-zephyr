@@ -663,15 +663,6 @@ jobs:
           path: comment-request/
           retention-days: 1
 
-      # upload size delta report artifact (will be retrieved by report_size_deltas.yml)
-      - name: Archive size deltas report information
-        uses: actions/upload-artifact@v7
-        if: ${{ github.event_name == 'pull_request' }}
-        with:
-          name: sketches-reports
-          path: sketches-reports/
-          retention-days: 1
-
       # upload new official test size artifact (for AWS storage)
       - name: Archive sketch size information
         uses: actions/upload-artifact@v7
