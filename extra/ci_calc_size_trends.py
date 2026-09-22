@@ -180,6 +180,19 @@ def outlier_sketch_trends(records, flash_outliers, ram_outliers):
     trends.sort(key=lambda t: -t["max_abs_delta"])
     return trends
 
+def _read_commit_info(input_dir):
+    """
+    Read the (head_sha, head_url) the reports were generated for, from the
+    first report JSON file found. All files in one CI run describe the
+    same commit, so any one file's values are representative.
+    """
+
+    for path in sorted(Path(input_dir).glob("*.json")):
+        with open(path) as f:
+            data = json.load(f)
+        return data.get("commit_hash"), data.get("commit_url")
+    return None, None
+
 def build_trends(input_dir):
     """
     Load all report records from input_dir and compute the full trends
@@ -188,9 +201,12 @@ def build_trends(input_dir):
     """
 
     records = load_records(input_dir)
+    head_sha, head_url = _read_commit_info(input_dir)
     flash_outliers = mad_outliers(records, "flash_delta_abs")
     ram_outliers = mad_outliers(records, "ram_delta_abs")
     return {
+        "head_sha": head_sha,
+        "head_url": head_url,
         "record_count": len(records),
         "board_summary": per_board_summary(records),
         "flash_outliers": flash_outliers,
@@ -203,6 +219,29 @@ def _truncate(value):
 
     return int(value)
 
+def _base_url(head_url, base_sha):
+    """
+    Derive the base commit's URL from the head commit's URL (same repo,
+    GitHub's .../commit/<sha> pattern), so the base is also a link
+    whenever we have enough information to build one.
+    """
+
+    if not head_url or not base_sha:
+        return None
+    return head_url.rsplit("/", 1)[0] + "/" + base_sha
+
+def _compare_url(head_url, base_sha, head_sha):
+    """
+    Build a GitHub compare view URL between base_sha and head_sha, derived
+    from the head commit's URL the same way _base_url derives the base
+    commit's own link.
+    """
+
+    if not head_url or not base_sha or not head_sha:
+        return None
+    repo_url = head_url.rsplit("/", 2)[0]
+    return f"{repo_url}/compare/{base_sha}...{head_sha}"
+
 def _outlier_rows(outliers, top_n):
     """Rank outlier records by combined magnitude and return the top N as plain tuples."""
 
@@ -213,7 +252,7 @@ def _outlier_rows(outliers, top_n):
         for o in ranked[:top_n]
     ]
 
-def _build_report_data(trends, top_n):
+def _build_report_data(trends, top_n, base_sha=None):
     """
     Assemble every prepared row set needed for a report, as plain Python
     values with no markup of any kind. Keeping this decoupled from any
@@ -239,6 +278,11 @@ def _build_report_data(trends, top_n):
     ]
 
     return {
+        "head_sha": trends["head_sha"],
+        "head_url": trends["head_url"],
+        "base_sha": base_sha,
+        "base_url": _base_url(trends["head_url"], base_sha),
+        "compare_url": _compare_url(trends["head_url"], base_sha, trends["head_sha"]),
         "record_count": trends["record_count"],
         "n_board_groups": len(trends["board_summary"]),
         "n_flash_outliers": len(trends["flash_outliers"]),
@@ -311,6 +355,14 @@ def _render_td(cell):
     return f"<td>{text}</td>"
 
 _NO_ROWS_MESSAGE = "<p><em>none</em></p>"
+
+def _commit_html(sha, url):
+    """Render a commit as a short linked hash, or "unknown" if absent."""
+
+    if not sha:
+        return "unknown"
+    short = html.escape(sha[:10])
+    return f'<a href="{html.escape(url)}"><code>{short}</code></a>' if url else f"<code>{short}</code>"
 
 def _html_table(headers, rows):
     if not rows:
@@ -491,8 +543,7 @@ def _chart_bubble(records, key, label, plt, min_abs_delta=MIN_DELTA):
 
         ax.axvline(0, color="#999", linewidth=0.8, linestyle="--", zorder=1)
         ax.set_xlabel(f"{label} delta (bytes, |delta| >= {min_abs_delta})")
-        ax.set_title(f"{label} delta distribution per board / link_mode, sorted by delta magnitude "
-                      "(bubble size = number of matching sketches)")
+        ax.set_title(f"{label} delta distribution per board / link_mode")
         fig.tight_layout()
         img = _figure_to_inline_svg(fig, plt, bold_mono_labels=plotted_boards, tooltips=tooltips)
 
@@ -545,6 +596,10 @@ def generate_html(report_data, records):
 
     flash_box_img, flash_box_excluded = _chart_bubble(records, "flash_delta_abs", "Flash", plt)
     ram_box_img, ram_box_excluded = _chart_bubble(records, "ram_delta_abs", "RAM", plt)
+
+    head_html = _commit_html(report_data["head_sha"], report_data["head_url"])
+    base_html = _commit_html(report_data["base_sha"], report_data["base_url"])
+    compare_html = f' (<a href="{html.escape(report_data["compare_url"])}">compare</a>)' if report_data["compare_url"] else ""
 
     board_rows = [
         (_mono(row[0]), _board_name(row[1]), row[2], row[3], *(_delta_cell(v) for v in row[4:]))
@@ -648,7 +703,7 @@ def generate_html(report_data, records):
 </style>
 </head>
 <body>
-<h1>Size delta trends report</h1>
+<h1>Size deltas from {base_html} to {head_html}{compare_html}</h1>
 <p class="summary">{report_data["record_count"]} sketch/board/link_mode records across
 {report_data["n_board_groups"]} board/link_mode combinations.
 {report_data["n_flash_outliers"]} flash and {report_data["n_ram_outliers"]} RAM per-board outliers flagged.
@@ -711,6 +766,14 @@ def _md_number(value):
     marker = "<sub><sup>🟢</sup></sub>" if value < 0 else "<sub><sup>🔴</sup></sub>"
     return f"{marker}&nbsp;**{text}**"
 
+def _commit_md(sha, url):
+    """Render a commit as a short linked hash, or "unknown" if absent."""
+
+    if not sha:
+        return "unknown"
+    short = sha[:10]
+    return f"[`{short}`]({url})" if url else f"`{short}`"
+
 def _markdown_table(headers, rows, align=None):
     """
     align is an optional per-column list of "l"/"r" (default all "l");
@@ -767,6 +830,13 @@ def generate_markdown(report_data):
         for sketch, board, link_mode, flash, ram in report_data["trend_rows"]
     ]
 
+    def short_sha(sha):
+        return sha[:10] if sha else "unknown"
+
+    head_sha = short_sha(report_data["head_sha"])
+    base_sha = short_sha(report_data["base_sha"])
+    compare_suffix = f' ([compare]({report_data["compare_url"]}))' if report_data["compare_url"] else ""
+
     recap = (
         f'{report_data["record_count"]} sketch/board/link_mode records across '
         f'{report_data["n_board_groups"]} board/link_mode combinations. '
@@ -774,7 +844,12 @@ def generate_markdown(report_data):
         "outliers flagged."
     )
 
-    return f"""{recap}
+    return f"""
+---
+
+## Size deltas from {base_sha} to {head_sha}{compare_suffix}
+
+{recap}
 
 ## Per-board / link_mode summary
 
@@ -801,6 +876,10 @@ def main():
     parser.add_argument("--output-md",
                          help="write a GitHub-flavored Markdown report (counts recap, outlier tables, "
                               "per-board summary) to this path")
+    parser.add_argument("--base-sha",
+                         help="SHA of the baseline commit the deltas were computed against (the "
+                              "reports themselves don't record it); shown in the HTML/Markdown "
+                              "report header alongside the commit they were generated for")
     args = parser.parse_args()
 
     trends, records = build_trends(args.input_dir)
@@ -812,7 +891,7 @@ def main():
         print(json.dumps(trends, indent=2))
 
     if args.output_html or args.output_md:
-        report_data = _build_report_data(trends, top_n=30)
+        report_data = _build_report_data(trends, top_n=30, base_sha=args.base_sha)
         if args.output_html:
             Path(args.output_html).write_text(generate_html(report_data, records))
             print(f"Wrote trends HTML report to {args.output_html}")
