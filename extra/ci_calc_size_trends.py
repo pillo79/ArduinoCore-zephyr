@@ -601,6 +601,105 @@ whether the anomaly is isolated to one board or a wider trend.</p>
 </html>
 """
 
+def _md_code(text):
+    """Render a package/board identifier in a typewriter (monospace) font."""
+
+    return f"`{text}`"
+
+def _md_number(value):
+    """
+    Bold a delta value if its magnitude clears the MIN_DELTA threshold, and
+    prefix it with a small colored dot by sign (green for negative, red for
+    positive). Values that don't clear the threshold are ignored deltas:
+    plain, unmarked numbers, so the dot only ever flags a genuinely notable
+    value. GitHub is the only Markdown renderer this targets, so nested
+    <sub>/<sup> is safe to rely on; it also shrinks and vertically centers
+    the circle so it renders as a small dot instead of a full-size emoji
+    that skews table row height.
+    """
+
+    text = f"{value:+d}" if value != 0 else "0"
+    if abs(value) <= MIN_DELTA:
+        return text
+    marker = "<sub><sup>🟢</sup></sub>" if value < 0 else "<sub><sup>🔴</sup></sub>"
+    return f"{marker}&nbsp;**{text}**"
+
+def _markdown_table(headers, rows, align=None):
+    """
+    align is an optional per-column list of "l"/"r" (default all "l");
+    "r" right-aligns a numeric column via the GFM `---:` separator syntax.
+    """
+
+    if not rows:
+        return "_none_"
+    if align is None:
+        align = ["l"] * len(headers)
+    sep_cell = {"l": "---", "r": "---:"}
+    lines = [
+        "| " + " | ".join(str(h) for h in headers) + " |",
+        "| " + " | ".join(sep_cell[a] for a in align) + " |",
+    ]
+    lines += ["| " + " | ".join(str(cell) for cell in row) + " |" for row in rows]
+    return "\n".join(lines)
+
+def generate_markdown(report_data):
+    """
+    Render prepared report data as a GitHub-flavored Markdown report: a
+    one-line count recap, the outlier-sketch cross-board trend table, the
+    per-board summary rows with at least one notable (>= MIN_DELTA) value,
+    and the full per-board summary folded into a collapsed section.
+    """
+
+    board_headers = ["package", "board", "link_mode", "sketches",
+                      "flash min", "flash mean", "flash median", "flash max",
+                      "ram min", "ram mean", "ram median", "ram max"]
+    board_align = ["l", "l", "l"] + ["r"] * (len(board_headers) - 3)
+    trend_align = ["l", "l", "l", "r", "r"]
+
+    def format_board_row(row):
+        package, board, link_mode, sketch_count, *deltas = row
+        return (_md_code(package), _md_code(board), link_mode, sketch_count,
+                *(_md_number(v) for v in deltas))
+
+    raw_board_rows = report_data["board_rows"]
+    notable_raw_rows = [row for row in raw_board_rows if any(abs(v) >= MIN_DELTA for v in row[4:])]
+    notable_board_rows = [format_board_row(row) for row in notable_raw_rows]
+
+    by_package = defaultdict(list)
+    for raw_row in raw_board_rows:
+        by_package[raw_row[0]].append(format_board_row(raw_row)[1:])
+
+    full_sections = "\n\n".join(
+        f"<details>\n<summary>Full per-board/link-mode summary for {_mono(package)}</summary>\n\n"
+        f"{_markdown_table(board_headers[1:], rows, board_align[1:])}\n\n</details>"
+        for package, rows in by_package.items()
+    )
+
+    trend_rows = [
+        (sketch, _md_code(board), link_mode, _md_number(flash), _md_number(ram))
+        for sketch, board, link_mode, flash, ram in report_data["trend_rows"]
+    ]
+
+    recap = (
+        f'{report_data["record_count"]} sketch/board/link_mode records across '
+        f'{report_data["n_board_groups"]} board/link_mode combinations. '
+        f'{report_data["n_flash_outliers"]} flash and {report_data["n_ram_outliers"]} RAM per-board '
+        "outliers flagged."
+    )
+
+    return f"""{recap}
+
+## Per-board / link_mode summary
+
+{_markdown_table(board_headers, notable_board_rows, board_align)}
+
+{full_sections}
+
+## Outlier sketches across boards
+
+{_markdown_table(["sketch", "board", "link_mode", "flash Δ", "RAM Δ"], trend_rows, trend_align)}
+"""
+
 def main():
     parser = argparse.ArgumentParser(
         description="Extract trends and flag outliers from ci_calc_size_reports.py delta reports")
@@ -612,6 +711,9 @@ def main():
     parser.add_argument("--output-html",
                          help="write a self-contained HTML report (charts + tables, no external assets) "
                               "to this path; requires matplotlib")
+    parser.add_argument("--output-md",
+                         help="write a GitHub-flavored Markdown report (counts recap, outlier tables, "
+                              "per-board summary) to this path")
     args = parser.parse_args()
 
     trends, records = build_trends(args.input_dir)
@@ -619,13 +721,17 @@ def main():
     if args.output_json:
         Path(args.output_json).write_text(json.dumps(trends, indent=2))
         print(f"Wrote trends JSON to {args.output_json}")
-    elif not args.output_html:
+    elif not args.output_html and not args.output_md:
         print(json.dumps(trends, indent=2))
 
-    if args.output_html:
+    if args.output_html or args.output_md:
         report_data = _build_report_data(trends, top_n=30)
-        Path(args.output_html).write_text(generate_html(report_data, records))
-        print(f"Wrote trends HTML report to {args.output_html}")
+        if args.output_html:
+            Path(args.output_html).write_text(generate_html(report_data, records))
+            print(f"Wrote trends HTML report to {args.output_html}")
+        if args.output_md:
+            Path(args.output_md).write_text(generate_markdown(report_data))
+            print(f"Wrote trends Markdown report to {args.output_md}")
 
 if __name__ == "__main__":
     main()
