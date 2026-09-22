@@ -343,7 +343,7 @@ def _html_table_grouped(solo_headers, group_headers, sub_headers, rows):
     )
     return f"<table><thead><tr>{row1}</tr><tr>{row2}</tr></thead><tbody>{body}</tbody></table>"
 
-def _figure_to_inline_svg(fig, plt, bold_mono_labels=()):
+def _figure_to_inline_svg(fig, plt, bold_mono_labels=(), tooltips=None):
     """
     Render a matplotlib figure to inline SVG markup (real <text>/<circle>/
     <path> elements, not baked-in glyph outlines or a raster image), so it
@@ -358,6 +358,12 @@ def _figure_to_inline_svg(fig, plt, bold_mono_labels=()):
     (<tspan>, mixing styles within one <text> element) does the same job,
     so the label's exact text content is swapped for a <tspan>-wrapped
     version after rendering.
+
+    tooltips: {gid: text} for artists whose set_gid(gid) was called before
+    rendering (e.g. one scatter() call per point). matplotlib wraps each
+    such artist in <g id="gid">...</g>; a <title> inserted as its first
+    child gives it a native hover tooltip, no JavaScript needed, same as
+    the "title" attribute would in plain HTML.
     """
 
     buf = io.BytesIO()
@@ -385,6 +391,13 @@ def _figure_to_inline_svg(fig, plt, bold_mono_labels=()):
         new = (f'><tspan style="font-weight:bold;font-family:monospace">'
                f'{html.escape(board)}</tspan> ({html.escape(mode)})<')
         svg = svg.replace(old, new)
+
+    for gid, text in (tooltips or {}).items():
+        svg = re.sub(
+            rf'(<g id="{re.escape(gid)}"[^>]*>)',
+            rf'\1<title>{html.escape(text)}</title>',
+            svg, count=1,
+        )
 
     return _Safe(svg)
 
@@ -431,8 +444,18 @@ def _chart_bubble(records, key, label, plt, min_abs_delta=MIN_DELTA):
         colors = ["#888888" if v == 0 else "#217821" if v < 0 else "#a31f1f" for v in xs]
 
         fig, ax = plt.subplots(figsize=(9, max(3, 0.4 * len(plotted_boards))))
-        ax.scatter(xs, ys, s=sizes, color=colors, alpha=0.85,
-                   edgecolors="#333333", linewidths=0.5, zorder=3)
+        # one scatter() call per point (instead of one batched call for all
+        # of them) so each bubble gets its own gid, letting the SVG
+        # post-processing below give it its own hover tooltip
+        tooltips = {}
+        for i, (x_val, y_val, size, color, count, board_label) in enumerate(
+            zip(xs, ys, sizes, colors, counts, (plotted_boards[y] for y in ys))
+        ):
+            gid = f"bubble-{label}-{i}"
+            ax.scatter([x_val], [y_val], s=[size], color=color, alpha=0.85,
+                       edgecolors="#333333", linewidths=0.5, zorder=3, gid=gid)
+            sketch_word = "sketch" if count == 1 else "sketches"
+            tooltips[gid] = f"{board_label}: {x_val:+d} bytes ({count} {sketch_word})"
         for x_val, y_val in zip(xs, ys):
             ax.annotate(f"{x_val:+d}", (x_val, y_val), xytext=(0, -8), textcoords="offset points",
                         ha="center", va="top", fontsize=6, color="#333333", zorder=4)
@@ -471,7 +494,7 @@ def _chart_bubble(records, key, label, plt, min_abs_delta=MIN_DELTA):
         ax.set_title(f"{label} delta distribution per board / link_mode, sorted by delta magnitude "
                       "(bubble size = number of matching sketches)")
         fig.tight_layout()
-        img = _figure_to_inline_svg(fig, plt, bold_mono_labels=plotted_boards)
+        img = _figure_to_inline_svg(fig, plt, bold_mono_labels=plotted_boards, tooltips=tooltips)
 
     by_value = defaultdict(list)
     for board_label in excluded_boards:
