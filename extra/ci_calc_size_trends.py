@@ -8,12 +8,13 @@
 #
 # This script expects a directory of "<package>-<board>-link_mode=<mode>.json"
 # report files (each already annotated with per-sketch "delta" data) and
-# prints/writes a JSON summary of sketches whose delta is a statistical
-# outlier vs. its own board/link_mode's distribution. Boards are not
-# comparable to one another (each has its own typical delta, e.g. from
-# board-specific code paths), so outliers are computed within each board's
-# own group of sketches rather than pooling everything into one global
-# distribution.
+# prints/writes a JSON summary of:
+#  - per-board/link_mode delta distributions (boards are not comparable to
+#    one another, so all statistics are computed within each board's own
+#    group of sketches, never across the whole dataset)
+#  - sketches whose delta is a statistical outlier vs. its own board's
+#    distribution
+#  - cross-board and static/dynamic link_mode trends
 
 import argparse
 from collections import defaultdict
@@ -22,6 +23,11 @@ from pathlib import Path
 import statistics
 
 SIZE_NAMES = ("flash", "RAM for global variables")
+
+# deltas smaller than this (in bytes) are treated as noise: common
+# per-binary overhead changes that would otherwise dominate a report
+# without being interesting
+MIN_DELTA = 128
 
 def parse_filename(name):
     """
@@ -106,17 +112,140 @@ def mad_outliers(records, key, threshold=3.5):
                 outliers.append({**record, "board_median": median, "mad_score": score})
     return outliers
 
+def per_board_summary(records):
+    """
+    Summarize flash/RAM deltas per (package, board, link_mode) group.
+    """
+
+    by_board = defaultdict(list)
+    for record in records:
+        by_board[(record["package"], record["board"], record["link_mode"])].append(record)
+
+    summary = []
+    for (package, board, link_mode), group in sorted(by_board.items()):
+        flash_vals = [r["flash_delta_abs"] for r in group]
+        ram_vals = [r["ram_delta_abs"] for r in group]
+        summary.append({
+            "package": package,
+            "board": board,
+            "link_mode": link_mode,
+            "sketch_count": len(group),
+            "flash_delta_min": min(flash_vals),
+            "flash_delta_mean": statistics.mean(flash_vals),
+            "flash_delta_median": statistics.median(flash_vals),
+            "flash_delta_max": max(flash_vals),
+            "ram_delta_min": min(ram_vals),
+            "ram_delta_mean": statistics.mean(ram_vals),
+            "ram_delta_median": statistics.median(ram_vals),
+            "ram_delta_max": max(ram_vals),
+        })
+    return summary
+
+def outlier_sketch_trends(records, flash_outliers, ram_outliers):
+    """
+    For every sketch that was flagged as a flash or RAM outlier on at least
+    one board, list its delta on every board/link_mode it appears on. This
+    shows whether a flagged anomaly is isolated to one board or a wider
+    cross-board trend, without dumping every sketch's minor per-board
+    variation (most of which is not an outlier, just normal board-specific
+    noise).
+    """
+
+    flagged_sketches = {o["sketch"] for o in flash_outliers} | {o["sketch"] for o in ram_outliers}
+    if not flagged_sketches:
+        return []
+
+    by_sketch = defaultdict(list)
+    for record in records:
+        if record["sketch"] in flagged_sketches:
+            by_sketch[record["sketch"]].append(record)
+
+    trends = []
+    for sketch, group in by_sketch.items():
+        entries = sorted(
+            ({"board": r["board"], "link_mode": r["link_mode"],
+              "flash_delta_abs": r["flash_delta_abs"], "ram_delta_abs": r["ram_delta_abs"]}
+             for r in group),
+            key=lambda e: (e["board"], e["link_mode"]),
+        )
+        trends.append({
+            "sketch": sketch,
+            "entries": entries,
+            "max_abs_delta": max(abs(e["flash_delta_abs"]) + abs(e["ram_delta_abs"]) for e in entries),
+        })
+
+    trends.sort(key=lambda t: -t["max_abs_delta"])
+    return trends
+
 def build_trends(input_dir):
     """
-    Load all report records from input_dir and compute the trends summary.
+    Load all report records from input_dir and compute the full trends
+    summary: per-board outliers, per-board summary, and cross-board outlier
+    trends.
     """
 
     records = load_records(input_dir)
+    flash_outliers = mad_outliers(records, "flash_delta_abs")
+    ram_outliers = mad_outliers(records, "ram_delta_abs")
     return {
         "record_count": len(records),
-        "flash_outliers": mad_outliers(records, "flash_delta_abs"),
-        "ram_outliers": mad_outliers(records, "ram_delta_abs"),
+        "board_summary": per_board_summary(records),
+        "flash_outliers": flash_outliers,
+        "ram_outliers": ram_outliers,
+        "outlier_sketch_trends": outlier_sketch_trends(records, flash_outliers, ram_outliers),
     }, records
+
+def _truncate(value):
+    """Truncate a byte-size value to an integer for display."""
+
+    return int(value)
+
+def _outlier_rows(outliers, top_n):
+    """Rank outlier records by combined magnitude and return the top N as plain tuples."""
+
+    ranked = sorted(outliers, key=lambda o: -(abs(o["flash_delta_abs"]) + abs(o["ram_delta_abs"])))
+    return [
+        (o["board"], o["link_mode"], o["sketch"],
+         _truncate(o["flash_delta_abs"]), _truncate(o["ram_delta_abs"]))
+        for o in ranked[:top_n]
+    ]
+
+def _build_report_data(trends, top_n):
+    """
+    Assemble every prepared row set needed for a report, as plain Python
+    values with no markup of any kind. Keeping this decoupled from any
+    particular output format means a renderer for a different format (e.g.
+    Markdown) could reuse the exact same rows instead of re-deriving them.
+    """
+
+    board_rows = [
+        (b["package"], b["board"], b["link_mode"], b["sketch_count"],
+         _truncate(b["flash_delta_min"]), _truncate(b["flash_delta_mean"]),
+         _truncate(b["flash_delta_median"]), _truncate(b["flash_delta_max"]),
+         _truncate(b["ram_delta_min"]), _truncate(b["ram_delta_mean"]),
+         _truncate(b["ram_delta_median"]), _truncate(b["ram_delta_max"]))
+        for b in trends["board_summary"]
+    ]
+
+    trend_rows = [
+        (t["sketch"], e["board"], e["link_mode"],
+         _truncate(e["flash_delta_abs"]), _truncate(e["ram_delta_abs"]))
+        for t in trends["outlier_sketch_trends"][:top_n]
+        for e in t["entries"]
+        if abs(e["flash_delta_abs"]) >= MIN_DELTA or abs(e["ram_delta_abs"]) >= MIN_DELTA
+    ]
+
+    return {
+        "record_count": trends["record_count"],
+        "n_board_groups": len(trends["board_summary"]),
+        "n_flash_outliers": len(trends["flash_outliers"]),
+        "n_ram_outliers": len(trends["ram_outliers"]),
+        "top_n": top_n,
+        "board_rows": board_rows,
+        "flash_outlier_rows": _outlier_rows(trends["flash_outliers"], top_n),
+        "ram_outlier_rows": _outlier_rows(trends["ram_outliers"], top_n),
+        "trend_rows": trend_rows,
+    }
 
 def main():
     parser = argparse.ArgumentParser(
