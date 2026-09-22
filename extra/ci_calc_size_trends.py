@@ -441,15 +441,30 @@ def _chart_bubble(records, key, label, plt, min_abs_delta=MIN_DELTA):
         ax.set_yticklabels(plotted_boards)
         ax.set_ylim(len(plotted_boards) - 0.5, -0.5)
 
-        xlim = ax.get_xlim()
-        xlim = (min(xlim[0], 0), max(xlim[1], 0))
-        span = xlim[1] - xlim[0] or 1
-        pad = max(span * 0.08, 50)
-        xlim = (xlim[0] - pad, xlim[1] + pad)
+        # use the actual data extent, not ax.get_xlim(): matplotlib's linear
+        # autoscale already adds its own default margin (~5% of the *total*
+        # span) to both sides, which on lopsided data inflates the small
+        # side's bound far more (in ratio terms) than the large side's
+        data_min = min(xs + [0])
+        data_max = max(xs + [0])
+        # multiplicative pad, not additive: on a log-ish axis, equal visual
+        # margin means equal *ratio*, so both sides are scaled by the same
+        # factor regardless of how differently sized their magnitudes are
+        pad_ratio = 1.3
+        left = data_min * pad_ratio if data_min < 0 else -min_abs_delta * pad_ratio
+        right = data_max * pad_ratio if data_max > 0 else min_abs_delta * pad_ratio
+        xlim = (left, right)
         ax.axvspan(xlim[0], -min_abs_delta, color="#2ca02c", alpha=0.18, zorder=0)
         ax.axvspan(min_abs_delta, xlim[1], color="#d62728", alpha=0.18, zorder=0)
         ax.axvspan(-min_abs_delta, min_abs_delta, color="#888888", alpha=0.25, zorder=0.5)
         ax.set_xlim(xlim)
+        # symlog, not log: deltas can be negative or zero, and every plotted
+        # point already clears min_abs_delta, so the linear region just
+        # covers the (empty) noise band without needing to render it
+        ax.set_xscale("symlog", linthresh=min_abs_delta, linscale=0.3)
+        # "10k"/"1M" instead of matplotlib's default "10^4"/"10^6" tick labels
+        from matplotlib.ticker import EngFormatter
+        ax.xaxis.set_major_formatter(EngFormatter(sep=""))
 
         ax.axvline(0, color="#999", linewidth=0.8, linestyle="--", zorder=1)
         ax.set_xlabel(f"{label} delta (bytes, |delta| >= {min_abs_delta})")
