@@ -560,6 +560,13 @@ jobs:
       GH_REPO: ${{ github.repository }}
     steps:
 
+      - name: Install matplotlib
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          sudo apt-get remove --purge man-db -y # skips the mandb triggers
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends python3-matplotlib
+
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
@@ -607,6 +614,37 @@ jobs:
           export GITHUB_BASE_SHA=$(git rev-list --parents -n 1 HEAD | cut -d' ' -f2)
           # errors due to race conditions with parallel branch runs should not fail the job
           extra/ci_calc_size_reports.py ${GITHUB_BASE_SHA} sketches-reports/ || true
+
+          # generate the size trends report (per-board charts + tables) from the
+          # delta-annotated reports above; best-effort, same as the delta computation
+          extra/ci_calc_size_trends.py --input-dir sketches-reports/ --base-sha ${GITHUB_BASE_SHA} \
+            --output-html size-trends-${{ needs.build-env.outputs.CORE_HASH }}.html --output-md size-trends.md || true
+
+          # append the size trends summary to the PR comment and the step summary,
+          # below the build summary
+          if [ -s size-trends.md ]; then
+            cat size-trends.md >> comment-request/comment_body
+            cat size-trends.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # upload the size trends HTML report; linked from the PR comment below
+      - name: Archive size trends report
+        id: upload-size-trends
+        uses: actions/upload-artifact@v7
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          name: size-trends-report
+          path: size-trends-${{ needs.build-env.outputs.CORE_HASH }}.html
+          if-no-files-found: ignore
+          archive: false
+
+      - name: Add size trends artifact link, if available
+        if: ${{ github.event_name == 'pull_request' && steps.upload-size-trends.outputs.artifact-id }}
+        run: |
+          ARTIFACT_ID=${{ steps.upload-size-trends.outputs.artifact-id }}
+          ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${ARTIFACT_ID}"
+          echo -e "\n[Full size trends report](${ARTIFACT_URL})" >> comment-request/comment_body
+          echo -e "\n[Full size trends report](${ARTIFACT_URL})" >> $GITHUB_STEP_SUMMARY
 
       # upload build metadata artifact, for upload to ci-builds
       - name: Archive build metadata information
