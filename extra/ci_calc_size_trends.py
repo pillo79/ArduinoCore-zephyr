@@ -511,6 +511,22 @@ def _chart_bubble(records, key, label, plt, min_abs_delta=MIN_DELTA):
 
     return img, excluded_rows
 
+def _accordion(group_name, items):
+    """
+    Render (label, table_html) pairs as a set of <details name="group_name">
+    elements. Sharing one `name` across a group of <details> is native
+    HTML: the browser keeps at most one of them open at a time within that
+    name, with no JavaScript required.
+    """
+
+    def render_label(label):
+        return str(label) if isinstance(label, _Safe) else html.escape(str(label))
+
+    return "\n\n".join(
+        f'<details name="{group_name}">\n<summary>{render_label(label)}</summary>\n\n{table_html}\n\n</details>'
+        for label, table_html in items
+    )
+
 def generate_html(report_data, records):
     """
     Render prepared report data as a single self-contained HTML page: charts
@@ -551,6 +567,69 @@ def generate_html(report_data, records):
 
     def top_suffix(total):
         return f" (top {top_n} of {total})" if top_n < total else ""
+
+    raw_by_board = defaultdict(list)
+    raw_by_sketch = defaultdict(list)
+    for record in records:
+        raw_by_board[(record["package"], record["board"], record["link_mode"])].append(record)
+        raw_by_sketch[record["sketch"]].append(record)
+
+    def notable_counts(recs):
+        """
+        Count notable (not ignored, i.e. clears MIN_DELTA) flash/RAM values
+        in recs, split by sign: negative (green) vs. positive (red).
+        """
+
+        green = red = 0
+        for r in recs:
+            for key in ("flash_delta_abs", "ram_delta_abs"):
+                value = r[key]
+                if value >= MIN_DELTA:
+                    red += 1
+                elif value <= -MIN_DELTA:
+                    green += 1
+        return green, red
+
+    def _count_dot(count, color):
+        return (f'{count}<span style="display:inline-block;width:.6em;height:.6em;border-radius:50%;'
+                f'background:{color};margin:0 .1em 0 .1em;vertical-align:middle;"></span>')
+
+    def notable_suffix(recs):
+        green, red = notable_counts(recs)
+        parts = []
+        if green:
+            parts.append(_count_dot(green, "#217821"))
+        if red:
+            parts.append(_count_dot(red, "#a31f1f"))
+        return f' ({", ".join(parts)})' if parts else ""
+
+    def board_table_items():
+        for (package, board, link_mode), recs in sorted(raw_by_board.items()):
+            recs = sorted(recs, key=lambda r: r["sketch"])
+            rows = [
+                (_mono(r["sketch"]), _delta_cell(_truncate(r["flash_delta_abs"])),
+                 _delta_cell(_truncate(r["ram_delta_abs"])))
+                for r in recs
+            ]
+            label = _Safe(
+                f"{_mono(package)} {_board_name(board)} ({html.escape(link_mode)}) "
+                f"- {len(rows)} sketches{notable_suffix(recs)}"
+            )
+            yield label, _html_table(["sketch", "flash Δ", "RAM Δ"], rows)
+
+    def sketch_table_items():
+        for sketch, recs in sorted(raw_by_sketch.items()):
+            recs = sorted(recs, key=lambda r: (r["board"], r["link_mode"]))
+            rows = [
+                (_board_name(r["board"]), r["link_mode"], _delta_cell(_truncate(r["flash_delta_abs"])),
+                 _delta_cell(_truncate(r["ram_delta_abs"])))
+                for r in recs
+            ]
+            label = _Safe(f"{_mono(sketch)} - {len(rows)} boards{notable_suffix(recs)}")
+            yield label, _html_table(["board", "link_mode", "flash Δ", "RAM Δ"], rows)
+
+    board_tables = _accordion("board-details", board_table_items())
+    sketch_tables = _accordion("sketch-details", sketch_table_items())
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -597,6 +676,14 @@ def generate_html(report_data, records):
 <p class="summary">Full per-board pattern for every sketch flagged above, showing
 whether the anomaly is isolated to one board or a wider trend.</p>
 {_html_table(["sketch", "board", "link_mode", "flash Δ", "RAM Δ"], trend_rows)}
+
+<h2>Per-board delta tables</h2>
+<p class="summary">Every sketch's flash/RAM delta on that board/link_mode. Opening one closes any other open here.</p>
+{board_tables}
+
+<h2>Per-sketch delta tables</h2>
+<p class="summary">Every board/link_mode a sketch was built for, and its flash/RAM delta there. Opening one closes any other open here.</p>
+{sketch_tables}
 </body>
 </html>
 """
