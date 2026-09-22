@@ -17,8 +17,9 @@
 #  - cross-board and static/dynamic link_mode trends
 
 import argparse
-from collections import defaultdict
+from collections import Counter, defaultdict
 import html
+import io
 import json
 from pathlib import Path
 import re
@@ -342,12 +343,154 @@ def _html_table_grouped(solo_headers, group_headers, sub_headers, rows):
     )
     return f"<table><thead><tr>{row1}</tr><tr>{row2}</tr></thead><tbody>{body}</tbody></table>"
 
-def generate_html(report_data):
+def _figure_to_inline_svg(fig, plt, bold_mono_labels=()):
     """
-    Render prepared report data as a single self-contained HTML page of
-    plain tables (per-board summary, flash/RAM outliers, outlier-sketch
-    trends).
+    Render a matplotlib figure to inline SVG markup (real <text>/<circle>/
+    <path> elements, not baked-in glyph outlines or a raster image), so it
+    can be embedded directly in an HTML report with no external files and
+    no JavaScript.
+
+    bold_mono_labels: tick-label strings of the form "name (mode)" whose
+    "name" portion should render bold+monospace while " (mode)" stays in
+    the chart's normal font — matching the board/link_mode split styling
+    used elsewhere in the HTML tables. matplotlib text has no per-run
+    styling, and SVG has no inline HTML either, but SVG's own equivalent
+    (<tspan>, mixing styles within one <text> element) does the same job,
+    so the label's exact text content is swapped for a <tspan>-wrapped
+    version after rendering.
     """
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="svg", bbox_inches="tight")
+    plt.close(fig)
+    svg = buf.getvalue().decode("utf-8")
+    svg = svg[svg.index("<svg"):]
+
+    # matplotlib resolves "system-ui"/"monospace" to a long quoted fallback
+    # chain for its own local rendering and writes that verbatim into the
+    # SVG's CSS; browsers treat a *quoted* 'system-ui' as a literal (and
+    # nonexistent) font name rather than the special unquoted keyword, so
+    # rewrite both chains down to the plain generic keywords that actually
+    # match the surrounding HTML page's font instead of matplotlib's
+    # locally-installed fallback fonts.
+    svg = re.sub(r"font-family: [^;]*sans-serif;", "font-family: system-ui, sans-serif;", svg)
+    svg = re.sub(r"font-family: [^;]*monospace;", "font-family: monospace;", svg)
+
+    for label in bold_mono_labels:
+        match = re.match(r"^(.*) \((\w+)\)$", label)
+        if not match:
+            continue
+        board, mode = match.groups()
+        old = f">{html.escape(label)}<"
+        new = (f'><tspan style="font-weight:bold;font-family:monospace">'
+               f'{html.escape(board)}</tspan> ({html.escape(mode)})<')
+        svg = svg.replace(old, new)
+
+    return _Safe(svg)
+
+def _chart_bubble(records, key, label, plt, min_abs_delta=MIN_DELTA):
+    """
+    Bubble chart of one metric's delta distribution, one row per
+    board/link_mode that has at least one delta reaching min_abs_delta,
+    ordered by that board's largest delta (descending) so the most notable
+    boards group at the top. Each bubble's x position is a delta value
+    actually seen on that board, and its size encodes how many sketches on
+    that board share that exact value. Boards with no delta reaching the
+    threshold are left out of the plot entirely; instead, a text summary
+    grouping those boards by their typical (median) delta is returned
+    alongside the chart, so the report is not padded with empty rows.
+
+    Returns (inline_svg_markup_or_None, excluded_rows).
+    """
+
+    all_values = defaultdict(list)
+    qualifying = defaultdict(list)
+    for record in records:
+        board_label = f"{record['board']} ({record['link_mode']})"
+        value = record[key]
+        all_values[board_label].append(value)
+        if abs(value) >= min_abs_delta:
+            qualifying[board_label].append(value)
+
+    plotted_boards = sorted(
+        qualifying.keys(),
+        key=lambda l: (-max(abs(v) for v in qualifying[l]), l),
+    )
+    excluded_boards = sorted(set(all_values) - set(qualifying))
+
+    img = None
+    if plotted_boards:
+        xs, ys, counts = [], [], []
+        for row, board_label in enumerate(plotted_boards):
+            for value, count in Counter(qualifying[board_label]).items():
+                xs.append(value)
+                ys.append(row)
+                counts.append(count)
+        max_count = max(counts)
+        sizes = [30 + 220 * (count / max_count) for count in counts]
+        colors = ["#888888" if v == 0 else "#217821" if v < 0 else "#a31f1f" for v in xs]
+
+        fig, ax = plt.subplots(figsize=(9, max(3, 0.4 * len(plotted_boards))))
+        ax.scatter(xs, ys, s=sizes, color=colors, alpha=0.85,
+                   edgecolors="#333333", linewidths=0.5, zorder=3)
+        for x_val, y_val in zip(xs, ys):
+            ax.annotate(f"{x_val:+d}", (x_val, y_val), xytext=(0, -8), textcoords="offset points",
+                        ha="center", va="top", fontsize=6, color="#333333", zorder=4)
+
+        ax.set_yticks(range(len(plotted_boards)))
+        ax.set_yticklabels(plotted_boards)
+        ax.set_ylim(len(plotted_boards) - 0.5, -0.5)
+
+        xlim = ax.get_xlim()
+        xlim = (min(xlim[0], 0), max(xlim[1], 0))
+        span = xlim[1] - xlim[0] or 1
+        pad = max(span * 0.08, 50)
+        xlim = (xlim[0] - pad, xlim[1] + pad)
+        ax.axvspan(xlim[0], -min_abs_delta, color="#2ca02c", alpha=0.18, zorder=0)
+        ax.axvspan(min_abs_delta, xlim[1], color="#d62728", alpha=0.18, zorder=0)
+        ax.axvspan(-min_abs_delta, min_abs_delta, color="#888888", alpha=0.25, zorder=0.5)
+        ax.set_xlim(xlim)
+
+        ax.axvline(0, color="#999", linewidth=0.8, linestyle="--", zorder=1)
+        ax.set_xlabel(f"{label} delta (bytes, |delta| >= {min_abs_delta})")
+        ax.set_title(f"{label} delta distribution per board / link_mode, sorted by delta magnitude "
+                      "(bubble size = number of matching sketches)")
+        fig.tight_layout()
+        img = _figure_to_inline_svg(fig, plt, bold_mono_labels=plotted_boards)
+
+    by_value = defaultdict(list)
+    for board_label in excluded_boards:
+        median_value = _truncate(statistics.median(all_values[board_label]))
+        by_value[median_value].append(board_label)
+
+    def value_label(value):
+        return "unchanged" if value == 0 else f"{value:+d}"
+
+    excluded_rows = [
+        (_delta_cell(value, text=value_label(value)), _Safe(", ".join(_bold_board_label(b) for b in boards)))
+        for value, boards in sorted(by_value.items())
+    ]
+
+    return img, excluded_rows
+
+def generate_html(report_data, records):
+    """
+    Render prepared report data as a single self-contained HTML page: charts
+    are rendered with matplotlib as inline SVG, so the output file has no
+    external dependencies, no JavaScript, and can be opened/shared as-is.
+    """
+
+    import logging
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
+
+    import matplotlib
+    matplotlib.use("Agg")
+    matplotlib.rcParams["svg.fonttype"] = "none"
+    matplotlib.rcParams["font.family"] = "system-ui, sans-serif"
+    import matplotlib.pyplot as plt
+
+    flash_box_img, flash_box_excluded = _chart_bubble(records, "flash_delta_abs", "Flash", plt)
+    ram_box_img, ram_box_excluded = _chart_bubble(records, "ram_delta_abs", "RAM", plt)
 
     board_rows = [
         (_mono(row[0]), _board_name(row[1]), row[2], row[3], *(_delta_cell(v) for v in row[4:]))
@@ -383,6 +526,7 @@ def generate_html(report_data):
   th, td {{ border: 1px solid #888; padding: .3rem .6rem; text-align: right; }}
   th {{ background: #f2f2f2; }}
   td:nth-child(-n+3), th:nth-child(-n+3) {{ text-align: left; }}
+  img {{ max-width: 100%; height: auto; margin: .5rem 0; }}
   .summary {{ color: #555; }}
 </style>
 </head>
@@ -392,6 +536,14 @@ def generate_html(report_data):
 {report_data["n_board_groups"]} board/link_mode combinations.
 {report_data["n_flash_outliers"]} flash and {report_data["n_ram_outliers"]} RAM per-board outliers flagged.
 </p>
+
+<h2>Per-board delta distributions</h2>
+{flash_box_img or ""}
+<p class="summary">Boards below the {MIN_DELTA} byte threshold (not plotted above):</p>
+{_html_table(["delta", "boards"], flash_box_excluded)}
+{ram_box_img or ""}
+<p class="summary">Boards below the {MIN_DELTA} byte threshold (not plotted above):</p>
+{_html_table(["delta", "boards"], ram_box_excluded)}
 
 <h2>Per-board / link_mode summary</h2>
 {_html_table_grouped(["package", "board", "link_mode", "sketches"], ["Flash", "RAM"],
@@ -420,11 +572,11 @@ def main():
                          help="write the trends summary as JSON to this path (default: print to stdout "
                               "if --output-html is not given either)")
     parser.add_argument("--output-html",
-                         help="write a self-contained HTML report (tables only, no external assets) "
-                              "to this path")
+                         help="write a self-contained HTML report (charts + tables, no external assets) "
+                              "to this path; requires matplotlib")
     args = parser.parse_args()
 
-    trends, _ = build_trends(args.input_dir)
+    trends, records = build_trends(args.input_dir)
 
     if args.output_json:
         Path(args.output_json).write_text(json.dumps(trends, indent=2))
@@ -434,7 +586,7 @@ def main():
 
     if args.output_html:
         report_data = _build_report_data(trends, top_n=30)
-        Path(args.output_html).write_text(generate_html(report_data))
+        Path(args.output_html).write_text(generate_html(report_data, records))
         print(f"Wrote trends HTML report to {args.output_html}")
 
 if __name__ == "__main__":
