@@ -18,8 +18,10 @@
 
 import argparse
 from collections import defaultdict
+import html
 import json
 from pathlib import Path
+import re
 import statistics
 
 SIZE_NAMES = ("flash", "RAM for global variables")
@@ -247,23 +249,193 @@ def _build_report_data(trends, top_n):
         "trend_rows": trend_rows,
     }
 
+class _Safe(str):
+    """A table cell that is already-safe HTML and must not be escaped again."""
+
+class _Cell:
+    """A table cell with an optional inline style (e.g. a background color)."""
+
+    def __init__(self, text, style=None):
+        self.text = text
+        self.style = style
+
+# same hue as the chart backgrounds added later (pale green below zero, pale
+# red above); gray marks a value that falls below the MIN_DELTA threshold
+NEGATIVE_CELL_STYLE = "background-color: rgba(46, 160, 44, 0.35);"
+POSITIVE_CELL_STYLE = "background-color: rgba(214, 39, 40, 0.35);"
+NEUTRAL_CELL_STYLE = "background-color: rgba(136, 136, 136, 0.3);"
+
+def _mono(text):
+    """Render a package/board identifier in a typewriter (monospace) font."""
+
+    return _Safe(f"<code>{html.escape(str(text))}</code>")
+
+def _board_name(text):
+    """Render a board name bold and in a typewriter (monospace) font."""
+
+    return _Safe(f"<strong><code>{html.escape(str(text))}</code></strong>")
+
+def _bold_board_label(label):
+    """Bold+monospace just the board name portion of a "board (link_mode)" label."""
+
+    match = re.match(r"^(.*) \((\w+)\)$", label)
+    if not match:
+        return html.escape(label)
+    board, link_mode = match.groups()
+    return f"<strong><code>{html.escape(board)}</code></strong> ({html.escape(link_mode)})"
+
+def _delta_cell(value, text=None):
+    """
+    A delta-value cell shaded green/red by sign, or gray if the value falls
+    below the MIN_DELTA threshold (including exactly zero). Positive values
+    are shown with an explicit "+" sign, matching the Markdown report.
+    """
+
+    if abs(value) < MIN_DELTA:
+        style = NEUTRAL_CELL_STYLE
+    elif value < 0:
+        style = NEGATIVE_CELL_STYLE
+    else:
+        style = POSITIVE_CELL_STYLE
+    if text is None:
+        text = f"{value:+d}" if value != 0 else "0"
+    return _Cell(text, style)
+
+def _render_td(cell):
+    if isinstance(cell, _Cell):
+        text = str(cell.text) if isinstance(cell.text, _Safe) else html.escape(str(cell.text))
+        style = f' style="{cell.style}"' if cell.style else ""
+        return f"<td{style}>{text}</td>"
+    text = str(cell) if isinstance(cell, _Safe) else html.escape(str(cell))
+    return f"<td>{text}</td>"
+
+_NO_ROWS_MESSAGE = "<p><em>none</em></p>"
+
+def _html_table(headers, rows):
+    if not rows:
+        return _NO_ROWS_MESSAGE
+    head = "".join(f"<th>{html.escape(str(h))}</th>" for h in headers)
+    body = "".join(
+        "<tr>" + "".join(_render_td(cell) for cell in row) + "</tr>"
+        for row in rows
+    )
+    return f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+
+def _html_table_grouped(solo_headers, group_headers, sub_headers, rows):
+    """
+    A table with a two-row header: solo_headers span both header rows
+    (e.g. "board"), and each name in group_headers spans len(sub_headers)
+    columns in the top row, with sub_headers repeated underneath it (e.g.
+    "Flash" / "RAM", each split into "min" / "mean" / "median" / "max").
+    """
+
+    if not rows:
+        return _NO_ROWS_MESSAGE
+
+    row1 = "".join(f'<th rowspan="2">{html.escape(h)}</th>' for h in solo_headers)
+    row1 += "".join(f'<th colspan="{len(sub_headers)}">{html.escape(g)}</th>' for g in group_headers)
+    row2 = "".join(f"<th>{html.escape(h)}</th>" for h in sub_headers * len(group_headers))
+
+    body = "".join(
+        "<tr>" + "".join(_render_td(cell) for cell in row) + "</tr>"
+        for row in rows
+    )
+    return f"<table><thead><tr>{row1}</tr><tr>{row2}</tr></thead><tbody>{body}</tbody></table>"
+
+def generate_html(report_data):
+    """
+    Render prepared report data as a single self-contained HTML page of
+    plain tables (per-board summary, flash/RAM outliers, outlier-sketch
+    trends).
+    """
+
+    board_rows = [
+        (_mono(row[0]), _board_name(row[1]), row[2], row[3], *(_delta_cell(v) for v in row[4:]))
+        for row in report_data["board_rows"]
+    ]
+    flash_outlier_rows = [
+        (_board_name(board), link_mode, sketch, _delta_cell(flash), _delta_cell(ram))
+        for board, link_mode, sketch, flash, ram in report_data["flash_outlier_rows"]
+    ]
+    ram_outlier_rows = [
+        (_board_name(board), link_mode, sketch, _delta_cell(flash), _delta_cell(ram))
+        for board, link_mode, sketch, flash, ram in report_data["ram_outlier_rows"]
+    ]
+    trend_rows = [
+        (sketch, _board_name(board), link_mode, _delta_cell(flash), _delta_cell(ram))
+        for sketch, board, link_mode, flash, ram in report_data["trend_rows"]
+    ]
+
+    top_n = report_data["top_n"]
+
+    def top_suffix(total):
+        return f" (top {top_n} of {total})" if top_n < total else ""
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Size delta trends report</title>
+<style>
+  body {{ font-family: system-ui, sans-serif; margin: 2rem; color: #222; }}
+  h1, h2 {{ border-bottom: 1px solid #ddd; padding-bottom: .3rem; }}
+  table {{ border-collapse: collapse; margin: 1rem 0 2rem; font-size: .85rem; border: 2px solid #666; }}
+  th, td {{ border: 1px solid #888; padding: .3rem .6rem; text-align: right; }}
+  th {{ background: #f2f2f2; }}
+  td:nth-child(-n+3), th:nth-child(-n+3) {{ text-align: left; }}
+  .summary {{ color: #555; }}
+</style>
+</head>
+<body>
+<h1>Size delta trends report</h1>
+<p class="summary">{report_data["record_count"]} sketch/board/link_mode records across
+{report_data["n_board_groups"]} board/link_mode combinations.
+{report_data["n_flash_outliers"]} flash and {report_data["n_ram_outliers"]} RAM per-board outliers flagged.
+</p>
+
+<h2>Per-board / link_mode summary</h2>
+{_html_table_grouped(["package", "board", "link_mode", "sketches"], ["Flash", "RAM"],
+                      ["min", "mean", "median", "max"], board_rows)}
+
+<h2>Flash delta outliers{top_suffix(report_data["n_flash_outliers"])}</h2>
+{_html_table(["board", "link_mode", "sketch", "flash Δ", "RAM Δ"], flash_outlier_rows)}
+
+<h2>RAM delta outliers{top_suffix(report_data["n_ram_outliers"])}</h2>
+{_html_table(["board", "link_mode", "sketch", "flash Δ", "RAM Δ"], ram_outlier_rows)}
+
+<h2>Outlier sketches across boards</h2>
+<p class="summary">Full per-board pattern for every sketch flagged above, showing
+whether the anomaly is isolated to one board or a wider trend.</p>
+{_html_table(["sketch", "board", "link_mode", "flash Δ", "RAM Δ"], trend_rows)}
+</body>
+</html>
+"""
+
 def main():
     parser = argparse.ArgumentParser(
         description="Extract trends and flag outliers from ci_calc_size_reports.py delta reports")
     parser.add_argument("--input-dir", default=".",
                          help="directory containing delta report JSON files (default: current directory)")
     parser.add_argument("--output-json",
-                         help="write the trends summary as JSON to this path (default: print to stdout)")
+                         help="write the trends summary as JSON to this path (default: print to stdout "
+                              "if --output-html is not given either)")
+    parser.add_argument("--output-html",
+                         help="write a self-contained HTML report (tables only, no external assets) "
+                              "to this path")
     args = parser.parse_args()
 
     trends, _ = build_trends(args.input_dir)
-    output = json.dumps(trends, indent=2)
 
     if args.output_json:
-        Path(args.output_json).write_text(output)
+        Path(args.output_json).write_text(json.dumps(trends, indent=2))
         print(f"Wrote trends JSON to {args.output_json}")
-    else:
-        print(output)
+    elif not args.output_html:
+        print(json.dumps(trends, indent=2))
+
+    if args.output_html:
+        report_data = _build_report_data(trends, top_n=30)
+        Path(args.output_html).write_text(generate_html(report_data))
+        print(f"Wrote trends HTML report to {args.output_html}")
 
 if __name__ == "__main__":
     main()
