@@ -129,7 +129,7 @@ int flashWiFiFirmware() {
     Serial.println(" bytes");
 
     const struct flash_area *fa;
-    int ret = flash_area_open(FIXED_PARTITION_ID(airoc_firmware), &fa);
+    int ret = flash_area_open(PARTITION_ID(airoc_firmware), &fa);
     if (ret) {
         Serial.print("Error opening airoc_firmware partition: ");
         Serial.println(ret);
@@ -165,7 +165,7 @@ int flashMBR() {
 
     // Open the MBR partition
     const struct flash_area *fa;
-    int ret = flash_area_open(FIXED_PARTITION_ID(mbr_partition), &fa);
+    int ret = flash_area_open(PARTITION_ID(mbr_partition), &fa);
     if (ret) {
         Serial.print("Error opening MBR partition: ");
         Serial.println(ret);

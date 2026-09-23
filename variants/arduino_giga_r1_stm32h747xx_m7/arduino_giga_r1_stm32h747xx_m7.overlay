@@ -55,6 +55,7 @@
 		compatible = "galaxycore,gc2145";
 		zephyr,deferred-init;
 		reg = <0x3c>;
+		zephyr,deferred-init;
 		reset-gpios = <&gpiod 4 GPIO_ACTIVE_LOW>;
 		pwdn-gpios = <&gpioa 1 GPIO_ACTIVE_LOW>;
 
@@ -205,7 +206,7 @@
 				&dcmi_d0_ph9 &dcmi_d1_ph10 &dcmi_d2_ph11 &dcmi_d3_pg11
 				&dcmi_d4_ph14 &dcmi_d5_pi4 &dcmi_d6_pi6 &dcmi_d7_pi7>;
 	pinctrl-names = "default";
-	dmas = <&dma1 0 75 (STM32_DMA_PERIPH_TO_MEMORY | STM32_DMA_PERIPH_NO_INC |
+	dmas = <&dma1 1 75 (STM32_DMA_PERIPH_TO_MEMORY | STM32_DMA_PERIPH_NO_INC |
 			STM32_DMA_MEM_INC | STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS |
 			STM32_DMA_PRIORITY_HIGH) STM32_DMA_FIFO_1_4>;
 
@@ -390,6 +391,7 @@
 		zephyr,log-uart = &log_uarts;
 		/* zephyr,console = &board_cdc_acm_uart; */
 		arduino,camera-clock = &pwmclock;
+		zephyr,console = &usart1;
 	};
 
 	log_uarts: log_uarts {
@@ -419,6 +421,7 @@
 		};
 
 		user_sketch: partition@e0000 {
+			label = "user_sketch";
 			reg = <0x000E0000 0x00120000>;
 		};
 	};

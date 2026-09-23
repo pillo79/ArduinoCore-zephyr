@@ -26,6 +26,11 @@ private:
 public:
 	ZephyrSSLClient();
 
+	int connect(IPAddress ip, uint16_t port) override {
+		String ipStr = ip.toString();
+		return connectSSL(ipStr.c_str(), port, nullptr);
+	}
+
 	int connect(const char *host, uint16_t port) override {
 #if defined(ARDUINO_MANAGES_MBEDTLS)
 		if (!mbedtls_is_ready) {

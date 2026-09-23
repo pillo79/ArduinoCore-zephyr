@@ -21,41 +21,49 @@ LOG_MODULE_REGISTER(sketch);
 #include <zephyr/drivers/uart.h>
 #include <zephyr/drivers/uart/cdc_acm.h>
 #include <zephyr/drivers/uart.h>
-#include <zephyr/usb/usb_device.h>
 
 #include <zephyr/devicetree/fixed-partitions.h>
-
-#define HEADER_LEN 16
-
-struct sketch_header_v1 {
-	uint8_t ver;    // @ 0x07
-	uint32_t len;   // @ 0x08
-	uint16_t magic; // @ 0x0c
-	uint8_t flags;  // @ 0x0e
-} __attribute__((packed));
-
-#define SKETCH_FLAG_DEBUG        0x01
-#define SKETCH_FLAG_LINKED       0x02
-#define SKETCH_FLAG_IMMEDIATE    0x04
-#define SKETCH_FLAG_WAIT_FOR_APP 0x08
+#include "../cores/arduino/zephyr_sketch_header.h"
 
 #define SKETCH_RAM_BUFFER_LEN 131072
 
 /* Need to replicate logic from zephyrSerial.h to avoid C++ here */
+#define ZARD_BOARD_HAS_SERIALUSB                                                                   \
+	DT_NODE_HAS_PROP(DT_PATH(zephyr_user), cdc_acm_serial) && CONFIG_USBD_CDC_ACM_CLASS
 #define ZARD_FIRST_SERIAL_IS_SERIALUSB                                                             \
-	DT_NODE_HAS_PROP(DT_PATH(zephyr_user), cdc_acm_serial) &&                                      \
-		(CONFIG_USB_CDC_ACM || CONFIG_USBD_CDC_ACM_CLASS)
+	ZARD_BOARD_HAS_SERIALUSB && !(DT_NODE_HAS_PROP(DT_PATH(zephyr_user), arduino_router_serial))
+
 #if ZARD_FIRST_SERIAL_IS_SERIALUSB
 const struct device *const usb_dev =
 	DEVICE_DT_GET(DT_PHANDLE_BY_IDX(DT_PATH(zephyr_user), cdc_acm_serial, 0));
 
-#if CONFIG_USB_DEVICE_STACK_NEXT
 #include <zephyr/usb/usbd.h>
 struct usbd_context *usbd_init_device(usbd_msg_cb_t msg_cb);
+static struct usbd_context *_usbd = NULL;
 
-int usb_enable(usb_dc_status_callback status_cb) {
+int usbd_config_set(struct usbd_context *uds_ctx, uint8_t new_cfg);
+
+int loader_usb_disable() {
+	int err = usbd_disable(_usbd);
+	if (err) {
+		// at least reset the configuration
+		usbd_config_set(_usbd, 0);
+	}
+	usbd_shutdown(_usbd);
+	return err;
+}
+
+static void loader_usb_msg_cb(struct usbd_context *const ctx, const struct usbd_msg *msg) {
+	if (usbd_can_detect_vbus(ctx)) {
+		if (msg->type == USBD_MSG_VBUS_READY) {
+			usbd_enable(ctx);
+		}
+	}
+}
+
+int loader_usb_enable(void) {
 	int err;
-	struct usbd_context *_usbd = usbd_init_device(NULL);
+	_usbd = usbd_init_device(loader_usb_msg_cb);
 	if (_usbd == NULL) {
 		return -ENODEV;
 	}
@@ -67,7 +75,6 @@ int usb_enable(usb_dc_status_callback status_cb) {
 	}
 	return 0;
 }
-#endif
 
 #if CONFIG_SHELL
 static int enable_shell_usb(void) {
@@ -96,14 +103,16 @@ void llext_entry(void *arg0, void *arg1, void *arg2) {
 
 /* Export Flash parameters for use by core building scripts */
 __attribute__((retain)) const uintptr_t sketch_base_addr =
-	DT_REG_ADDR(DT_GPARENT(DT_NODELABEL(user_sketch))) + DT_REG_ADDR(DT_NODELABEL(user_sketch));
+	DT_PARTITION_ADDR(DT_NODELABEL(user_sketch));
 __attribute__((retain)) const uintptr_t sketch_max_size = DT_REG_SIZE(DT_NODELABEL(user_sketch));
 
 /* Determine maximum size of the loader application */
-#if DT_HAS_FIXED_PARTITION_LABEL(image_0) /* "image_0" partition size */
-#define LOADER_MAX_SIZE DT_REG_SIZE(DT_NODE_BY_FIXED_PARTITION_LABEL(image_0))
+#if DT_HAS_PARTITION_LABEL(image_0) /* "image_0" partition size */
+#define LOADER_MAX_SIZE DT_REG_SIZE(DT_NODE_BY_PARTITION_LABEL(image_0))
 #elif CONFIG_FLASH_LOAD_SIZE > 0 /* forced value from Kconfig */
 #define LOADER_MAX_SIZE CONFIG_FLASH_LOAD_SIZE
+#elif CONFIG_FLASH_USES_MAPPED_PARTITION /* size of the mapped code partition */
+#define LOADER_MAX_SIZE DT_REG_SIZE(DT_CHOSEN(zephyr_code_partition))
 #elif CONFIG_FLASH_LOAD_OFFSET /* heuristic: size of Flash minus load offset */
 #define LOADER_MAX_SIZE (DT_REG_SIZE(DT_NODELABEL(flash0)) - CONFIG_FLASH_LOAD_OFFSET)
 #else /* default: size of whole Flash */
@@ -114,23 +123,22 @@ __attribute__((retain)) const uintptr_t loader_max_size = LOADER_MAX_SIZE;
 struct backup_store {
 	uint32_t wait_for_app_magic;
 };
-volatile __stm32_backup_sram_section struct backup_store backup;
+extern volatile __stm32_backup_sram_section struct backup_store backup;
 
 static int loader(const struct shell *sh) {
 	const struct flash_area *fa;
 	int rc;
 
 	/* Test that attempting to open a disabled flash area fails */
-	rc = flash_area_open(FIXED_PARTITION_ID(user_sketch), &fa);
+	rc = flash_area_open(PARTITION_ID(user_sketch), &fa);
 	if (rc) {
 		printk("Failed to open flash area, rc %d\n", rc);
 		return rc;
 	}
 
-	uintptr_t base_addr =
-		DT_REG_ADDR(DT_GPARENT(DT_NODELABEL(user_sketch))) + DT_REG_ADDR(DT_NODELABEL(user_sketch));
+	uintptr_t base_addr = DT_PARTITION_ADDR(DT_NODELABEL(user_sketch));
 
-	char header[HEADER_LEN];
+	char header[SKETCH_HEADER_LEN];
 	rc = flash_area_read(fa, 0, header, sizeof(header));
 	if (rc) {
 		printk("Failed to read header, rc %d\n", rc);
@@ -139,7 +147,7 @@ static int loader(const struct shell *sh) {
 
 	bool sketch_valid = true;
 	struct sketch_header_v1 *sketch_hdr = (struct sketch_header_v1 *)(header + 7);
-	if (sketch_hdr->ver != 0x1 || sketch_hdr->magic != 0x2341) {
+	if (sketch_header_v1_verify(sketch_hdr) != 0) {
 		printk("Invalid sketch header\n");
 		sketch_valid = false;
 		// This is not a valid sketch, but try to start a shell anyway
@@ -152,7 +160,7 @@ static int loader(const struct shell *sh) {
 		// disables default shell on UART
 		shell_uninit(shell_backend_uart_get_ptr(), NULL);
 		// enables USB and starts the shell
-		usb_enable(NULL);
+		loader_usb_enable();
 		int dtr;
 		do {
 			// wait for the serial port to open
@@ -164,7 +172,7 @@ static int loader(const struct shell *sh) {
 #elif CONFIG_LOG
 #if !CONFIG_USB_DEVICE_INITIALIZE_AT_BOOT
 	if (debug) {
-		usb_enable(NULL);
+		loader_usb_enable();
 	}
 #endif
 	for (int i = 0; i < log_backend_count_get(); i++) {
@@ -179,13 +187,14 @@ static int loader(const struct shell *sh) {
 #endif
 #endif
 
-#if defined(CONFIG_BOARD_ARDUINO_UNO_Q)
+#if defined(CONFIG_BOARD_ARDUINO_UNO_Q) || defined(CONFIG_BOARD_ARDUINO_VENTUNO_Q)
 	void matrixBegin(void);
 	void matrixEnd(void);
 	void matrixPlay(uint8_t *buf, uint32_t len);
 	void matrixSetGrayscaleBits(uint8_t _max);
 	void matrixGrayscaleWrite(uint8_t *buf);
 #include "bootanimation.h"
+#include "usbanimation.h"
 
 	uint8_t *_bootanimation = (uint8_t *)bootanimation;
 	size_t _bootanimation_len = bootanimation_len;
@@ -216,15 +225,30 @@ static int loader(const struct shell *sh) {
 
 	if ((!sketch_valid) || !(sketch_hdr->flags & SKETCH_FLAG_IMMEDIATE)) {
 		// Start the bootanimation while waiting for the MPU to boot
-		const struct gpio_dt_spec spec =
-			GPIO_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), control_gpios, 0);
 
-		gpio_pin_configure_dt(&spec, GPIO_INPUT | GPIO_PULL_DOWN);
-		k_sleep(K_MSEC(200));
-		if (gpio_pin_get_dt(&spec) == 0) {
+		const struct gpio_dt_spec mpu_booted =
+			GPIO_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), control_gpios, 0);
+		gpio_pin_configure_dt(&mpu_booted, GPIO_INPUT | GPIO_PULL_DOWN);
+		const struct gpio_dt_spec usb_mode =
+			GPIO_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), control_gpios, 1);
+		gpio_pin_configure_dt(&usb_mode, GPIO_INPUT | GPIO_PULL_UP);
+
+		k_sleep(K_MSEC(400));
+
+		if (gpio_pin_get_dt(&usb_mode) == 0) {
+			// USB mode, skip the animation
 			matrixBegin();
 			matrixSetGrayscaleBits(8);
-			while (gpio_pin_get_dt(&spec) == 0) {
+			while (1) {
+				matrixPlay(usbanimation_raw, usbanimation_raw_len);
+				k_sleep(K_MSEC(10));
+			}
+		}
+
+		if (gpio_pin_get_dt(&mpu_booted) == 0) {
+			matrixBegin();
+			matrixSetGrayscaleBits(8);
+			while (gpio_pin_get_dt(&mpu_booted) == 0) {
 				matrixPlay(_bootanimation, _bootanimation_len);
 			}
 			matrixPlay(_bootanimation_end, _bootanimation_end_len);
@@ -257,9 +281,16 @@ static int loader(const struct shell *sh) {
 #endif
 #endif
 
+#if ZARD_FIRST_SERIAL_IS_SERIALUSB
+		if (debug) {
+			// Disable USB before jumping to sketch
+			loader_usb_disable();
+		}
+#endif
+
 		extern struct k_heap llext_heap;
 		typedef void (*entry_point_t)(struct k_heap *heap, size_t heap_size);
-		entry_point_t entry_point = (entry_point_t)(base_addr + HEADER_LEN + 1);
+		entry_point_t entry_point = (entry_point_t)(base_addr + SKETCH_HEADER_LEN + 1);
 		entry_point(&llext_heap, llext_heap.heap.init_bytes);
 		// should never reach here
 		for (;;) {
@@ -340,6 +371,13 @@ static int loader(const struct shell *sh) {
 	k_thread_start(&llext_thread);
 	k_thread_join(&llext_thread, K_FOREVER);
 #else
+
+#if ZARD_FIRST_SERIAL_IS_SERIALUSB
+	if (debug) {
+		// Disable USB before jumping to sketch
+		loader_usb_disable();
+	}
+#endif
 
 #ifdef CONFIG_LLEXT
 	llext_bootstrap(ext, main_fn, NULL);

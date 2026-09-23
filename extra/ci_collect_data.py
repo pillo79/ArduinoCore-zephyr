@@ -134,12 +134,22 @@ for board_data in ALL_BOARD_DATA.values():
 
     # Get list of expected errors for this board
     exceptions = []
+    warning_filters = [] # [ (sketch_pattern, regex), ...]
     if os.path.exists(f"variants/{variant}/known_example_issues.txt"):
         with open(f"variants/{variant}/known_example_issues.txt", 'r') as f:
             for line in f:
-                sketch_pattern = line.split('#')[0].strip()
-                if sketch_pattern:
-                    exceptions.append(re.compile(f"^(ArduinoCore-zephyr/)?{sketch_pattern}"))
+                line = line.split('#')[0].strip()
+                if not line:
+                    continue
+                elif '|' in line:
+                    # this is a warning filter, not an exception
+                    sketch_pattern, warning_pattern = line.split('|', 1)
+                    sketch_pattern = re.compile(f"^(ArduinoCore-zephyr/)?{sketch_pattern}")
+                    warning_pattern = re.compile(warning_pattern)
+                    warning_filters.append(( sketch_pattern, warning_pattern ))
+                else:
+                    # this is an exception
+                    exceptions.append(re.compile(f"^(ArduinoCore-zephyr/)?{line}"))
 
     # Get raw data from report files for both static and dynamic linking modes
     for link_mode in ("static", "dynamic"):
@@ -175,6 +185,11 @@ for board_data in ALL_BOARD_DATA.values():
 
             # Replace long absolute paths with '...' for brevity.
             sketch_issues = [ re.sub(r'(/.+?)((/[^/]+){3}):', r'...\2:', issue) for issue in issues ]
+
+            # Remove known warnings, if any
+            for sketch_pattern, warning_pattern in warning_filters:
+                if sketch_pattern.match(sketch):
+                    sketch_issues = [ issue for issue in sketch_issues if not warning_pattern.search(issue) ]
 
             if not success:
                 status = ERROR

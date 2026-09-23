@@ -18,11 +18,11 @@ Let's assume the structure of your application for simplicity to be,
 Paste your library's source files like ``ADXL345.h`` and ``ADXL345.cpp`` in your project's src folder. 
 
 ## Update CMakeLists
-As we can see, there is a Top-level CMakelists which needs to be updated with your external library's source files.
+As we can see, there is a Top-level CMakeLists.txt which needs to be updated with your external library's source files.
 For example, we add `target_sources(app PRIVATE src/ADXL345.cpp)`  to CMakeLists.txt.
 
 ## Update main.cpp
-Finally, paste your required code using the library in ``main.c`` and include that library's header using
+Finally, paste your required code using the library in ``main.cpp`` and include that library's header using
 ```c
 #include "ADXL345.h"
 ```

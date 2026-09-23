@@ -78,11 +78,20 @@ void WiFiClass::registerScanEventCallback() {
 }
 
 const char *WiFiClass::firmwareVersion() {
-#if defined(ARDUINO_PORTENTA_C33)
-	return "v1.5.0";
-#else
-	return "v0.0.0";
-#endif
+	static constexpr const char unknownVersion[] = "v0.0.0";
+	struct wifi_version version = {};
+	struct net_if *iface = net_if_get_wifi_sta();
+
+	if (iface == nullptr ||
+		net_mgmt(NET_REQUEST_WIFI_VERSION, iface, &version, sizeof(version)) != 0) {
+		return unknownVersion;
+	}
+
+	if (version.fw_version != nullptr && version.fw_version[0] != '\0') {
+		return version.fw_version;
+	}
+
+	return unknownVersion;
 }
 
 int WiFiClass::begin(const char *ssid, const char *passphrase, wl_enc_type security,

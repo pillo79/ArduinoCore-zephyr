@@ -19,7 +19,7 @@ jobs:
         with:
           pattern: '^[^!]+: [A-Za-z]+.+ .+$'
           flags: 'gm'
-          error: 'Commit subject line must match the following pattern: <scope>: <description>'
+          error: 'Commit subject line / PR title must match the following pattern: <scope>: <description>'
           excludeTitle: 'false'
           excludeDescription: 'true'
           checkAllCommitMessages: 'true'
@@ -29,7 +29,7 @@ jobs:
         with:
           pattern: '^[^#].{10,80}$'
           error: 'Commit subject line maximum line length of 80 characters is exceeded.'
-          excludeTitle: 'false'
+          excludeTitle: 'true'
           excludeDescription: 'true'
           checkAllCommitMessages: 'true'
           accessToken: ${{ secrets.GITHUB_TOKEN }}

@@ -35,7 +35,7 @@ void setup() {
 
     // Open the MBR partition to read the partition table
     const struct flash_area *fa;
-    int ret = flash_area_open(FIXED_PARTITION_ID(mbr_partition), &fa);
+    int ret = flash_area_open(PARTITION_ID(mbr_partition), &fa);
     if (ret) {
         Serial.println("ERROR! Unable to open flash device.");
         return;

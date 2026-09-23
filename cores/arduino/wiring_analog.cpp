@@ -97,14 +97,11 @@ static const struct dac_channel_cfg dac_ch_cfg[] = {
 int _analog_write_resolution = 8;
 #endif
 
-// Note: We can not update the arduino_adc structure as it is read only...
-static int read_resolution = 10;
+} // anonymous namespace
 
 uint32_t map64(uint32_t x, uint32_t in_min, uint32_t in_max, uint32_t out_min, uint32_t out_max) {
 	return ((uint64_t)(x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min);
 }
-
-} // anonymous namespace
 
 #if defined(CONFIG_DAC) || defined(CONFIG_PWM)
 void analogWriteResolution(int bits) {
@@ -183,6 +180,9 @@ void analogWrite(enum dacPins dacName, int value) {
 #endif
 
 #ifdef CONFIG_ADC
+
+// Note: We can not update the arduino_adc structure as it is read only...
+static int read_resolution = 10;
 
 void __attribute__((weak)) analogReference(uint8_t mode) {
 	/*

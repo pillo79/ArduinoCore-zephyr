@@ -14,12 +14,16 @@
 #include <math.h>
 #include <zephyr/kernel.h>
 #include <time.h>
+#include <sys/time.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/device.h>
+#include <zephyr/posix/unistd.h>
 #if defined(CONFIG_MBEDTLS)
 #include <mbedtls/memory_buffer_alloc.h>
 #include <mbedtls/debug.h>
 #endif
+
+#include "../cores/arduino/zephyr_sketch_header.h"
 
 #define FORCE_EXPORT_SYM(name)                                                                     \
 	extern void name(void);                                                                        \
@@ -61,6 +65,11 @@ EXPORT_LIBC_SYM(strtok);
 EXPORT_LIBC_SYM(memchr);
 EXPORT_LIBC_SYM(strdup);
 EXPORT_LIBC_SYM(memmem);
+
+// XSI strerror_r: hoisted into the firmware so std::error_code/system_error in
+// network/TLS sketches import it instead of bundling _strerror_r per sketch.
+extern int __xpg_strerror_r(int, char *, size_t);
+EXPORT_LIBC_SYM(__xpg_strerror_r);
 
 // stdlib.h
 EXPORT_LIBC_SYM(malloc);
@@ -144,11 +153,6 @@ EXPORT_SYMBOL(pinctrl_lookup_state);
 EXPORT_SYMBOL(pinctrl_configure_pins);
 #endif
 
-#if defined(CONFIG_USB_DEVICE_STACK)
-EXPORT_SYMBOL(usb_enable);
-EXPORT_SYMBOL(usb_disable);
-#endif
-
 #if CONFIG_LOG
 EXPORT_SYMBOL(z_log_msg_runtime_vcreate);
 FORCE_EXPORT_SYM(log_const_sketch)
@@ -208,6 +212,9 @@ EXPORT_SYMBOL(mbedtls_memory_buffer_alloc_init);
 #if defined(CONFIG_MBEDTLS_DEBUG)
 EXPORT_SYMBOL(mbedtls_debug_set_threshold);
 #endif
+#if defined(CONFIG_MBEDTLS_PSA_CRYPTO_CLIENT)
+EXPORT_SYMBOL(psa_crypto_init);
+#endif
 #endif
 
 #if defined(CONFIG_WIFI)
@@ -218,6 +225,7 @@ FORCE_EXPORT_SYM(net_mgmt_NET_REQUEST_WIFI_SCAN);
 FORCE_EXPORT_SYM(net_mgmt_NET_REQUEST_WIFI_IFACE_STATUS);
 FORCE_EXPORT_SYM(net_mgmt_NET_REQUEST_WIFI_AP_ENABLE);
 FORCE_EXPORT_SYM(net_mgmt_NET_REQUEST_WIFI_DISCONNECT);
+FORCE_EXPORT_SYM(net_mgmt_NET_REQUEST_WIFI_VERSION);
 #endif
 
 #if defined(CONFIG_BT)
@@ -243,14 +251,22 @@ FORCE_EXPORT_SYM(bt_ctlr_set_public_addr);
 #if defined(CONFIG_STACK_CANARIES)
 FORCE_EXPORT_SYM(__stack_chk_guard);
 FORCE_EXPORT_SYM(__stack_chk_fail);
+// Required by  __stack_chk_init()
+EXPORT_LIBC_SYM(getentropy);
 #endif
 
 #if defined(CONFIG_VIDEO)
 FORCE_EXPORT_SYM(video_buffer_aligned_alloc);
 FORCE_EXPORT_SYM(video_buffer_alloc);
 FORCE_EXPORT_SYM(video_buffer_release);
+FORCE_EXPORT_SYM(video_import_buffer);
 FORCE_EXPORT_SYM(video_set_ctrl);
+FORCE_EXPORT_SYM(video_enqueue);
 #endif
+#if defined(CONFIG_VIDEO_BUFFER_POOL_ALLOC_OPS)
+FORCE_EXPORT_SYM(video_register_user_buffer_ops);
+#endif
+
 #if defined(CONFIG_INPUT)
 FORCE_EXPORT_SYM(zephyr_input_register_callback);
 #endif
@@ -258,6 +274,9 @@ FORCE_EXPORT_SYM(zephyr_input_register_callback);
 #if defined(CONFIG_SHARED_MULTI_HEAP)
 FORCE_EXPORT_SYM(shared_multi_heap_aligned_alloc);
 FORCE_EXPORT_SYM(shared_multi_heap_free);
+#if defined(CONFIG_VIDEO_BUFFER_POOL_ALLOC_OPS)
+FORCE_EXPORT_SYM(smh_region_video_init);
+#endif
 #endif
 
 #if defined(CONFIG_STM32_BACKUP_PROTECTION)
@@ -296,6 +315,7 @@ FORCE_EXPORT_SYM(usbd_device_set_bcd_usb);
 FORCE_EXPORT_SYM(usbd_msg_register_cb);
 FORCE_EXPORT_SYM(usbd_device_set_code_triple);
 FORCE_EXPORT_SYM(usbd_register_all_classes);
+FORCE_EXPORT_SYM(usbd_register_class);
 FORCE_EXPORT_SYM(usbd_add_configuration);
 FORCE_EXPORT_SYM(usbd_caps_speed);
 FORCE_EXPORT_SYM(usbd_can_detect_vbus);
@@ -316,19 +336,32 @@ EXPORT_SYMBOL(k_work_schedule_for_queue);
 EXPORT_SYMBOL(k_work_reschedule_for_queue);
 EXPORT_SYMBOL(k_work_queue_start);
 EXPORT_SYMBOL(k_work_submit_to_queue);
+EXPORT_SYMBOL(k_work_cancel);
+EXPORT_SYMBOL(k_work_cancel_delayable);
 // FORCE_EXPORT_SYM(k_timer_user_data_set);
 // FORCE_EXPORT_SYM(k_timer_start);
 
 EXPORT_SYMBOL(time);
+
+#ifdef CONFIG_XSI_SINGLE_PROCESS
+// Required by time()
+EXPORT_LIBC_SYM(gettimeofday);
+#endif
+
 EXPORT_SYMBOL(sys_clock_settime);
 EXPORT_SYMBOL(mktime);
 EXPORT_SYMBOL(gmtime);
 
-EXPORT_SYMBOL(printf);
-EXPORT_SYMBOL(sprintf);
-EXPORT_SYMBOL(snprintf);
+/*
+ * Export the v* forms under __real_ names. The sketch core (llext_wrappers.c)
+ * defines strong printf/sprintf/snprintf/sscanf trampolines that forward here,
+ * which keeps picolibc's vfscanf/vfprintf and the __atod_engine/__atof_engine
+ * float helpers out of the sketch llext. vsnprintf is already exported above.
+ */
+EXPORT_LIBC_SYM(vprintf);
+EXPORT_LIBC_SYM(vsprintf);
+EXPORT_LIBC_SYM(vsscanf);
 EXPORT_SYMBOL(cbvprintf);
-EXPORT_SYMBOL(sscanf);
 FORCE_EXPORT_SYM(__assert_no_args);
 EXPORT_SYMBOL(stdin);
 EXPORT_SYMBOL(stdout);
@@ -360,8 +393,17 @@ EXPORT_AEABI_SYM(__aeabi_dcmple);
 EXPORT_AEABI_SYM(__aeabi_dcmpgt);
 EXPORT_AEABI_SYM(__aeabi_dcmpge);
 EXPORT_AEABI_SYM(__aeabi_dcmpun);
+/* float arithmetic */
+EXPORT_AEABI_SYM(__aeabi_fadd);
+EXPORT_AEABI_SYM(__aeabi_fsub);
+EXPORT_AEABI_SYM(__aeabi_fmul);
+EXPORT_AEABI_SYM(__aeabi_fdiv);
 /* float comparisons */
+EXPORT_AEABI_SYM(__aeabi_fcmpeq);
+EXPORT_AEABI_SYM(__aeabi_fcmplt);
 EXPORT_AEABI_SYM(__aeabi_fcmple);
+EXPORT_AEABI_SYM(__aeabi_fcmpgt);
+EXPORT_AEABI_SYM(__aeabi_fcmpge);
 EXPORT_AEABI_SYM(__aeabi_fcmpun);
 /* double <-> integer conversions */
 EXPORT_AEABI_SYM(__aeabi_d2iz);
@@ -374,6 +416,10 @@ EXPORT_AEABI_SYM(__aeabi_ul2d);
 /* float <-> double / integer conversions */
 EXPORT_AEABI_SYM(__aeabi_d2f);
 EXPORT_AEABI_SYM(__aeabi_f2d);
+EXPORT_AEABI_SYM(__aeabi_i2f);
+EXPORT_AEABI_SYM(__aeabi_ui2f);
+EXPORT_AEABI_SYM(__aeabi_f2iz);
+EXPORT_AEABI_SYM(__aeabi_f2uiz);
 EXPORT_AEABI_SYM(__aeabi_l2f);
 EXPORT_AEABI_SYM(__aeabi_ul2f);
 /* integer division */
@@ -400,7 +446,7 @@ EXPORT_AEABI_SYM(__gnu_thumb1_case_si);
 FORCE_EXPORT_SYM(__cxa_pure_virtual);
 #endif
 
-#if defined(CONFIG_BOARD_ARDUINO_UNO_Q)
+#if defined(CONFIG_BOARD_ARDUINO_UNO_Q) || defined(CONFIG_BOARD_ARDUINO_VENTUNO_Q)
 FORCE_EXPORT_SYM(matrixBegin);
 FORCE_EXPORT_SYM(matrixWrite);
 FORCE_EXPORT_SYM(matrixPlay);
@@ -481,3 +527,5 @@ EXPORT_SYMBOL(magic_location);
 FORCE_EXPORT_SYM(regulator_enable);
 FORCE_EXPORT_SYM(regulator_disable);
 #endif
+
+EXPORT_SYMBOL(sketch_header_v1_verify);

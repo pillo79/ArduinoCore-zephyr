@@ -11,12 +11,19 @@
 #include <zephyr/usb/bos.h>
 
 #include <zephyr/logging/log.h>
+#include <zephyr/app_version.h>
+#if __has_include(<variant.h>)
+#include <variant.h>
+#endif
 
 #ifdef CONFIG_USB_DEVICE_STACK_NEXT
 
 /* By default, do not register the USB DFU class DFU mode instance. */
 static const char *const blocklist[] = {
 	"dfu_dfu",
+#if defined(LOADER_PROVIDES_EXTRA_USB_CLASSES)
+	"cdc_acm_0",
+#endif
 	NULL,
 };
 
@@ -32,8 +39,8 @@ USBD_DESC_PRODUCT_DEFINE(sample_product, CONFIG_USB_DEVICE_PRODUCT);
 USBD_DESC_SERIAL_NUMBER_DEFINE(sample_sn);
 /* doc string instantiation end */
 
-USBD_DESC_CONFIG_DEFINE(fs_cfg_desc, "FS Configuration");
-USBD_DESC_CONFIG_DEFINE(hs_cfg_desc, "HS Configuration");
+USBD_DESC_CONFIG_DEFINE(fs_cfg_desc, APP_VERSION_EXTENDED_STRING);
+USBD_DESC_CONFIG_DEFINE(hs_cfg_desc, APP_VERSION_EXTENDED_STRING);
 
 /* doc configuration instantiation start */
 static const uint8_t attributes = 0;
@@ -73,6 +80,19 @@ static void sample_fix_code_triple(struct usbd_context *uds_ctx, const enum usbd
 	}
 }
 
+#if defined(LOADER_PROVIDES_EXTRA_USB_CLASSES)
+static int register_cdc_acm_0(struct usbd_context *const uds_ctx, const enum usbd_speed speed) {
+	int err;
+
+	err = usbd_register_class(&usbd, "cdc_acm_0", speed, 1);
+	if (err) {
+		return err;
+	}
+
+	return usbd_device_set_code_triple(uds_ctx, speed, USB_BCC_MISCELLANEOUS, 0x02, 0x01);
+}
+#endif
+
 struct usbd_context *usbd_setup_device(usbd_msg_cb_t msg_cb) {
 	int err;
 
@@ -109,6 +129,10 @@ struct usbd_context *usbd_setup_device(usbd_msg_cb_t msg_cb) {
 			return NULL;
 		}
 
+#if defined(LOADER_PROVIDES_EXTRA_USB_CLASSES)
+		register_cdc_acm_0(&usbd, USBD_SPEED_HS);
+#endif
+
 		sample_fix_code_triple(&usbd, USBD_SPEED_HS);
 	}
 
@@ -125,6 +149,10 @@ struct usbd_context *usbd_setup_device(usbd_msg_cb_t msg_cb) {
 		return NULL;
 	}
 	/* doc functions register end */
+
+#if defined(LOADER_PROVIDES_EXTRA_USB_CLASSES)
+	register_cdc_acm_0(&usbd, USBD_SPEED_FS);
+#endif
 
 	sample_fix_code_triple(&usbd, USBD_SPEED_FS);
 

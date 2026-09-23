@@ -1,9 +1,9 @@
 {
-  "name": "Arduino UNO Q Board",
+  "name": "Arduino Q Boards",
   "architecture": "zephyr",
   "category": "Arduino",
   "libraryDependencies": [
-    { "name":"Arduino_RouterBridge", "version":"0.4.2" },
+    { "name":"Arduino_RouterBridge", "version":"0.4.3" },
     { "name":"Arduino_RPClite", "version":"0.3.0" },
     { "name":"MsgPack", "version":"0.4.2" },
     { "name":"DebugLog", "version":"0.8.4" },

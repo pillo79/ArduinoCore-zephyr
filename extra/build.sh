@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Copyright (c) Arduino s.r.l. and/or its affiliated companies
 # SPDX-License-Identifier: Apache-2.0
@@ -47,18 +47,22 @@ if ! [ -z "$chosen_board" ]; then
 	# found, use the target and args from there
 	board=$(jq -cr '.board' <<< "$chosen_board")
 	target=$(jq -cr '.target' <<< "$chosen_board")
-	args=$(jq -cr '.args' <<< "$chosen_board")
+	# the args field is a single string; split it on unquoted whitespace,
+	# keeping quotes so a quoted value with spaces stays one array element
+	arg_token='(?:[^\s"'\'']+|"[^"]*"|'\''[^'\'']*'\'')+'
+	mapfile -t args < <(jq -cr '.args' <<< "$chosen_board" | grep -oP "$arg_token")
 	upload_offset=$(jq -cr '.upload_offset' <<< "$chosen_board")
 
 	# Check for debug flag and append
 	if [ x$2 == x"--debug" ]; then
-		args="$args -- -DEXTRA_CONF_FILE=../extra/debug.conf"
+		args+=(-- -DEXTRA_CONF_FILE=../extra/debug.conf)
 	fi
 else
 	# expect Zephyr-compatible target and args
 	target=$1
 	shift
-	args="$*"
+	# keep each argument as a separate array element to preserve quoting
+	args=("$@")
 	chosen_board=$(extra/get_board_details.sh | jq -cr ".[] | select(.target == \"$target\") // empty")
 	if [ ! -z "$chosen_board" ]; then
 		board=$(jq -cr '.board' <<< "$chosen_board")
@@ -68,8 +72,12 @@ else
 	fi
 fi
 
+# Save the build version to loader/VERSION and for later use in local files
+build_version=$(extra/get_core_version.sh loader/VERSION)
+
 echo
-echo "Build target: $target $args"
+echo "Build version: $build_version"
+echo "Build target: $target ${args[*]}"
 
 # Get the variant name (NORMALIZED_BOARD_TARGET in Zephyr)
 variant=$(extra/get_variant_name.sh $target)
@@ -85,7 +93,7 @@ fi
 BUILD_DIR=build/${variant}
 VARIANT_DIR=variants/${variant}
 rm -rf ${BUILD_DIR}
-west build -d ${BUILD_DIR} -b ${target} loader -t llext-edk ${args}
+west build -d ${BUILD_DIR} -b ${target} loader -t llext-edk "${args[@]}"
 
 # Extract the generated EDK tarball and copy it to the variant directory
 mkdir -p ${VARIANT_DIR} firmwares
@@ -138,31 +146,18 @@ update_local_field() {
 	local field=$1
 	local value="$2"
 	local comment="$3"
-	local full_field_name="${board}.${field}"
+
+	if [ -z "$board" ]; then
+		local file="platform.local.txt"
+		local full_field_name="${field}"
+	else
+		local file="boards.local.txt"
+		local full_field_name="${board}.${field}"
+	fi
 	local match_regexp="${full_field_name//./\\.}" # escape dots
 
-	if [ -n "$comment" ]; then
-		# if there's a comment, add/update it as a commented-out line above the actual field
-		if grep -qE "^# ${match_regexp}:" boards.local.txt; then
-			sed -i -e "s/^# ${match_regexp}:.*/# ${full_field_name}: ${comment}/" boards.local.txt
-		else
-			echo "# ${full_field_name}: ${comment}" >> boards.local.txt
-		fi
-	fi
-
-	# update the actual field line
-	if grep -qE "^${match_regexp}" boards.local.txt; then
-		sed -i -e "s/^${match_regexp}=.*/${full_field_name}=${value}/" boards.local.txt
-	else
-		echo "${full_field_name}=${value}" >> boards.local.txt
-	fi
-}
-
-# update properties on boards.local.txt from the generated files
-if [ ! -z "$board" ]; then
-
-	if [ ! -f boards.local.txt ] ; then
-		cat << EOF > boards.local.txt
+	if [ ! -f $file ] ; then
+		cat << EOF > $file
 #########################################################################################
 #
 # AUTO GENERATED FILE - DO NOT EDIT
@@ -172,6 +167,33 @@ if [ ! -z "$board" ]; then
 
 EOF
 	fi
+
+	if [ -n "$comment" ]; then
+		# if there's a comment, add/update it as a commented-out line above the actual field
+		if grep -qE "^# ${match_regexp}:" $file; then
+			sed -i -e "s/^# ${match_regexp}:.*/# ${full_field_name}: ${comment}/" $file
+		else
+			echo "# ${full_field_name}: ${comment}" >> $file
+		fi
+	fi
+
+	# update the actual field line
+	if grep -qE "^${match_regexp}" $file; then
+		sed -i -e "s/^${match_regexp}=.*/${full_field_name}=${value}/" $file
+	else
+		echo "${full_field_name}=${value}" >> $file
+	fi
+}
+
+# update properties on boards.local.txt from the generated files
+if [ ! -z "$board" ]; then
+
+	# save version to both platform.local.txt and boards.local.txt:
+	# - the platform one is reported by the IDE as _the_ core version;
+	# - the board-specific one is used by the auto-update-loader feature
+	#   (when developing, each board build should be tracked separately).
+	board="" update_local_field "version" "$build_version"
+	update_local_field "version" "$build_version"
 
 	# sketch load address: start of sketch partition, hex (exact)
 	CODE_ADDR=$(get_value_from_text_file variants/${variant}/syms-static.ld '_sketch_start')

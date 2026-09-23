@@ -1,9 +1,9 @@
-# Arduino Zephyr (BETA) Core and platform.
+# Arduino Zephyr Core and platform.
 #
 # For more info:
 # https://github.com/arduino/Arduino/wiki/Arduino-IDE-1.5---3rd-party-Hardware-specification
 
-name=Arduino Zephyr Boards (BETA)
+name=Arduino Zephyr Boards
 version=9.9.9
 
 # Compile variables
@@ -19,7 +19,7 @@ compiler.path={build.compiler_path}
 compiler.c.cmd={build.crossprefix}gcc
 compiler.c.flags=-g -Os -c {compiler.define} {compiler.warning_flags} {compiler.zephyr.macros} "@{compiler.zephyr.machine_flags_file}" "@{compiler.zephyr.cflags_file}" -fdata-sections -ffunction-sections -MMD
 compiler.c.elf.cmd={build.crossprefix}g++
-compiler.c.elf.flags=-Wl,--gc-sections "@{compiler.zephyr.machine_flags_file}" -std=gnu++17
+compiler.c.elf.flags=-Wl,--gc-sections -Wl,-z,noexecstack "@{compiler.zephyr.machine_flags_file}" -std=gnu++17
 compiler.S.cmd={build.crossprefix}g++
 compiler.S.flags=-c -x assembler-with-cpp "@{compiler.zephyr.machine_flags_file}"
 compiler.cpp.cmd={build.crossprefix}g++
@@ -41,11 +41,26 @@ compiler.zephyr.machine_flags_file={build.variant.path}/machine_flags.txt
 compiler.zephyr.cflags_file={build.variant.path}/cflags.txt
 compiler.zephyr.cxxflags_file={build.variant.path}/cxxflags.txt
 compiler.zephyr.macros="-imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h" "-imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h"
-compiler.zephyr.common_cxxflags=-fno-exceptions -fno-rtti -fdata-sections -ffunction-sections -fno-unwind-tables
-compiler.zephyr.common_ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit -lstdc++ -lsupc++ -lnosys -nostdlib
+# NOTE: -fno-extern-tls-init prevents the C++ frontend from emitting guarded
+# references to the thread-local init function (e.g. _ZTH5errno) for extern
+# thread_local variables such as picolibc's `errno`. These variables are
+# statically initialized and need no dynamic init, but with the default
+# -fextern-tls-init the compiler emits a weak `_ZTH<var>` reference that the
+# llext loader cannot process, failing with "Undefined symbol ... _ZTH5errno"
+# (ret -61). The toolchain 1.0.1 update made this surface for std::stoi/std::stol
+# and any other libstdc++ code that touches errno (e.g. Arduino_RouterBridge).
+compiler.zephyr.common_cxxflags=-fno-exceptions -fno-rtti -fdata-sections -ffunction-sections -fno-unwind-tables -fno-extern-tls-init
+# NOTE: -lstdc++/-lsupc++ are intentionally NOT listed here. They are linked
+# inside the --start-group of build.link_command (see compiler.zephyr.extra_ldflags)
+# so that the core archive is scanned before libstdc++. Together with
+# -Wl,-u,__cxa_allocate_exception this guarantees the core's exception-ABI stubs
+# (cores/arduino/abi.cpp) win over libstdc++'s eh_*.o, keeping the C++ exception
+# machinery and the libgcc unwinder (whose __gnu_Unwind_Find_exidx / __exidx_*
+# references cannot be resolved by the llext loader) out of the sketch llext.
+compiler.zephyr.common_ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit -lnosys -nostdlib -Wl,-u,__cxa_allocate_exception
 
 compiler.zephyr.extra_cxxflags=
-compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lm
+compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lm -lgcc -lc
 
 # these can be overriden in boards.txt
 build.extra_flags=
@@ -55,7 +70,7 @@ build.boot_mode=wait
 upload.extension=elf-zsk.bin
 
 build.ldscript.path={runtime.platform.path}/variants/_ldscripts
-build.link_command="{compiler.path}{compiler.c.elf.cmd}" "-L{build.path}" "-L{build.variant.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {build.extra_flags} {build.extra_ldflags} {compiler.zephyr.common_ldflags} --specs=nano.specs --specs=nosys.specs {compiler.ldflags} {object_files} -Wl,--start-group "{build.path}/{archive_file}" {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags} -Wl,--end-group {build.link_args.{build.link_mode}}
+build.link_command="{compiler.path}{compiler.c.elf.cmd}" "-L{build.path}" "-L{build.variant.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {build.extra_flags} {build.extra_ldflags} {compiler.zephyr.common_ldflags} {compiler.ldflags} {object_files} -Wl,--start-group "{build.path}/{archive_file}" {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags} -Wl,--end-group {build.link_args.{build.link_mode}}
 
 build.check_command-dynamic={build.link_command} {build.link_args.check-dynamic} -o "{build.path}/{build.project_name}_check.tmp"
 build.check_command-static=true
@@ -107,6 +122,11 @@ build.zip.pattern={recipe.size.pattern}
 
 # Linux compile patterns
 # -----------------------
+
+## Test for the variant being actually compiled
+
+recipe.hooks.prebuild.1.pattern=sh -c 'if [ ! -f "{build.variant.path}/includes.txt" ]; then echo "Error: No binaries found for {_id}. See README.md to compile or download them first." && exit 1; fi'
+recipe.hooks.prebuild.1.pattern.windows=cmd /c if not exist "{build.variant.path}/includes.txt" (echo Error: No binaries found for {_id}. See README.md to compile or download them first. && exit 1)
 
 ## Compile c files
 recipe.c.o.pattern="{compiler.path}{compiler.c.cmd}" {compiler.c.flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} -DARDUINO_ARCH_ZEPHYR {build.library_discovery_phase_flag} {build.extra_flags} {build.extra_ldflags} {compiler.c.extra_flags} "-I{build.core.path}/api/deprecated" "-I{build.core.path}/api/deprecated-avr-comp" {includes} "-iprefix{build.variant.path}" "@{compiler.zephyr.includes_file}" -o "{object_file}" "{source_file}"
@@ -164,102 +184,122 @@ pluggable_monitor.required.serial=builtin:serial-monitor
 # Uploader tools
 # --------------
 
+# Shared defaults for all boards, unless overridden in boards.txt
+bootloader.vid={upload_port.0.vid}
+bootloader.pid={upload_port.0.pid}
+upload.vid={bootloader.vid}
+upload.pid={bootloader.pid}
+
+# No erase command is needed for Zephyr targets
+erase.pattern=
+
+# Generated files used at upload time
+upload.artifacts.loader={runtime.platform.path}/firmwares/{bootloader.file}
+upload.artifacts.sketch={build.path}/{build.project_name}.{upload.extension}
+
+# Expects a {loader.cmd} and a {sketch.cmd} to be defined in the tool's
+# section. The loader is flashed if it does not match the current (maybe
+# board-specific) core version. The sketch is then flashed in any case.
+# Extra arguments are passed to either command depending on whether the other
+# part will be flashed in the same session or not.
+empty=
+loader.args.with_sketch={empty}
+loader.args.without_sketch={empty}
+sketch.args.with_loader={empty}
+sketch.args.without_loader={empty}
+flash-loader-condition=not eq "v{upload.port.properties.configuration}" "v{version}"
+flash-loader-and-sketch.1=if {flash-loader-condition} {loader.cmd}{loader.args.with_sketch}
+flash-loader-and-sketch.2=if {flash-loader-condition} {sketch.cmd}{sketch.args.with_loader}
+flash-loader-and-sketch.3=if not {flash-loader-condition} {sketch.cmd}{sketch.args.without_loader}
+tools.patterns.flash-loader-and-sketch="{runtime.tools.scripting-tools.path}/scripting-tools" {flash-loader-and-sketch.1} :: {flash-loader-and-sketch.2} :: {flash-loader-and-sketch.3}
+tools.patterns.flash-loader-only={loader.cmd}{loader.args.without_sketch}
+
 #
 # OpenOCD
 #
+
+# Special handling of loader and sketch via cfg file
+
 tools.openocd.path={runtime.tools.openocd-0.12.0-arduino1-static.path}
 tools.openocd.cmd=bin/openocd
 tools.openocd.cmd.windows=bin/openocd.exe
 
 tools.openocd.upload.params.verbose=-d2
 tools.openocd.upload.params.quiet=-d0
-tools.openocd.upload.pattern="{path}/{cmd}" -s "{path}/share/openocd/scripts/" {upload.programmer} {upload.config} -c "set filename0 "{runtime.platform.path}/firmwares/{bootloader.file}"" -c "set filename1 "{build.path}/{build.project_name}.{upload.extension}"" -c "set offset {upload.address}" -f "{build.variant.path}/{openocd_cfg}" "{upload.verbose}"
+tools.openocd.upload.pattern="{path}/{cmd}" -s "{path}/share/openocd/scripts/" {upload.programmer} {upload.config} -c "set filename0 "{upload.artifacts.loader}"" -c "set filename1 "{upload.artifacts.sketch}"" -c "set offset {upload.address}" -f "{build.variant.path}/{openocd_cfg}" "{upload.verbose}"
 
 tools.openocd.program.params.verbose=-d2
 tools.openocd.program.params.quiet=-d0
-tools.openocd.upload.pattern="{path}/{cmd}" -s "{path}/share/openocd/scripts/" {upload.programmer} {upload.config} -c "set filename0 "{runtime.platform.path}/firmwares/{bootloader.file}"" -c "set filename1 "{build.path}/{build.project_name}.{upload.extension}"" -c "set offset {upload.address}" -f "{build.variant.path}/{openocd_cfg}" "{upload.verbose}"
-
-tools.openocd.erase.params.verbose=-d2
-tools.openocd.erase.params.quiet=-d0
-tools.openocd.erase.pattern=
+tools.openocd.program.pattern="{path}/{cmd}" -s "{path}/share/openocd/scripts/" {upload.programmer} {upload.config} -c "set filename0 "{upload.artifacts.loader}"" -c "set filename1 "{upload.artifacts.sketch}"" -c "set offset {upload.address}" -f "{build.variant.path}/{openocd_cfg}" "{upload.verbose}"
 
 tools.openocd.bootloader.params.verbose=-d2
 tools.openocd.bootloader.params.quiet=-d0
-tools.openocd.bootloader.pattern="{path}/{cmd}" -s "{path}/share/openocd/scripts/" {upload.programmer} {upload.config} -c "set filename0 "{runtime.platform.path}/firmwares/{bootloader.file}"" -f "{build.variant.path}/flash_bootloader.cfg" "{upload.verbose}"
+tools.openocd.bootloader.pattern="{path}/{cmd}" -s "{path}/share/openocd/scripts/" {upload.programmer} {upload.config} -c "set filename0 "{upload.artifacts.loader}"" -f "{build.variant.path}/flash_bootloader.cfg" "{upload.verbose}"
+
 
 #
 # BOSSA
 #
+
 tools.bossac.path={runtime.tools.bossac-1.9.1-arduino2.path}
 tools.bossac.cmd=bossac
 tools.bossac.cmd.windows=bossac.exe
 
+tools.bossac.sketch.cmd="{path}/{cmd}" {upload.verbose} --port={serial.port.file} -U -i -e -w "{upload.artifacts.sketch}" --offset {upload.address} -R
+tools.bossac.loader.cmd="{path}/{cmd}" {upload.verbose} --port={serial.port.file} -U -i -e -w "{upload.artifacts.loader}" --offset {bootloader.address}
+tools.bossac.loader.args.without_sketch={empty} -R
+
 tools.bossac.upload.params.verbose=-d
 tools.bossac.upload.params.quiet=
-tools.bossac.upload.pattern="{path}/{cmd}" {upload.verbose} --port={serial.port.file} -U -i -e -w "{build.path}/{build.project_name}.{upload.extension}" --offset {upload.address} -R
+tools.bossac.upload.pattern={tools.patterns.flash-loader-and-sketch}
 
 tools.bossac.bootloader.params.verbose=-d
 tools.bossac.bootloader.params.quiet=
-tools.bossac.bootloader.pattern="{path}/{cmd}" {upload.verbose} --port={serial.port.file} -U -i -e -w "{runtime.platform.path}/firmwares/{bootloader.file}" --offset {bootloader.address} -R
+tools.bossac.bootloader.pattern={tools.patterns.flash-loader-only}
 
-tools.bossac.erase.params.verbose=
-tools.bossac.erase.params.quiet=
-tools.bossac.erase.pattern=
-
-#
-# STM32FLASH
-#
-tools.stm32flash.cmd=stm32flash
-tools.stm32flash.path={runtime.platform.path}/tools/windows
-tools.stm32flash.path.macosx={runtime.platform.path}/tools/macosx
-tools.stm32flash.path.linux={runtime.platform.path}/tools/linux
-tools.stm32flash.upload.params.verbose=-v
-tools.stm32flash.upload.params.quiet=
-tools.stm32flash.upload.pattern="{path}/{cmd}" {serial.port} -e 1024 -b 2400 -w "{build.path}/{build.project_name}.bin"
-tools.stm32flash.program.params.verbose=-v
-tools.stm32flash.program.params.quiet=
-tools.stm32flash.program.pattern="{path}/{cmd}" {serial.port} -e 1024 -b 2400 -w "{build.path}/{build.project_name}.bin"
-tools.stm32flash.erase.params.verbose=-v
-tools.stm32flash.erase.params.quiet=
-tools.stm32flash.erase.pattern="{path}/{cmd}" {serial.port} -e 1024 -b 2400
 
 #
 # DFU_UTIL
 #
 
-upload.dfuse=--dfuse-address={upload.address}:leave
-bootloader.dfuse=--dfuse-address={bootloader.address}:leave
+# overridable by boards.txt
+leave.dfuse=:leave
+upload.dfuse=--dfuse-address={upload.address}
+bootloader.dfuse=--dfuse-address={bootloader.address}
 
 tools.dfu-util.path={runtime.tools.dfu-util.path}
 tools.dfu-util.cmd=dfu-util
+tools.dfu-util.sketch.cmd="{path}/{cmd}" --device ,{upload.vid}:{upload.pid} -D "{upload.artifacts.sketch}" -a{upload.interface} {upload.dfuse}{leave.dfuse}
+tools.dfu-util.loader.cmd="{path}/{cmd}" --device ,{bootloader.vid}:{bootloader.pid} -D "{upload.artifacts.loader}" -a{bootloader.interface} {bootloader.dfuse}
+tools.dfu-util.loader.args.without_sketch={leave.dfuse}
+
 tools.dfu-util.upload.params.verbose=-d
 tools.dfu-util.upload.params.quiet=
-tools.dfu-util.upload.pattern="{path}/{cmd}" --device ,{upload.vid}:{upload.pid} -D "{build.path}/{build.project_name}.{upload.extension}" -a{upload.interface} {upload.dfuse}
+tools.dfu-util.upload.pattern={tools.patterns.flash-loader-and-sketch}
 
 tools.dfu-util.bootloader.params.verbose=-d
 tools.dfu-util.bootloader.params.quiet=
-tools.dfu-util.bootloader.pattern="{path}/{cmd}" --device ,{bootloader.vid}:{bootloader.pid} -D "{runtime.platform.path}/firmwares/{bootloader.file}" -a{bootloader.interface} {bootloader.dfuse}
+tools.dfu-util.bootloader.pattern={tools.patterns.flash-loader-only}
 
-tools.dfu-util.erase.params.verbose=
-tools.dfu-util.erase.params.quiet=
-tools.dfu-util.erase.pattern=
 
 #
 # PICOTOOL
 #
+
+tools.picotool.sketch.cmd="{path}/{cmd}" {upload.verbose} -n -D "{upload.artifacts.sketch}"
+tools.picotool.loader.cmd="{path}/{cmd}" {upload.verbose} -n -D "{upload.artifacts.loader}"
+tools.picotool.loader.args.with_sketch={empty} -R
+
 tools.picotool.path={runtime.tools.rp2040tools.path}
 tools.picotool.cmd=rp2040load
 tools.picotool.upload.params.verbose=-v
 tools.picotool.upload.params.quiet=
-tools.picotool.upload.pattern="{path}/{cmd}" {upload.verbose} -D "{build.path}/{build.project_name}"
-
-tools.picotool.erase.params.verbose=
-tools.picotool.erase.params.quiet=
-tools.picotool.erase.pattern=
+tools.picotool.upload.pattern={tools.patterns.flash-loader-and-sketch}
 
 tools.picotool.bootloader.params.verbose=-v
 tools.picotool.bootloader.params.quiet=
-tools.picotool.bootloader.pattern="{path}/{cmd}" {upload.verbose} -D "{runtime.platform.path}/firmwares/{bootloader.file}"
+tools.picotool.bootloader.pattern={tools.patterns.flash-loader-only}
+
 
 #
 # IMGTOOL
@@ -269,29 +309,22 @@ tools.imgtool.path={runtime.tools.imgtool.path}
 tools.imgtool.cmd=imgtool
 tools.imgtool.flags=sign --key "{build.keys.keychain}/{build.keys.sign_key}" --encrypt "{build.keys.keychain}/{build.keys.encrypt_key}" "{build.path}/{build.project_name}.bin" "{build.path}/{build.project_name}.bin" --align {build.alignment} --max-align {build.alignment} --version {build.version} --header-size {build.header_size} --pad-header --slot-size {build.slot_size}
 
-#
-# ADB WRAPPER
-#
-
-tools.adb.path={runtime.tools.adb.path}
-tools.adb.cmd=adb
-tools.adb.upload.params.verbose=-v
-tools.adb.upload.params.quiet=
-tools.adb.upload.pattern="{path}/{cmd}" push "{build.path}/{build.project_name}.elf" "/tmp/arduino/m4-user-sketch.elf"
 
 #
 # REMOTEOCD
 #
+
+# Special handling of loader and sketch via upload command
+
 tools.remoteocd.path={runtime.tools.remoteocd.path}
 tools.remoteocd.cmd=remoteocd
 tools.remoteocd.upload.params.verbose=--verbose
 tools.remoteocd.upload.params.quiet=
-tools.remoteocd.upload.pattern="{path}/{cmd}" upload --adb-path "{runtime.tools.adb.path}/adb" -s "{upload.port.properties.serialNumber}" -f "{build.variant.path}/{openocd_cfg}" "{upload.verbose}" "{runtime.platform.path}/firmwares/{bootloader.file}" "{build.path}/{build.project_name}.{upload.extension}"
+tools.remoteocd.upload.pattern="{path}/{cmd}" upload --adb-path "{runtime.tools.adb.path}/adb" -s "{upload.port.properties.serialNumber}" -f "{build.variant.path}/{openocd_cfg}" "{upload.verbose}" "{upload.artifacts.loader}" "{upload.artifacts.sketch}"
 
 tools.remoteocd.bootloader.params.verbose=--verbose
 tools.remoteocd.bootloader.params.quiet=
-tools.remoteocd.erase.pattern=
-tools.remoteocd.bootloader.pattern="{path}/{cmd}" upload --adb-path "{runtime.tools.adb.path}/adb" -s "{upload.port.properties.serialNumber}" -f "{build.variant.path}/flash_bootloader.cfg" "{upload.verbose}" "{runtime.platform.path}/firmwares/{bootloader.file}"
+tools.remoteocd.bootloader.pattern="{path}/{cmd}" upload --adb-path "{runtime.tools.adb.path}/adb" -s "{upload.port.properties.serialNumber}" -f "{build.variant.path}/flash_bootloader.cfg" "{upload.verbose}" "{upload.artifacts.loader}"
 
 tools.remoteocd_network.upload.protocol=network
 tools.remoteocd_network.upload.field.password=Password
@@ -300,7 +333,8 @@ tools.remoteocd_network.path={runtime.tools.remoteocd.path}
 tools.remoteocd_network.cmd=remoteocd
 tools.remoteocd_network.upload.params.verbose=--verbose
 tools.remoteocd_network.upload.params.quiet=
-tools.remoteocd_network.upload.pattern="{path}/{cmd}" upload -a "{upload.port.address}" --password "{upload.field.password}" -f "{build.variant.path}/{openocd_cfg}" "{upload.verbose}" "{runtime.platform.path}/firmwares/{bootloader.file}" "{build.path}/{build.project_name}.{upload.extension}"
+tools.remoteocd_network.upload.pattern="{path}/{cmd}" upload -a "{upload.port.address}" --password "{upload.field.password}" -f "{build.variant.path}/{openocd_cfg}" "{upload.verbose}" "{upload.artifacts.loader}" "{upload.artifacts.sketch}"
+
 
 #
 # PYOCD WRAPPER
@@ -312,15 +346,11 @@ tools.pyocd.path=
 tools.pyocd.cmd=pyocd
 tools.pyocd.upload.params.verbose=
 tools.pyocd.upload.params.quiet=
-tools.pyocd.upload.pattern="{cmd}" load --target {upload.target} {build.path}/{build.project_name}.{upload.extension}@{upload.address}
+tools.pyocd.upload.pattern="{cmd}" load --target {upload.target} {upload.artifacts.sketch}@{upload.address}
 
 tools.pyocd.bootloader.params.verbose=
 tools.pyocd.bootloader.params.quiet=
-tools.pyocd.bootloader.pattern="{cmd}" load --target {bootloader.target} "{runtime.platform.path}/firmwares/{bootloader.file}"
-
-tools.pyocd.erase.params.verbose=
-tools.pyocd.erase.params.quiet=
-tools.pyocd.erase.pattern=
+tools.pyocd.bootloader.pattern="{cmd}" load --target {bootloader.target} "{upload.artifacts.loader}"
 
 
 #

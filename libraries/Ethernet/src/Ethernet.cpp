@@ -12,17 +12,22 @@
 #include <zephyrPinctrl.h>
 
 #if DT_HAS_COMPAT_STATUS_OKAY(ethernet_phy)
-#define ETH_PHY_NODE DT_INST(0, ethernet_phy)
-static const struct device *eth_phy_dev = DEVICE_DT_GET(ETH_PHY_NODE);
 
-#if DT_HAS_CHOSEN(arduino_eth_clock)
-#define CLOCK_NODE DT_CHOSEN(arduino_eth_clock)
-static const struct pwm_dt_spec CLOCK_PWM = PWM_DT_SPEC_GET(CLOCK_NODE);
-#define INIT_ETH_CLOCK() zephyr::arduino::init_pwm_ref_clock(DEVICE_DT_GET(CLOCK_NODE), CLOCK_PWM)
-#else
-/* Some boards provide ETH ref clock on a dedicated pin, not via a PWM alias. */
-#define INIT_ETH_CLOCK() 0
-#endif
+static inline int init_eth_clock() {
+	if (!DT_HAS_CHOSEN(arduino_eth_clock)) {
+		return 0;
+	}
+
+	int ret = 0;
+	static const struct device *eth_clk_dev = DEVICE_DT_GET_OR_NULL(DT_CHOSEN(arduino_eth_clock));
+	static const struct pwm_dt_spec eth_pwm = PWM_DT_SPEC_GET_OR(DT_CHOSEN(arduino_eth_clock), {});
+
+	if (!device_is_ready(eth_clk_dev)) {
+		ret = zephyr::arduino::init_pwm_ref_clock(eth_clk_dev, eth_pwm);
+	}
+
+	return ret;
+}
 
 int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long responseTimeout) {
 	(void)timeout;
@@ -69,9 +74,6 @@ int EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress ga
 	}
 	setMACAddress(mac);
 	config(ip, dns, gateway, subnet);
-	if (!net_if_is_up(netif)) {
-		net_if_up(netif);
-	}
 	return 1;
 }
 
@@ -88,6 +90,8 @@ EthernetLinkStatus EthernetClass::linkStatus() {
 }
 
 EthernetHardwareStatus EthernetClass::hardwareStatus() {
+	int ret = 0;
+
 	if (netif == nullptr) {
 		netif = net_if_get_first_ethernet();
 	}
@@ -96,19 +100,27 @@ EthernetHardwareStatus EthernetClass::hardwareStatus() {
 		return EthernetNoHardware;
 	}
 
-	if (!net_if_is_up(netif)) {
-		/* since we don't perform hardware setup only once in begin() but here, avoid doing it again
-		 * every time we call this function if network is already up */
-		int ret = INIT_ETH_CLOCK();
-		if (ret < 0) {
-			return EthernetNoHardware;
-		}
+	/* performing ethernet devices initialization here, because we need it to check the hw
+	 * presence and status of the link. Internally they are performed only once, if
+	 * device_is_ready returns false. NOTE, eth_clock device could be set as a dependency of
+	 * netif device
+	 * */
+	ret = init_eth_clock();
+	if (ret < 0) {
+		return EthernetNoHardware;
+	}
 
-		ret = zephyr::arduino::init_dev_apply_pinctrl(eth_phy_dev);
+	if (!device_is_ready(net_if_get_device(netif))) {
+		ret = zephyr::arduino::init_dev_apply_pinctrl(net_if_get_device(netif));
 		if (ret < 0) {
 			return EthernetNoHardware;
 		}
 	}
+
+	if (!net_if_is_up(netif)) {
+		net_if_up(netif);
+	}
+
 	return EthernetOk;
 }
 

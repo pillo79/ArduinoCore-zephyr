@@ -15,17 +15,17 @@
 void start_static_threads();
 #endif
 
-// This function will be overwriten by most variants.
+// This function will be overwritten by most variants.
 void __attribute__((weak)) initVariant(void) {
 }
 
-// This function can be overwriten by one library.
+// This function can be overwritten by one library.
 void __attribute__((weak)) __loopHook(void) {
 }
 
 int main(void) {
-#if ZARD_FIRST_SERIAL_IS_SERIALUSB
-	Serial.begin(115200);
+#if ZARD_BOARD_HAS_SERIALUSB
+	SerialUSB.begin(115200);
 #endif
 
 	initVariant();

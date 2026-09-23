@@ -10,9 +10,8 @@
 #include <zephyr/usb/usb_device.h>
 #include <SerialUSB.h>
 
-#if ZARD_FIRST_SERIAL_IS_SERIALUSB
-const struct device *const usb_dev =
-	DEVICE_DT_GET(DT_PHANDLE_BY_IDX(DT_PATH(zephyr_user), cdc_acm_serial, 0));
+#if ZARD_BOARD_HAS_SERIALUSB
+const struct device *const usb_dev = DEVICE_DT_GET(ZARD_SERIALUSB_PHANDLE);
 
 void __attribute__((weak)) _on_1200_bps() {
 	NVIC_SystemReset();
@@ -26,11 +25,10 @@ void arduino::SerialUSB_::baudChangeHandler(const struct device *dev, uint32_t r
 	}
 }
 
-#if defined(CONFIG_USB_DEVICE_STACK_NEXT)
 int arduino::SerialUSB_::usb_disable() {
 	// To avoid Cannot perform port reset: 1200-bps touch: setting DTR to OFF: protocol error
 	k_sleep(K_MSEC(100));
-	return usbd_disable(Serial._usbd);
+	return usbd_disable(SerialUSB._usbd);
 }
 
 void arduino::SerialUSB_::usbd_next_cb(struct usbd_context *const ctx, const struct usbd_msg *msg) {
@@ -46,8 +44,8 @@ void arduino::SerialUSB_::usbd_next_cb(struct usbd_context *const ctx, const str
 
 	if (msg->type == USBD_MSG_CDC_ACM_LINE_CODING) {
 		uint32_t baudrate;
-		uart_line_ctrl_get(Serial.uart, UART_LINE_CTRL_BAUD_RATE, &baudrate);
-		Serial.baudChangeHandler(nullptr, baudrate);
+		uart_line_ctrl_get(SerialUSB.uart, UART_LINE_CTRL_BAUD_RATE, &baudrate);
+		SerialUSB.baudChangeHandler(nullptr, baudrate);
 	}
 }
 
@@ -67,7 +65,6 @@ int arduino::SerialUSB_::enable_usb_device_next(void) {
 	}
 	return 0;
 }
-#endif /* defined(CONFIG_USB_DEVICE_STACK_NEXT) */
 
 void arduino::SerialUSB_::begin(unsigned long baudrate, uint16_t config) {
 	if (!started) {
@@ -87,23 +84,33 @@ void arduino::SerialUSB_::begin(unsigned long baudrate, uint16_t config) {
 }
 
 arduino::SerialUSB_::operator bool() {
-	uart_line_ctrl_get(uart, UART_LINE_CTRL_DTR, &dtr);
-	return dtr;
+	int old_dtr = dtr;
+	int ret = uart_line_ctrl_get(uart, UART_LINE_CTRL_DTR, &dtr);
+	ret = dtr && (ret == 0);
+	if (ret && old_dtr == 0) {
+		k_sleep(K_MSEC(1));
+	}
+	return ret;
 }
 
 size_t arduino::SerialUSB_::write(const uint8_t *buffer, size_t size) {
-	if (!Serial) {
+	if (!SerialUSB) {
 		return 0;
 	}
 	return arduino::ZephyrSerial::write(buffer, size);
 }
 
 void arduino::SerialUSB_::flush() {
-	if (!Serial) {
+	if (!SerialUSB) {
 		return;
 	}
 	arduino::ZephyrSerial::flush();
 }
 
-arduino::SerialUSB_ Serial(usb_dev);
+arduino::SerialUSB_ SerialUSB(usb_dev);
+
+#if ZARD_FIRST_SERIAL_IS_SERIALUSB
+extern arduino::SerialUSB_ Serial [[gnu::alias("SerialUSB")]];
+#endif
+
 #endif

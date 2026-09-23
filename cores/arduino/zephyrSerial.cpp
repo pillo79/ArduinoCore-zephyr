@@ -86,11 +86,7 @@ void arduino::ZephyrSerial::IrqHandler() {
 	k_sem_take(&rx.sem, K_NO_WAIT);
 	while (uart_irq_rx_ready(uart) && ((length = uart_fifo_read(uart, buf, sizeof(buf))) > 0)) {
 		length = min(sizeof(buf), static_cast<size_t>(length));
-		ret = ring_buf_put(&rx.ringbuf, &buf[0], length);
-
-		if (ret < 0) {
-			break;
-		}
+		ring_buf_put(&rx.ringbuf, &buf[0], length);
 	}
 	k_sem_give(&rx.sem);
 
@@ -166,9 +162,6 @@ size_t arduino::ZephyrSerial::write(const uint8_t *buffer, size_t size) {
 		k_sem_take(&tx.sem, K_FOREVER);
 		auto ret = ring_buf_put(&tx.ringbuf, &buffer[idx], size - idx);
 		k_sem_give(&tx.sem);
-		if (ret < 0) {
-			return 0;
-		}
 		idx += ret;
 		if (ret == 0) {
 			uart_irq_tx_enable(uart);

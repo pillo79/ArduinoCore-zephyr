@@ -30,12 +30,13 @@ namespace arduino {
  * Map deferred-init peripherals and zephyr,console (that is not deferred) with their
  * pinctrl configuration from devicetree.
  */
-#define NODE_SELECTED(node_id)                                                                     \
-	UTIL_OR(DT_PROP(node_id, zephyr_deferred_init),                                                \
-			DT_SAME_NODE(node_id, DT_CHOSEN(zephyr_console)))
+#define PINCTRL_NODE_SELECTED(node_id)                                                             \
+	UTIL_AND(DT_NODE_HAS_PROP(node_id, pinctrl_0),                                                 \
+			 UTIL_OR(DT_PROP(node_id, zephyr_deferred_init),                                       \
+					 DT_SAME_NODE(node_id, DT_CHOSEN(zephyr_console))))
 
 #define PINCTRL_DEFINE_IF_SELECTED(node_id)                                                        \
-	COND_CODE_1(NODE_SELECTED(node_id), (PINCTRL_DT_DEFINE(node_id);), ())
+	COND_CODE_1(PINCTRL_NODE_SELECTED(node_id), (PINCTRL_DT_DEFINE(node_id);), ())
 
 DT_FOREACH_STATUS_OKAY_NODE(PINCTRL_DEFINE_IF_SELECTED)
 
@@ -46,7 +47,7 @@ struct pinctrl_map_entry {
 
 #define PINCTRL_MAP_ENTRY(node_id) {DEVICE_DT_GET(node_id), PINCTRL_DT_DEV_CONFIG_GET(node_id)},
 #define PINCTRL_MAP_ENTRY_IF_PRESENT(node_id)                                                      \
-	COND_CODE_1(NODE_SELECTED(node_id), (PINCTRL_MAP_ENTRY(node_id)), ())
+	COND_CODE_1(PINCTRL_NODE_SELECTED(node_id), (PINCTRL_MAP_ENTRY(node_id)), ())
 
 static const struct pinctrl_map_entry pinctrl_map[] = {
 	DT_FOREACH_STATUS_OKAY_NODE(PINCTRL_MAP_ENTRY_IF_PRESENT){NULL, NULL},
@@ -192,7 +193,7 @@ int init_dev_apply_pinctrl(const struct device *dev) {
  * exports.
  */
 #define DECLARE_DEVICE_WEAK(node_id)                                                               \
-	COND_CODE_1(NODE_SELECTED(node_id),                                                             \
+	COND_CODE_1(PINCTRL_NODE_SELECTED(node_id),                                                             \
 		(extern const struct device DEVICE_DT_NAME_GET(node_id) __attribute__((weak));), ())
 
 DT_FOREACH_STATUS_OKAY_NODE(DECLARE_DEVICE_WEAK)

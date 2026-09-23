@@ -73,6 +73,10 @@
 	};
 };
 
+&sci4_spi {
+	zephyr,deferred-init;
+};
+
 &sci5 {
 	status = "okay";
 	pinctrl-0 = <&sci5_default>;
@@ -162,8 +166,19 @@
 	#size-cells = <0>;
 	interrupts = <87 1>, <88 1>, <89 1>, <90 1>;
 	interrupt-names = "rxi", "txi", "tei", "eri";
-	clock-frequency = <DT_FREQ_M(1)>;
+	clock-frequency = <I2C_BITRATE_FAST>;
 	pinctrl-0 = <&iic0_default>;
+	pinctrl-names = "default";
+};
+
+&iic1 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	interrupts = <91 1>, <92 1>, <93 1>, <94 1>;
+	interrupt-names = "rxi", "txi", "tei", "eri";
+	clock-frequency = <I2C_BITRATE_FAST>;
+	pinctrl-0 = <&iic1_default>;
 	pinctrl-names = "default";
 };
 
@@ -244,6 +259,11 @@
 	eth_clock: pwmclock {
 		zephyr,deferred-init;
 	};
+};
+
+&eth {
+	status = "okay";
+	zephyr,deferred-init;
 };
 
 &mdio {
@@ -457,8 +477,19 @@
 
 		cdc-acm-serial = <&board_cdc_acm_uart>; /* 'Serial' object is managed by SerialUSB */
 		serials = <&uart9>, <&uart7>, <&uart6>, <&uart5>; /* 'Serial1' onwards */
+
+		/* On-board ESP32-C3 coprocessor: the UART it is flashed over, and the
+		 * control lines a host flashing tool drives through DTR/RTS.
+		 *   boot-gpios  : P803 (ESP32-C3 GPIO0 / download strap)
+		 *   reset-gpios : P804 (ESP32-C3 EN / reset)
+		 * Both are active low, so the GPIO flags carry the polarity.
+		 */
+		coprocessor-serial = <&uart8>;
+		coprocessor-boot-gpios = <&ioport8 3 GPIO_ACTIVE_LOW>;
+		coprocessor-reset-gpios = <&ioport8 4 GPIO_ACTIVE_LOW>;
+
 		i2cs = <&iic0>, <&iic1>, <&i2c3>;
-		spis = <&spi1>;
+		spis = <&sci4_spi>, <&spi1>;
 		pwms = <&pwm1 0 PWM_HZ(490) PWM_POLARITY_NORMAL>,
 		       <&pwm8 1 PWM_HZ(490) PWM_POLARITY_NORMAL>,
 		       <&pwm3 0 PWM_HZ(490) PWM_POLARITY_NORMAL>,

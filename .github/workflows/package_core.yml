@@ -53,10 +53,13 @@ jobs:
       ARTIFACTS: ${{ env.ARTIFACTS }}
       # List of architectures the artifacts will be built for
       SUB_ARCHES: ${{ env.SUB_ARCHES }}
+      # URL of the latest ci-builds index for this branch, if any
+      CI_BUILDS_URL: ${{ env.CI_BUILDS_URL }}
     steps:
 
       - name: Install OS dependencies
         working-directory: /opt
+        timeout-minutes: 5 # early error on Github network issues
         run: |
           sudo apt-get remove --purge man-db -y # skips the mandb triggers
           sudo apt-get update
@@ -69,10 +72,8 @@ jobs:
           persist-credentials: false
           fetch-tags: true # needed for get_core_version.sh
 
-      - name: Initialize Zephyr environment
+      - name: Identify current version and board set
         run: |
-          # Install Zephyr as a core user would, but faster
-          yes | ./extra/bootstrap.sh -o=--filter=tree:0
           # Set up basic environment for later steps
           echo "CORE_HASH=$(git describe --always $HEAD_REF)" >> "$GITHUB_ENV"
           echo "ALL_BOARD_DATA=$(extra/get_board_details.sh | jq -c 'sort_by(.variant)')" >> "$GITHUB_ENV"
@@ -88,15 +89,48 @@ jobs:
             [[ -n "$BRANCH" ]] || { echo "::error::No branch found containing tag ${{ github.ref_name }}"; exit 1; }
             echo "CORE_BRANCH=${BRANCH}" >> "$GITHUB_ENV"
           else
-            echo "CORE_BRANCH=${{ github.head_ref || github.ref_name }}" >> "$GITHUB_ENV"
+            echo "CORE_BRANCH=${{ github.base_ref || github.ref_name }}" >> "$GITHUB_ENV"
           fi
           echo "ALL_BOARD_FQBNS=$(jq -c 'map((. + {link_mode: "static"}), (. + {link_mode: "dynamic"}))' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "ARTIFACTS=$(jq -c '["zephyr"] + (map(.artifact) | unique)' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "SUB_ARCHES=$(jq -c 'map(.subarch) | unique' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
+
+      - name: Cache west modules and blobs
+        uses: actions/cache@v5
+        with:
+          key: west-cache-${{ hashFiles('west.yml', 'boards.txt') }}
+          restore-keys: |
+            west-blobs-
+          path: ${{ runner.temp }}/west-cache
+
+      - name: Initialize Zephyr environment
+        timeout-minutes: 10 # early error on Github network issues
+        env:
+          WEST_CACHE: ${{ runner.temp }}/west-cache
+        run: |
+          # Install Zephyr as a core user would, but faster
+          yes | ./extra/bootstrap.sh -o=--filter=tree:0
           # Archive the build environment for later jobs
           (cd && tar cphf - .cmake work zephyr-sdk-* | zstd > build-env.tar.zstd)
-          # The API is only needed for packaging, not for building, so it's separate
-          tar cphf - cores/arduino/api | zstd > arduino-api.tar.zstd
+
+      - name: Get ci-builds package index link
+        if: ${{ github.repository == 'arduino/ArduinoCore-zephyr' }}
+        run: |
+          # for pull requests and pushes to the official Arduino repo, use the latest ci-built core as a reference
+          CI_BUILDS_URL="https://arduino.github.io/core-ci-builds/package_arduino_zephyr_${CORE_BRANCH}_ci_index.json"
+          if ! wget -q --method=HEAD "$CI_BUILDS_URL" >& /dev/null ; then
+            CLOSEST_BRANCH=$(git branch -r | grep -vE "HEAD|/$(git branch --show-current)$" | while read -r b; do \
+                               echo "$(git rev-list --count $b..HEAD) $b" ; \
+                             done | sort -n | head -n 1 | awk '{print $2}' | cut -d / -f 2)
+            [ -z "$CLOSEST_BRANCH" ] && CLOSEST_BRANCH="main"
+            echo "::warning::No ci-builds index found for branch $CORE_BRANCH, using $CLOSEST_BRANCH"
+            CI_BUILDS_URL="https://arduino.github.io/core-ci-builds/package_arduino_zephyr_${CLOSEST_BRANCH}_ci_index.json"
+            if ! wget -q --method=HEAD "$CI_BUILDS_URL" >& /dev/null ; then
+              echo "::warning::No ci-builds index found for branch $CLOSEST_BRANCH, using main"
+              CI_BUILDS_URL="https://arduino.github.io/core-ci-builds/package_arduino_zephyr_main_ci_index.json"
+            fi
+          fi
+          echo "CI_BUILDS_URL=$CI_BUILDS_URL" >> "$GITHUB_ENV"
 
       - name: Download test data
         run: |
@@ -114,14 +148,6 @@ jobs:
         with:
           name: build-env
           path: ~/build-env.tar.zstd
-          retention-days: 1
-          archive: false
-
-      - name: Archive API snapshot
-        uses: actions/upload-artifact@v7
-        with:
-          name: arduino-api
-          path: arduino-api.tar.zstd
           retention-days: 1
           archive: false
 
@@ -152,11 +178,14 @@ jobs:
     steps:
 
       - uses: actions/download-artifact@v8
+        timeout-minutes: 10 # early error on Github network issues
         with:
           path: /home/runner
           name: build-env.tar.zstd
 
       - name: Restore build environment
+        id: restore-env
+        timeout-minutes: 5 # early error on Github network issues
         run: |
           sudo apt-get remove --purge man-db -y # skips the mandb triggers
           sudo apt-get update
@@ -208,7 +237,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Package board artifacts
-        if: ${{ !cancelled() }}
+        if: ${{ steps.restore-env.outcome == 'success' && !cancelled() }}
         run: |
           # add the config file to the report files, list them for later archiving
           cp firmwares/zephyr-${{ matrix.variant }}.config $REPORT.config
@@ -223,11 +252,12 @@ jobs:
             firmwares/*${{ matrix.variant }}* \
             variants/${{ matrix.variant }}/ \
             boards.local_${{ matrix.variant }}.txt \
+            cores/arduino/api/ \
             ${FULL_BUILD_DIR} \
           | zstd > binaries-${ARTIFACT_TAG}.tar.zstd
 
       - name: Archive board binaries
-        if: ${{ !cancelled() }}
+        if: ${{ steps.restore-env.outcome == 'success' && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           # prefix the name with 'failed-' if the build failed, so that it is not removed
@@ -237,7 +267,7 @@ jobs:
           archive: false
 
       - name: Archive build reports
-        if: ${{ !cancelled() }}
+        if: ${{ steps.restore-env.outcome == 'success' && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: build-report-${{ env.ARTIFACT_TAG }}
@@ -275,12 +305,6 @@ jobs:
           persist-credentials: false
           fetch-tags: true
 
-      # Get the API snapshot
-      - uses: actions/download-artifact@v8
-        with:
-          path: .
-          name: arduino-api.tar.zstd
-
       # Get all built binaries
       - uses: actions/download-artifact@v8
         with:
@@ -290,9 +314,8 @@ jobs:
 
       - name: Package core
         run: |
-          # Extract the API snapshot and board binaries in place
-          rm -f cores/arduino/api # remove broken symlink
-          tar --use-compress-program=unzstd -xpf arduino-api.tar.zstd
+          # Extract the board binaries in place
+          # (each will also include the same copy of the API)
           for f in binaries-*.tar.zstd ; do
             tar --use-compress-program=unzstd -xpf $f
           done
@@ -301,22 +324,113 @@ jobs:
           ./extra/package_core.sh ${{ matrix.artifact }} ${CORE_TAG} distrib/${CORE_ARTIFACT}
 
       - uses: actions/upload-artifact@v7
+        id: upload-core
         if: ${{ success() || failure() }}
         with:
           name: ${{ env.CORE_ARTIFACT }}
           path: distrib/${{ env.CORE_ARTIFACT }}
           archive: false
 
+      - name: Archive artifact ID
+        run: |
+          echo '${{ steps.upload-core.outputs.artifact-id }}' > ${{ matrix.artifact }}.id
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: artifact-id-${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.id
 
 
-  # After generating the final cores, the API and per-board binary archives are no longer needed.
-  # The build environment archive can also be removed.
+
+  # Prepare this PR's temporary package index JSON by merging the newly
+  # built core packages with the latest package index from ci-builds.
+
+  package-index:
+    name: Package index URL for offline tests
+    runs-on: ubuntu-latest
+    needs:
+      - build-env
+      - package-core
+    if: ${{ github.event_name == 'pull_request' && needs.build-env.outputs.CI_BUILDS_URL != '' }}
+    env:
+      CORE_HASH: ${{ needs.build-env.outputs.CORE_HASH }}
+      CORE_BRANCH: ${{ needs.build-env.outputs.CORE_BRANCH }}
+      ARTIFACTS: ${{ needs.build-env.outputs.ARTIFACTS }}
+      CI_BUILDS_URL: ${{ needs.build-env.outputs.CI_BUILDS_URL }}
+    steps:
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          fetch-tags: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: ArduinoCore-*.tar.bz2
+          path: .
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: artifact-id-*
+          path: .
+          merge-multiple: true
+
+      - name: Prepare PR package index
+        run: |
+          wget ${CI_BUILDS_URL} -O ci_index.json
+          # clear other platforms from the index
+          jq '.packages[0].platforms = []' ci_index.json > ci_index.tmp && mv ci_index.tmp ci_index.json
+
+          mkdir -p snippets/platforms/
+          jq -cr '.[]' <<< ${ARTIFACTS} | while read -r artifact; do
+            [ $artifact == "zephyr" ] && continue
+            ARTIFACT_FILE=ArduinoCore-${artifact}-${CORE_HASH}.tar.bz2
+            PACKAGE_JSON=snippets/platforms/${artifact}.json
+            ./extra/gen_package_index_json.sh ${artifact} ${ARTIFACT_FILE} ${PACKAGE_JSON}
+            # replace the download URL with this PR's artifact link
+            ARTIFACT_ID=$(cat ${artifact}.id)
+            ARTIFACT_URL="https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
+            sed -i -e "s!\"url\":.*!\"url\": \"${ARTIFACT_URL}\",!" ${PACKAGE_JSON}
+            # append the new snippet to the index
+            jq -s '.[0].packages[0].platforms += .[1].packages[0].platforms | .[0]' \
+                    ci_index.json ${PACKAGE_JSON} > ci_index.tmp && mv ci_index.tmp ci_index.json
+          done
+          PACKAGE_INDEX_FILE="package_arduino_zephyr_pr_${{ github.event.pull_request.number }}_ci_index.json"
+          echo "PACKAGE_INDEX_FILE=${PACKAGE_INDEX_FILE}" >> $GITHUB_ENV
+          mv ci_index.json ${PACKAGE_INDEX_FILE}
+
+      - name: Archive PR package index
+        id: package-index-json
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.PACKAGE_INDEX_FILE }}
+          path: ${{ env.PACKAGE_INDEX_FILE }}
+          archive: false
+
+      - name: Display final URL in the summary
+        run: |
+          ARTIFACT_ID=${{ steps.package-index-json.outputs.artifact-id }}
+          PACKAGE_INDEX_URL="https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
+          PACKAGE_INDEX_URL="${PACKAGE_INDEX_URL}#${{ env.PACKAGE_INDEX_FILE }}"
+          echo "[${PACKAGE_INDEX_URL}](${PACKAGE_INDEX_URL})" >> $GITHUB_STEP_SUMMARY
+
+
+
+  # After generating the final cores, the following temporary artifacts are
+  # no longer used and can be removed:
+  #
+  #  - the Zephyr build environment
+  #  - the API and per-board binaries
+  #  - the artifact download URLs
 
   cleanup-build:
     name: Clean up intermediates
     runs-on: ubuntu-latest
     needs:
       - package-core
+      - package-index
     steps:
 
       - uses: geekyeggo/delete-artifact@v6
@@ -325,6 +439,7 @@ jobs:
             arduino-api.tar.zstd
             binaries-*
             build-env.tar.zstd
+            artifact-id-*
           failOnError: false
 
 
@@ -350,6 +465,7 @@ jobs:
       FQBN: arduino:${{ matrix.subarch }}:${{ matrix.board }}:link_mode=${{ matrix.link_mode }}
       CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
       ARTIFACT_TAG: ${{ needs.build-env.outputs.CORE_HASH }}-${{ matrix.board }}-${{ matrix.link_mode }}
+      CI_BUILDS_URL: ${{ needs.build-env.outputs.CI_BUILDS_URL }}
     if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     steps:
 
@@ -386,10 +502,12 @@ jobs:
       - name: Compile tests for ${{ matrix.board }}
         uses: pillo79/compile-sketches@next
         with:
+          # Use ci-builds core, if possible, to use the exact set of tools required by the source
           fqbn: ${{ env.FQBN }}
           platforms: |
             # Use Board Manager version first to install the tools
             - name: ${{ env.PLAT }}
+              ${{ env.CI_BUILDS_URL != '' && format('source-url: {0}', env.CI_BUILDS_URL) || '' }}
             # ... then replace that with the local version
             - name: ${{ env.PLAT }}
               source-path: "ArduinoCore-zephyr"
@@ -397,6 +515,11 @@ jobs:
             ${{ env.ALL_TESTS }}
           libraries: |
             ${{ env.ALL_LIBRARIES }}
+          cli-compile-flags: |
+            - '--build-property'
+            - 'compiler.c.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
+            - '--build-property'
+            - 'compiler.cpp.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
           verbose: 'false'
           enable-deltas-report: 'false'
           enable-issues-report: 'true'
@@ -436,6 +559,13 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
     steps:
+
+      - name: Install matplotlib
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          sudo apt-get remove --purge man-db -y # skips the mandb triggers
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends python3-matplotlib
 
       - uses: actions/checkout@v6
         with:
@@ -485,6 +615,37 @@ jobs:
           # errors due to race conditions with parallel branch runs should not fail the job
           extra/ci_calc_size_reports.py ${GITHUB_BASE_SHA} sketches-reports/ || true
 
+          # generate the size trends report (per-board charts + tables) from the
+          # delta-annotated reports above; best-effort, same as the delta computation
+          extra/ci_calc_size_trends.py --input-dir sketches-reports/ --base-sha ${GITHUB_BASE_SHA} \
+            --output-html size-trends-${{ needs.build-env.outputs.CORE_HASH }}.html --output-md size-trends.md || true
+
+          # append the size trends summary to the PR comment and the step summary,
+          # below the build summary
+          if [ -s size-trends.md ]; then
+            cat size-trends.md >> comment-request/comment_body
+            cat size-trends.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # upload the size trends HTML report; linked from the PR comment below
+      - name: Archive size trends report
+        id: upload-size-trends
+        uses: actions/upload-artifact@v7
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          name: size-trends-report
+          path: size-trends-${{ needs.build-env.outputs.CORE_HASH }}.html
+          if-no-files-found: ignore
+          archive: false
+
+      - name: Add size trends artifact link, if available
+        if: ${{ github.event_name == 'pull_request' && steps.upload-size-trends.outputs.artifact-id }}
+        run: |
+          ARTIFACT_ID=${{ steps.upload-size-trends.outputs.artifact-id }}
+          ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${ARTIFACT_ID}"
+          echo -e "\n[Full size trends report](${ARTIFACT_URL})" >> comment-request/comment_body
+          echo -e "\n[Full size trends report](${ARTIFACT_URL})" >> $GITHUB_STEP_SUMMARY
+
       # upload build metadata artifact, for upload to ci-builds
       - name: Archive build metadata information
         uses: actions/upload-artifact@v7
@@ -500,15 +661,6 @@ jobs:
         with:
           name: comment-request
           path: comment-request/
-          retention-days: 1
-
-      # upload size delta report artifact (will be retrieved by report_size_deltas.yml)
-      - name: Archive size deltas report information
-        uses: actions/upload-artifact@v7
-        if: ${{ github.event_name == 'pull_request' }}
-        with:
-          name: sketches-reports
-          path: sketches-reports/
           retention-days: 1
 
       # upload new official test size artifact (for AWS storage)
@@ -566,7 +718,7 @@ jobs:
   publish-core:
     name: Publish core
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && github.repository == 'arduino/ArduinoCore-zephyr' }}
+    if: ${{ github.event_name == 'push' && github.repository == 'arduino/ArduinoCore-zephyr' && !startsWith(github.ref_name, 'dependabot/') }}
     needs:
       - build-env
       - package-core
@@ -600,6 +752,8 @@ jobs:
             aws s3 cp $f s3://${{ secrets.S3_BUCKET }}/
           done
           aws s3 cp size-reports-*.tar.bz2 s3://${{ secrets.S3_BUCKET }}/size-reports/
+
+
 
   # Prepare the package index JSON snippets for the newly built core packages.
 
@@ -650,9 +804,15 @@ jobs:
           name: snippets-${{ env.CORE_TAG }}
           path: snippets/
 
+
+
+  # Upload the newly built core packages and package index snippets to the
+  # ci-builds repository so the build is fully logged and the next PRs can
+  # use them as a reference for testing.
+
   ci-builds-upload:
     name: Upload to ci-builds
-    if: ${{ github.event_name == 'push' && github.repository == 'arduino/ArduinoCore-zephyr' }}
+    if: ${{ github.event_name == 'push' && github.repository == 'arduino/ArduinoCore-zephyr' && !startsWith(github.ref_name, 'dependabot/') }}
     runs-on: ubuntu-latest
     needs:
       - build-env

@@ -1,10 +1,10 @@
-# Adding custom boards/ variants
+# Adding custom boards/variants
 
 - Boards already supported by Zephyr can be added to the variants folder as outlined in this documentation.
-- Custom boards can first by added by following the [official Zephyr porting guide](https://docs.zephyrproject.org/latest/hardware/porting/board_porting.html).
+- Custom boards can first be added by following the [official Zephyr porting guide](https://docs.zephyrproject.org/latest/hardware/porting/board_porting.html).
 Once completed, continue here by adding a variant for your custom board.
 
-## Suppored Boards/variants
+## Supported Boards/variants
 
 - [X] Arduino Nano ble sense 33
 - [X] Arduino Nano ble 33
@@ -26,7 +26,7 @@ target board. To add board support:
 1. This project is structured in a way so as to isolate the variants from the core API. Thus, whenever a new board
 needs to be added it needs to be done in the `variants/` folder.
 Add a folder inside of the variants folder that matches the name of your board.
-2. Add an overlay file file that match the name of the board.
+2. Add an overlay file that matches the name of the board.
 3. Add a `variant.h` file.
 
 An example of this structure is shown below.
@@ -45,12 +45,18 @@ variants/
 The Arduino API requires pin mapping definitions to use Arduino-style pin numbers
 (pin numbers printed on the board, not GPIO numbers).
 The pin-mapping node is under the `zephyr,user` node of DTS.
-`digital-pin-gpios` defines digital input/output pins that is D0, D1, ..,
-`adc-pin-gpios` defines analog input pins that is A0, A1, ... .
+`digital-pin-gpios` defines digital input/output pins, i.e. D0, D1, ...,
+`adc-pin-gpios` defines analog input pins, i.e. A0, A1, etc.
 `pwm-pin-gpios` defines PWM pins.
 Each pin specifies in the form of a GPIO cell.
 Usually, it is in the form of `<[port] [pin-number] [flag]>`.
 You can also use the Arduino header node definition here.
+
+> [!NOTE]
+> For phandle-array properties like these (`digital-pin-gpios`, `adc-pin-gpios`,
+> `pwm-pin-gpios`, `serials`, `i2cs`, etc.), both `<&dev1 &dev2>` (multiple entries in a
+> single bracket group) and `<&dev1>, <&dev2>` (separate bracket groups joined by commas)
+> are valid DTS syntax. However, `<&dev1, &dev2>` is **invalid**.
 
 ### Overlays using previously-defined Arduino headers
 
@@ -66,18 +72,17 @@ uses [the Arduino header definitions](https://github.com/zephyrproject-rtos/zeph
 ```
 / {
 	zephyr,user {
-		digital-pin-gpios = <&arduino_header 6 0>,	/* Digital */
-				    <&arduino_header 7 0>;
-				    ...
-				    <&arduino_header 19 0>;
-				    <&arduino_header 0 0>;	/* Analog */
-				    <&arduino_header 1 0>;
-				    ...
-				    <&arduino_header 5 0>;
-				    <&arduino_header 20 0>;	/* SDA */
-				    <&arduino_header 21 0>;	/* SCL */
-				    <&gpio0 13 GPIO_ACTIVE_LOW>;	/* LED0 */
-		};
+		digital-pin-gpios = <&arduino_header 6 0>, /* Digital */
+			    <&arduino_header 7 0>,
+			    ...
+			    <&arduino_header 19 0>,
+			    <&arduino_header 0 0>, /* Analog */
+			    <&arduino_header 1 0>,
+			    ...
+			    <&arduino_header 5 0>,
+			    <&arduino_header 20 0>, /* SDA */
+			    <&arduino_header 21 0>, /* SCL */
+			    <&gpio0 13 GPIO_ACTIVE_LOW>; /* LED0 */
 	};
 };
 ```
@@ -85,15 +90,15 @@ uses [the Arduino header definitions](https://github.com/zephyrproject-rtos/zeph
 ### Configure Serial devices
 
 The `serials` node defines the Serial devices to use.
-It instantiate the `Serial` with the UART device that contained in the node.
-Also instantiate as `Serial1`, `Serial2`, .. `SerialN` with the devices that is
-after the second in the case of the array contains plural devices.
+It instantiates `Serial` with the UART device contained in the node.
+Also instantiates `Serial1`, `Serial2`, ... `SerialN` with the devices
+after the first when the array contains more than one device.
 
-If the `serials` node is not defined, Use the node labeled `arduino-serial`.
+If the `serials` node is not defined, use the node labeled `arduino-serial`.
 Boards with Arduino-shield style connectors usually label `arduino-serial` for
 UART port exposed in header or frequently used UART port.
 
-If even 'arduino_serial' does not define, it uses the stub implementation
+If even `arduino_serial` is not defined, it uses the stub implementation
 that redirects to printk().
 
 The following example instantiates `Serial` and `Serial1` with each `uart0` and `uart1`.
@@ -101,7 +106,7 @@ The following example instantiates `Serial` and `Serial1` with each `uart0` and 
 ```
 / {
        zephyr,user {
-               serials = <&uart0, &uart1>;
+               serials = <&uart0>, <&uart1>;
        };
 };
 ```
@@ -109,20 +114,20 @@ The following example instantiates `Serial` and `Serial1` with each `uart0` and 
 ### Configure I2C devices
 
 The `i2cs` node defines the I2C devices to use.
-It instantiate the `Wire` with the i2c device that contained in the node.
-Also instantiate as `Wire1`, `Wire2`, .. `WireN` with the devices
-that is after the second in the case of the array contains plural devices.
+It instantiates `Wire` with the i2c device contained in the node.
+Also instantiates `Wire1`, `Wire2`, ... `WireN` with the devices
+after the first when the array contains more than one device.
 
-If the `i2cs` node is not defined, Use the node labeled `arduino-i2c`.
+If the `i2cs` node is not defined, use the node labeled `arduino-i2c`.
 Boards with Arduino-shield style connectors usually label `arduino-i2c`
 to i2c exposed in the connector.
 
-The following example instantiates `Wire` and `Wire2` with each `i2c0` and `i2c1`.
+The following example instantiates `Wire` and `Wire1` with each `i2c0` and `i2c1`.
 
 ```
 / {
        zephyr,user {
-               i2cs = <&i2c0, &i2c1>;
+               i2cs = <&i2c0 &i2c1>;
        };
 };
 ```
@@ -135,16 +140,15 @@ array to find the index of the pin.
 
 The node is phandle-array, which uses the format same as `digital-pin-gpios`.
 
-It set the digital pin number to the `LED_BUILTIN` if found the pin
-that defined in `builtin-led-gpios` from `digital-pin-gpios`.
+It sets the digital pin number to `LED_BUILTIN` if the pin
+defined in `builtin-led-gpios` is found in `digital-pin-gpios`.
 
-If the `builtin-led-gpios` is not defined, Use the node aliased as `led0`
+If the `builtin-led-gpios` is not defined, use the node aliased as `led0`
 to define `LED_BUILTIN`.
 
-The `LED_BUILTIN` does not define here if it has not found both nodes or
-defined `LED_BUILTIN` already.
+`LED_BUILTIN` is not defined if neither node is found or `LED_BUILTIN` is already defined.
 
-For example, in the case of the 13th digital pins connected to the onboard LED,
+For example, in the case of the 13th digital pin connected to the onboard LED,
 define `builtin-led-gpios` as follows.
 
 ```
@@ -160,7 +164,7 @@ define `builtin-led-gpios` as follows.
 You can see in the example above that there is no mapping for `LED0` in the
 board's Arduino header definition so it has been added using the Zephyr `gpios`
 syntax (port, pin, flags). When creating an overlay file that doesn't have an
-Arduino header defined, you should follow this syntax for adding all pins
+Arduino header defined, you should follow this syntax for adding all pins.
 
 ### You control the pin mapping
 
@@ -168,7 +172,7 @@ Zephyr [chooses to map Arduino headers beginning with the Analog
 pins](https://docs.zephyrproject.org/latest/build/dts/api/bindings/gpio/arduino-header-r3.html),
 but the overlay file example above begins with the digital pins. This is to
 match user
-expectation that issuing `pinMode(0,OUTPUT);` should control digital pin 0 (and
+expectations that issuing `pinMode(0,OUTPUT);` should control digital pin 0 (and
 not pin 6). In the same way, the Analog 0 pin was mapped to D14 as this is
 likely what a shield made for the Arduino Uno R3 header would expect.
 

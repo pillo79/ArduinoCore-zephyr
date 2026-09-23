@@ -16,7 +16,7 @@
     {
       "packager": "zephyr",
       "name": "arm-zephyr-eabi",
-      "version": "0.16.8"
+      "version": "1.0.1"
     },
     {
       "packager": "arduino",
@@ -31,12 +31,12 @@
     {
       "packager": "arduino",
       "name": "zephyr-sketch-tool",
-      "version": "0.4.0"
+      "version": "0.4.1"
     },
     {
       "packager": "arduino",
       "name": "sync-zephyr-artifacts",
-      "version": "0.2.1"
+      "version": "0.2.2"
     },
     {
       "packager": "arduino",
@@ -67,6 +67,16 @@
       "packager": "arduino",
       "name": "bin2uf2",
       "version": "0.1.0"
+    },
+    {
+      "packager": "arduino",
+      "name": "scripting-tools",
+      "version": "0.0.7"
+    },
+    {
+      "packager": "arduino",
+      "name": "rp2040tools",
+      "version": "1.1.0-rc1"
     }
   ]
 }

@@ -9,3 +9,10 @@
 # against the path of each sketch found in this repo. If a match is found, the
 # sketch compilation result will be ignored.
 
+# If the line contains a '|' (pipe) character, the part before the | is treated
+# as a regular expression to match against the sketch path, and the part after
+# the '|' is a regular expression to match against a reported issue. If both
+# match, the message will be ignored.
+
+# Loads of those in the lvgl library
+libraries/Arduino_Video/examples/LVGLDemo|warning: missing terminating " character

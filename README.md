@@ -1,10 +1,6 @@
-> [!IMPORTANT]  
-> This core is in **BETA**. 🧪  
-> Features may change, and bugs may be present. Use for testing only and provide feedback to help us improve.
->
-> [![Default branch status](https://github.com/arduino/ArduinoCore-zephyr/actions/workflows/package_core.yml/badge.svg?branch=arduino&event=push)](https://github.com/arduino/ArduinoCore-zephyr/actions/workflows/package_core.yml)
+[![Default branch status](https://github.com/arduino/ArduinoCore-zephyr/actions/workflows/package_core.yml/badge.svg?branch=main&event=push)](https://github.com/arduino/ArduinoCore-zephyr/actions/workflows/package_core.yml)
 
-# 🚧 Arduino Core for Zephyr
+# 🪁 Arduino Core for Zephyr
 
 This repository is a downstream fork of the [Arduino Core for Zephyr RTOS-based
 boards](https://github.com/zephyrproject-rtos/arduino-core-zephyr) that
@@ -13,7 +9,12 @@ by the [Arduino IDE](https://docs.arduino.cc/software/ide/),
 [Arduino CLI](https://docs.arduino.cc/arduino-cli/) and
 [Arduino App Lab](https://docs.arduino.cc/software/app-lab/).
 
-## 🧐 What is Zephyr? 
+This core is designed to replace the [mbed OS-based Arduino
+Core](https://github.com/arduino/ArduinoCore-mbed) on all the devices it
+supported, and to provide a more modern and flexible foundation for current and
+future Arduino boards by allowing the use of Zephyr RTOS features and APIs.
+
+## 🧐 What is Zephyr?
 
 [Zephyr RTOS](https://zephyrproject.org/) is an open-source, real-time operating system designed for low-power, resource-constrained devices. It's modular, scalable, and supports multiple architectures.
 
@@ -25,25 +26,32 @@ Install the core and its toolchains via Board Manager:
 * Download and install the latest [Arduino IDE](https://www.arduino.cc/en/software) (only versions `2.x.x` are supported).
 * Open the *'Settings / Preferences'* window.
 * Open the *'Boards Manager'* from the side menu and search for *'Zephyr'*.
-  * If it doesn’t appear, add the following URL to the *'Additional Boards Manager URLs'* field: `https://downloads.arduino.cc/packages/package_zephyr_index.json` (if you have multiple URLs, separate them with a comma).
-* Install the `Arduino Zephyr Boards` platform.
-
-Alternatively, to install the core using the command line, run the following command with the Arduino CLI:
-
-```bash
-arduino-cli core install arduino:zephyr --additional-urls https://downloads.arduino.cc/packages/package_zephyr_index.json
-```
+* Install the *'Arduino Zephyr Boards'* platform (or the *'Arduino Uno Q Board'* platform if you have an Arduino UNO Q).
 
 ## 🏗️ First Use
 
-To get started with your board:
+The first time you use a Zephyr board, the *Zephyr loader* must be installed on
+the board. Since release 0.90.0 this procedure is fully automated and the
+loader will be installed automatically when you upload your first sketch.
+
+[!NOTE]
+> The Arduino Portenta C33 needs a full bootloader update to work with the
+> Zephyr core. For this board, the update *must be performed manually* the
+> first time. Make sure to follow the instructions in [this Help Center
+> article](https://support.arduino.cc/hc/en-us/articles/29180434600476-Install-the-Zephyr-loader-on-your-board)
+> to properly update the bootloader on your Portenta C33.
+
+To manually force a loader update, follow these steps:
+
 * Put the board in bootloader mode by double-clicking the RESET button.
 * Run the `Burn Bootloader` option from the IDE/CLI.
   * Note that due to limitations in the Arduino IDE, you may need to select any programmer from the `Programmers` menu.
 * Once the bootloader is installed, you can load your first sketch by placing the board into bootloader mode again.
 
-> [!NOTE]  
-> After the initial setup, future sketches will be loaded automatically without needing to reset the board.
+> [!NOTE]
+> After the initial setup, future sketches will be loaded automatically without
+> needing to reset the board. Each sketch update will also reflash the loader
+> if a different version is detected.
 
 ## 🔧 Troubleshooting
 
@@ -65,7 +73,7 @@ To get started with your board:
 ---
 
 #### **Q: I get an OS crash, like `<err> os: ***** USAGE FAULT *****`**
-**A:** This is usually due to a buffer overflow or coding error in the user's own code. However, since the project is still in beta 🧪, a [good bug report](#-bug-reporting) could help identify any issues in our code.
+**A:** This is usually due to a buffer overflow or coding error in the user's own code. However, a [good bug report](#-bug-reporting) could help identify any issues in the loader or Zephyr itself.
 
 ---
 
@@ -82,6 +90,23 @@ See the [Using the Core in Arduino IDE/CLI](#using-the-core-in-arduino-idecli) s
 
 #### **Q: Wi-Fi is not working, or I get `Communication with WiFi module failed!` in the Serial Monitor**
 **A:** You are probably missing the Wi-Fi firmware, or the firmware is corrupted. Boards should come with the Wi-Fi firmware already flashed, but in case Wi-Fi is not working run the [`FlashFormat`](libraries/Storage/examples/FlashFormat/FlashFormat.ino) sketch to restore the firmware.
+
+---
+
+#### **Q: I get a `No binaries found for <board>.` when compiling a custom core**
+
+**A:** To use the Zephyr core from sources, it is not enough to install them in
+your `hardware` folder. You also need to obtain the *Zephyr loader* for the
+boards you want to use. Read on from [Under the hood](#-under-the-hood) below
+to learn how to build (or get!) those binaries.
+
+---
+
+#### **Q: My sketch running on Portenta C33 takes a long time to start, and the initial serial output is lost**
+
+**A:** This is caused by legacy firmware running on the Portenta C33's ESP32 Wi-Fi chip. Follow the [instructions](libraries/WiFi/examples/SerialBridge/README.md) to update the firmware to the latest version.  
+If you want to rollback to the Renesas core, remember to downgrade the firmware to the legacy version.
+
 
 ## 📚 Libraries
 
@@ -108,10 +133,10 @@ The behavior of the `loader` can be adjusted through the `Mode` menu of the IDE:
 The most important components of this project are:
 
 * [Zephyr based loader](/loader)
-* [LLEXT](https://docs.zephyrproject.org/latest/services/llext/index.html)
-* [Actual core](/cores/arduino) with [variants](/variants) and the usual [platform](/platform.txt) and [boards](/boards) files
-* [ArduinoCore-API](https://github.com/arduino/ArduinoCore-API)
-* [zephyr-sketch-tool](/extra/zephyr-sketch-tool)
+* [Actual core](/cores/arduino) with [variants](/variants) and the usual [platform](/platform.txt) and [boards](/boards) TXT files
+* The official [ArduinoCore-API](https://github.com/arduino/ArduinoCore-API)
+* [LLEXT](https://docs.zephyrproject.org/latest/services/llext/index.html) as the glue layer between sketch and loader
+* [zephyr-sketch-tool](/extra/zephyr-sketch-tool) for packaging the sketch binary
 
 ## 🏃 Shortcut: using the Core in Arduino IDE/CLI without installing Zephyr
 
@@ -119,27 +144,20 @@ The most important components of this project are:
 >
 > If you are only interested in developing features in the [core](/cores/arduino)
 > or [libraries](/libraries), and do not want to set up a full Zephyr build
-> environment, you can use the [`sync-zephyr-artifacts`](/extra/sync-zephyr-artifacts) 
+> environment, you can use the [`sync-zephyr-artifacts`](/extra/sync-zephyr-artifacts)
 > utility to download a pre-built version of the files needed to compile
 > sketches and flash the loader.
 >
 > To do so, after cloning this repo, compile the `sync-zephyr-artifacts`
-> utility via `go build` and run it as `sync-zephyr-artifacts .` to retrieve
-> the precompiled files for the current revision of the core. 
+> utility via `go build` and run it as `sync-zephyr-artifacts <path-to-core>`
+> to retrieve the precompiled files for the current revision of the core.
 >
 > Next, follow the instructions in [Using the Core in Arduino IDE/CLI](#using-the-core-in-arduino-idecli)
-> or [Using the Core in the Arduino App Lab](#using-the-core-in-the-arduino-app-lab) 
+> or [Using the Core in the Arduino App Lab](#using-the-core-in-the-arduino-app-lab)
 > to start using the core in your preferred Arduino software.
 > Remember to [update the loader on your board](#flash-the-loader) as well.
 
 ## 🛠️ Setup a Zephyr build environment
-
-> [!WARNING]  
-> If you checked out this repo before 0.3.2 was released, please note that
-> development has switched to the `main` branch; the old `arduino` branch will
-> be removed in the short future. Please follow this
-> [migration guide](https://github.com/arduino/ArduinoCore-zephyr/issues/163)
-> to update your local branches and outstanding PRs.
 
 In this section, we’ll guide you through setting up your environment to work on and update the Zephyr core.
 
@@ -172,16 +190,8 @@ There are two strategies to set up the sources for building the loader on Window
 2) Install the sources within the WSL file system, like: `~/git/ArduinoCore-zephyr`
 
 There are pros and cons to both strategies:
-1) Builds on the native Windows file system are relatively very slow, but once done, you can use the results directly within the Arduino IDE. 
+1) Builds on the native Windows file system are relatively very slow, but once done, you can use the results directly within the Arduino IDE.
 2) Builds on WSL's file system are a lot faster, however, you need to copy the resulting build back to somewhere in your Windows directory structure. Use this location in the Arduino IDE as mentioned below in the [Using the Core in Arduino IDE/CLI](#using-the-core-in-arduino-idecli) section.
-
-After `bootstrap.sh` has completed, you may also have to update the `cores\arduino\api` link to the path of the ArduinoCore-API's `api` folder.
-
-### Clone the repository
-```bash
-mkdir my_new_zephyr_folder && cd my_new_zephyr_folder
-git clone https://github.com/arduino/ArduinoCore-zephyr
-```
 
 ### Run the ```bootstrap``` script
 ```bash
@@ -267,12 +277,12 @@ Once this is done, your development folder will appear in the IDE/CLI package
 list as `arduino-git:zephyr`, and the Fully Qualified Board Name (FQBN) to use
 will be `arduino-git:zephyr:name_from_boards_txt`.
 
-Remember to also install and/or update the officially published core in the IDE Board Manager to get the latest tools and dependencies. 
+Remember to also install and/or update the officially published core in the IDE Board Manager to get the latest tools and dependencies.
 [⚙️ Installation](#️-installation).
 
 ### Using the Core in the Arduino App Lab
 
-> [!WARNING] 
+> [!WARNING]
 > Arduino App Lab expects a hardcoded FQBN (`arduino:zephyr:unoq` for the UNO Q), so the [technique used for Arduino IDE/CLI](#using-the-core-in-arduino-idecli) **does not** work. A small workaround is required.
 
 1. Disable the release core
@@ -317,7 +327,7 @@ mv ~/Arduino/hardware/arduino/zephyr ~/Arduino/hardware/arduino/zephyr.disable
 > ```bash
 > . venv/bin/activate
 > west config -d manifest.project-filter
-> west sdk install --version 0.17.0
+> west sdk install
 > west update
 > ```
 
@@ -349,18 +359,14 @@ To report a bug, open the [issues](/../../issues) and follow the instructions. A
 
 Contributions are always welcome. The preferred way to receive code contribution is by submitting a [Pull request](/../../pulls).
 
-> [!WARNING] 
-> At this stage of development, we only accept Pull requests for bug fixes and features. We do **not** accept support for new targets.
-
 ## 📌 Upcoming features
 
 - [ ] USB: switch to `USB_DEVICE_STACK_NEXT` to support PluggableUSB
-- [x] Relocate RODATA in flash to accommodate sketches with large assets
 - [ ] Provide better error reporting for failed llext operations
 - [ ] Replace [`llext_exports.c`](/loader/llext_exports.c) with proper symbols generation (via includes)
-- [ ] Fix corner cases with `std::` includes (like `<iterator>`)
 - [ ] Get rid of all warnings
 
 ## 🌟 Acknowledgments
 
-This effort would have been very hard without the [GSoC project](/README.gsoc.md) and the Zephyr community.
+This effort would have been very hard without the [GSoC project](/README.gsoc.md), the Zephyr community and all the contributors to this repo.
+Thanks to everyone who has contributed to this project!

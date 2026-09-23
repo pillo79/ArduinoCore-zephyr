@@ -22,7 +22,7 @@ void setup() {
 
     const struct flash_area *fa;
 	int rc;
-	rc = flash_area_open(FIXED_PARTITION_ID(bootanimation), &fa);
+	rc = flash_area_open(PARTITION_ID(bootanimation), &fa);
 	if (rc) {
 		return;
 	}

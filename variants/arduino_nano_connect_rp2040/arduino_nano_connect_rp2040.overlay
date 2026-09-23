@@ -7,6 +7,15 @@
 #include <zephyr/dt-bindings/adc/adc.h>
 
 / {
+	chosen {
+		zephyr,log-uart = &log_uarts;
+	};
+
+	log_uarts: log_uarts {
+		compatible = "zephyr,log-uart";
+		uarts = <&uart0 &board_cdc_acm_uart>;
+	};
+
 	zephyr,user {
 		/*
 		 * Arduino Nano RP2040 Connect pin mapping
@@ -269,6 +278,7 @@
 &flash0 {
 	partitions {
 		user_sketch: partition@e0000 {
+			compatible = "zephyr,mapped-partition";
 			reg = <0x0E0000 0x20000>;
 		};
 	};

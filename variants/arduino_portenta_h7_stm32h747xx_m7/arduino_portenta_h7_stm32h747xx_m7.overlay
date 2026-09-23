@@ -10,7 +10,7 @@
 
 &usart1 {
 	status = "okay";
-	zephyr,deferred-init;
+	/* usart1 is not set as deferred-init to catch early boot logs since it is assigned to zephyr,console */
 };
 
 &uart4 {
@@ -20,7 +20,12 @@
 
 &usart6 {
 	status = "okay";
-	/* usart6 is not set as deferred-init to catch early boot logs since it is assigned to zephyr,console */
+	zephyr,deferred-init;
+};
+
+&uart8 {
+	status = "okay";
+	zephyr,deferred-init;
 };
 
 &rtc {
@@ -60,6 +65,7 @@
 	ov7670: ov7670@21 {
 		compatible = "ovti,ov7670";
 		reg = <0x21>;
+		zephyr,deferred-init;
 
 		reset-gpios = <&gpioe 3 GPIO_ACTIVE_LOW>;
 		pwdn-gpios = <&gpiod 5 GPIO_ACTIVE_LOW>;
@@ -74,7 +80,6 @@
 
 &i2c1 {
 	status = "okay";
-	zephyr,deferred-init;
 };
 
 &i2c4 {
@@ -179,7 +184,7 @@
 		     &dcmi_d0_ph9 &dcmi_d1_ph10 &dcmi_d2_ph11 &dcmi_d3_ph12
 		     &dcmi_d4_ph14 &dcmi_d5_pi4 &dcmi_d6_pi6 &dcmi_d7_pi7>;
 	pinctrl-names = "default";
-	dmas = <&dma1 0 75 (STM32_DMA_PERIPH_TO_MEMORY | STM32_DMA_PERIPH_NO_INC |
+	dmas = <&dma1 1 75 (STM32_DMA_PERIPH_TO_MEMORY | STM32_DMA_PERIPH_NO_INC |
 			    STM32_DMA_MEM_INC | STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS |
 			    STM32_DMA_PRIORITY_HIGH) STM32_DMA_FIFO_FULL>; //FULL for 7670, default FIFO_1_4
 
@@ -295,9 +300,9 @@
 		zephyr,camera = &dcmi;
 		zephyr,display = &ltdc;
 		zephyr,mipi-dsi = &mipi_dsi;
-		zephyr,console = &usart6;
-		zephyr,shell-uart = &usart6;
-		zephyr,cdc-acm-uart0 = &usart6;
+		zephyr,console = &usart1;
+		zephyr,shell-uart = &usart1;
+		zephyr,cdc-acm-uart0 = &usart1;
 		zephyr,log-uart = &log_uarts;
 		arduino,camera-clock = &pwmclock;
 		arduino,eth-clock = &pwmclock;
@@ -305,7 +310,7 @@
 
 	log_uarts: log_uarts {
 		compatible = "zephyr,log-uart";
-		uarts = <&usart6 &board_cdc_acm_uart>;
+		uarts = <&usart1 &board_cdc_acm_uart>;
 	};
 
 	/* used to overcome problems with _C analog pins */
@@ -340,6 +345,7 @@
 		};
 
 		user_sketch: partition@e0000 {
+			label = "user_sketch";
 			reg = <0x000E0000 0x00120000>;
 		};
 	};
@@ -445,7 +451,7 @@ qspi_flash: &mx25l12833f {};
 				<&gpio_invalid 5 0>;			/* Hack for D20 */
 
 		cdc-acm-serial = <&board_cdc_acm_uart>; /* 'Serial' object is managed by SerialUSB */
-		serials = <&usart6>, <&usart1>, <&uart4>; /* 'Serial1' onwards */
+		serials = <&usart1>, <&uart7>, <&uart8>, <&usart6>, <&uart4>; /* 'Serial1' onwards */
 		i2cs = <&i2c3>, <&i2c1>, <&i2c4>;
 		spis = <&spi2>;
 		cans = <&fdcan1>;
@@ -507,7 +513,7 @@ qspi_flash: &mx25l12833f {};
 	def-back-color-red = <0>;
 	def-back-color-green = <0>;
 	def-back-color-blue = <0>;
-	pixel-format = <PANEL_PIXEL_FORMAT_RGB_565>;
+	pixel-format = <PANEL_PIXEL_FORMAT_RGB_888>;
 
 	display-timings {
 		compatible = "zephyr,panel-timing";
