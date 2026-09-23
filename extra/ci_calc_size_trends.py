@@ -512,6 +512,25 @@ def _chart_bubble(records, key, label, plt, min_abs_delta=MIN_DELTA):
             ax.annotate(f"{x_val:+d}", (x_val, y_val), xytext=(0, -8), textcoords="offset points",
                         ha="center", va="top", fontsize=6, color="#333333", zorder=4)
 
+        # mean and 1-sigma window over EVERY sketch on that board (not just
+        # the ones clearing min_abs_delta), matching the population that
+        # per_board_summary()/mad_outliers() already summarize elsewhere
+        row_stats = {}
+        for row, board_label in enumerate(plotted_boards):
+            values = all_values[board_label]
+            mean = statistics.mean(values)
+            stdev = statistics.stdev(values) if len(values) > 1 else 0.0
+            row_stats[row] = (mean, stdev)
+
+        for row, (mean, stdev) in row_stats.items():
+            ax.fill_betweenx([row - 0.4, row + 0.4], mean - stdev, mean + stdev,
+                              color="#add8e6", alpha=0.4, zorder=1,
+                              label="mean ± σ" if row == 0 else None)
+            ax.plot([mean, mean], [row - 0.4, row + 0.4], linewidth=1.5,
+                    color="#1f4e79", zorder=2,
+                    label="mean" if row == 0 else None)
+        ax.legend(loc="lower right", fontsize=7, frameon=False)
+
         ax.set_yticks(range(len(plotted_boards)))
         ax.set_yticklabels(plotted_boards)
         ax.set_ylim(len(plotted_boards) - 0.5, -0.5)
