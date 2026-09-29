@@ -43,3 +43,11 @@ burner_app.communication=USB
 burner_app.protocol=
 burner_app.bootloader.pattern={iap_flash.pattern}
 burner_app.upload.artifacts.loader={iap_flash.image}
+
+mcumgr.name=MCUmgr
+mcumgr.communication=serial
+mcumgr.protocol=
+mcumgr.program.protocol=
+mcumgr.program.tool=mcumgr
+mcumgr.program.tool.default=mcumgr
+mcumgr.program.extra_params=
