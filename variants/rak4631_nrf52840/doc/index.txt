@@ -91,8 +91,9 @@ USB), so MCUboot must already be on the board. Before the first arduino-cli
 upload, flash the MCUboot hex over SWD with a J-Link or a RAKDAP1 probe. The
 core ships it as `firmwares/rak4631_nrf52840/mcuboot.hex`, and
 `extra/build.sh rak4631` writes it to the same path. arduino-cli cannot install
-MCUboot itself. Images are signed with `key/arduino_key_ecdsa-p256.pem`,
-which is public in this repository, so this does not provide secure boot.
+MCUboot itself. Images are signed with the key given to `extra/build.sh` with
+`--key`; without it, the publicly known MCUboot development key is used, which
+does not provide secure boot.
 
 Entering serial recovery: `arduino-cli upload` first sends a 1200-bps touch to
 the board's USB port. A running sketch handles it (the core opens `Serial`
