@@ -22,7 +22,7 @@ manifest:
 
   projects:
     - name: zephyr
-      remote: maidnl
+      remote: pillo79
       revision: mezza-dev-zephyr-main
       import:
         name-allowlist:
