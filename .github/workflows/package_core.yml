@@ -216,6 +216,10 @@ jobs:
       - name: Build loader
         shell: bash
         run: |
+          # the restored build environment invalidates the git index stat
+          # caches, which would mark every module as dirty in the build metadata
+          (source venv/bin/activate && west -q forall -c 'git update-index -q --refresh' || true)
+
           mkdir -p reports
           echo "::group::ccache stats before build"
           ccache --show-stats
@@ -311,6 +315,7 @@ jobs:
           tar chf - \
             firmwares/*${{ matrix.variant }}* \
             variants/${{ matrix.variant }}/ \
+            spdx/${{ matrix.variant }}/ \
             boards.local_${{ matrix.variant }}.txt \
             cores/arduino/api/ \
             ${FULL_BUILD_DIR} \
@@ -350,6 +355,7 @@ jobs:
     env:
       ALL_BOARD_DATA: ${{ needs.build-env.outputs.ALL_BOARD_DATA }}
       CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
+      SPDX_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-spdx-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
       CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
     strategy:
       matrix:
@@ -382,6 +388,21 @@ jobs:
           cat $(ls boards.local_*.txt | sort) >> boards.local.txt
           # Create the core artifact for this set of boards
           ./extra/package_core.sh ${{ matrix.artifact }} ${CORE_TAG} distrib/${CORE_ARTIFACT}
+
+      # One SPDX archive per core package, with the documents of its boards
+      # (the umbrella 'zephyr' package is not described)
+      - name: Package SPDX documents
+        if: ${{ matrix.artifact != 'zephyr' }}
+        run: |
+          VARIANTS=$(jq -r "map(select(.artifact == \"${{ matrix.artifact }}\") | .variant) | unique | .[]" <<< "${ALL_BOARD_DATA}")
+          tar jcf distrib/${SPDX_ARTIFACT} $(for v in ${VARIANTS}; do echo spdx/$v; done)
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ matrix.artifact != 'zephyr' }}
+        with:
+          name: ${{ env.SPDX_ARTIFACT }}
+          path: distrib/${{ env.SPDX_ARTIFACT }}
+          archive: false
 
       - uses: actions/upload-artifact@v7
         id: upload-core
