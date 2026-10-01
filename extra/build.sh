@@ -111,6 +111,26 @@ else
 	west build -d ${BUILD_DIR} -b ${target} loader -t llext-edk "${args[@]}"
 fi
 
+# Generate the SPDX SBOM documents for each built image. Sysbuild lists its
+# images in domains.yaml; a plain build has only the loader image.
+# The SPDX_VERSION environment variable selects the format (2.2, 2.3 or 3.0).
+SPDX_VERSION=${SPDX_VERSION:-3.0}
+# SPDX 3 documents use full IRIs, as the core document links to them from
+# another document set (see extra/gen_core_spdx.py)
+SPDX_ARGS=(--spdx-version ${SPDX_VERSION})
+[[ $SPDX_VERSION == 3* ]] && SPDX_ARGS+=(--no-namespace-map)
+SPDX_DIR=spdx/${variant}
+rm -rf ${SPDX_DIR}
+if [ -f ${BUILD_DIR}/domains.yaml ]; then
+	images=$(python3 -c 'import sys, yaml; [print(d["name"], d["build_dir"]) for d in yaml.safe_load(open(sys.argv[1]))["domains"]]' ${BUILD_DIR}/domains.yaml)
+else
+	images="loader ${IMAGE_DIR}"
+fi
+while read -r image image_dir; do
+	echo "Generating SPDX documents for '$image'"
+	west spdx -d ${image_dir} -s ${SPDX_DIR}/${image} "${SPDX_ARGS[@]}"
+done <<< "$images"
+
 # Extract the generated EDK tarball and copy it to the variant directory
 mkdir -p ${VARIANT_DIR} firmwares
 (set -e ; cd ${IMAGE_DIR} && rm -rf llext-edk && tar xf zephyr/llext-edk.tar.Z)
