@@ -35,6 +35,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import urllib.parse
 import urllib.request
 import uuid
 
@@ -43,6 +44,7 @@ import yaml
 REPO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 CORE_ROOT = "ArduinoCore-zephyr"
 CORE_URL = "https://github.com/arduino/ArduinoCore-zephyr"
+CORE_PURL = "pkg:github/arduino/ArduinoCore-zephyr"
 SUPPLIER = "Arduino"
 API_DIR = "cores/arduino/api/"
 API_LICENSE = "LGPL-2.1-or-later"
@@ -474,6 +476,11 @@ def generate_core(root, variant, args, spdx_version, namespace_prefix):
         base_dir=root,
         supplier=SUPPLIER,
     )
+    # package URLs: the core package, and its parts for the variant
+    core_purl = CORE_PURL
+    if core_version:
+        core_purl += "@" + urllib.parse.quote(core_version, safe="")
+    core.add_external_reference(core_purl)
     graph.add_component(core, doc.name)
     doc.add_described_component(core)
 
@@ -507,6 +514,7 @@ def generate_core(root, variant, args, spdx_version, namespace_prefix):
         supplier=SUPPLIER,
         comment=f"Loader firmware for {variant}",
     )
+    fw.add_external_reference(f"{core_purl}?variant={urllib.parse.quote(variant, safe='')}")
     graph.add_component(fw, doc.name)
     graph.add_relationship(core, fw, RelationshipType.CONTAINS)
 
@@ -517,6 +525,7 @@ def generate_core(root, variant, args, spdx_version, namespace_prefix):
         supplier=SUPPLIER,
         comment=f"LLEXT EDK for {variant}: headers exported from the loader build, with comments stripped",
     )
+    edk.add_external_reference(f"{core_purl}#variants/{variant}/llext-edk")
     graph.add_component(edk, doc.name)
     graph.add_relationship(core, edk, RelationshipType.CONTAINS)
     links.append((edk, RelationshipType.GENERATED_FROM, "loader", "zephyr", "zephyr-sources"))
