@@ -110,6 +110,19 @@ jobs:
         run: |
           # Install Zephyr as a core user would, but faster
           yes | ./extra/bootstrap.sh -o=--filter=tree:0
+          # Filtered fetches from the west cache record its path as a partial
+          # clone promisor of the zephyr checkout, which git then warns about
+          # on every command, and the build metadata drops the zephyr remote:
+          # make that remote the promisor instead
+          (cd ../zephyr
+           remote=$(git remote 2>/dev/null)
+           for key in $(git config --local --name-only --get-regexp '^remote\./.*\.promisor$'); do
+             path=${key#remote.}; path=${path%.promisor}
+             filter=$(git config --local "remote.$path.partialclonefilter")
+             git config --local --remove-section "remote.$path"
+             git config --local "remote.$remote.promisor" true
+             if [ -n "$filter" ]; then git config --local "remote.$remote.partialclonefilter" "$filter"; fi
+           done)
           # Archive the build environment for later jobs (keeping symlinks:
           # tracked ones restored as regular files would make the git
           # checkouts dirty in the build metadata)
