@@ -135,6 +135,12 @@ done
 cp ${IMAGE_DIR}/zephyr/zephyr.dts firmwares/zephyr-$variant.dts
 cp ${IMAGE_DIR}/zephyr/.config firmwares/zephyr-$variant.config
 
+# Export the MCUboot image, when built by sysbuild
+rm -f firmwares/mcuboot-$variant.elf
+if [ -f ${BUILD_DIR}/mcuboot/zephyr/zephyr.elf ]; then
+	cp ${BUILD_DIR}/mcuboot/zephyr/zephyr.elf firmwares/mcuboot-$variant.elf
+fi
+
 # Generate the provides.ld file for linked builds
 echo "Generating exported symbol scripts"
 extra/gen_provides.py "${IMAGE_DIR}/zephyr/zephyr.elf" -T > ${VARIANT_DIR}/tls-syms.S

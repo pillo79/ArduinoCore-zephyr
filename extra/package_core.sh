@@ -86,6 +86,8 @@ for variant in $INCLUDED_VARIANTS ; do
 		log_msg error "No firmware for '${variant}' found."
 		RET=3
 	fi
+	# add the bootloader, if built for the variant
+	ls firmwares/mcuboot-${variant}.* >> ${TEMP_INC} 2>/dev/null || true
 done
 
 # create the list of files and directories to exclude
