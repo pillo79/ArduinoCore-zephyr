@@ -108,8 +108,22 @@ jobs:
           # west projects are not needed for building: the information builds
           # take from them is recorded here instead.
           source venv/bin/activate
+          ZEPHYR_DIR=$(west list -f '{abspath}' zephyr)
+          # Filtered fetches from the west cache record its path as a partial
+          # clone promisor of the zephyr checkout, which git then warns about
+          # on every command, and the build metadata drops the zephyr remote:
+          # make that remote the promisor instead
+          (cd $ZEPHYR_DIR
+           remote=$(git remote 2>/dev/null)
+           for key in $(git config --local --name-only --get-regexp '^remote\./.*\.promisor$'); do
+             path=${key#remote.}; path=${path%.promisor}
+             filter=$(git config --local "remote.$path.partialclonefilter")
+             git config --local --remove-section "remote.$path"
+             git config --local "remote.$remote.promisor" true
+             if [ -n "$filter" ]; then git config --local "remote.$remote.partialclonefilter" "$filter"; fi
+           done)
           # - the Zephyr build version, stored in the west configuration;
-          ZEPHYR_BUILD_VERSION=$(git -C $(west list -f '{abspath}' zephyr) describe --abbrev=12 --always)
+          ZEPHYR_BUILD_VERSION=$(git -C $ZEPHYR_DIR describe --abbrev=12 --always)
           west config build.cmake-args -- "-DBUILD_VERSION=$ZEPHYR_BUILD_VERSION"
           # - the manifests imported from other projects (Zephyr's provides its
           #   west commands and modules), which west reads from their git data:
