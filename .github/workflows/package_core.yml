@@ -396,7 +396,27 @@ jobs:
       - name: Package SPDX documents
         if: ${{ matrix.artifact != 'zephyr' }}
         run: |
+          # Fetch only the zspdx library from the Zephyr revision in west.yml
+          read ZEPHYR_URL ZEPHYR_REV < <(python3 - <<'PY'
+          import yaml
+          m = yaml.safe_load(open("west.yml"))["manifest"]
+          remotes = {r["name"]: r["url-base"] for r in m["remotes"]}
+          p = next(p for p in m["projects"] if p["name"] == "zephyr")
+          print(f'{remotes[p["remote"]]}/{p.get("repo-path", p["name"])}', p["revision"])
+          PY
+          )
+          export ZEPHYR_BASE=${RUNNER_TEMP}/zephyr
+          git init -q ${ZEPHYR_BASE}
+          git -C ${ZEPHYR_BASE} sparse-checkout set scripts/pylib/zspdx
+          git -C ${ZEPHYR_BASE} fetch -q --depth 1 --filter=blob:none ${ZEPHYR_URL} ${ZEPHYR_REV}
+          git -C ${ZEPHYR_BASE} checkout -q FETCH_HEAD
+          python3 -m venv ${RUNNER_TEMP}/spdx-venv
+          ${RUNNER_TEMP}/spdx-venv/bin/pip install -q reuse packaging pyyaml spdx-python-model
+
+          # Describe the core package contents of each of its boards in
+          # spdx/<variant>/, next to their image SPDX documents
           VARIANTS=$(jq -r "map(select(.artifact == \"${{ matrix.artifact }}\") | .variant) | unique | .[]" <<< "${ALL_BOARD_DATA}")
+          ${RUNNER_TEMP}/spdx-venv/bin/python extra/gen_core_spdx.py distrib/${CORE_ARTIFACT} spdx ${VARIANTS}
           tar jcf distrib/${SPDX_ARTIFACT} $(for v in ${VARIANTS}; do echo spdx/$v; done)
 
       - uses: actions/upload-artifact@v7
