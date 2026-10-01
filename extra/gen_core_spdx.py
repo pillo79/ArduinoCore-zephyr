@@ -19,10 +19,16 @@
 # are exact copies of a file of an image build document (e.g. the ELF image) are
 # linked to it.
 #
+# Each tag-value document of the variant, including the image ones, is then
+# converted to JSON with the SPDX tools, as <name>.spdx.json next to it. The
+# references between the JSON documents checksum the JSON documents, so each
+# set is consistent on its own.
+#
 # Uses the 'zspdx' library from Zephyr, located via $ZEPHYR_BASE or the
 # current west workspace.
 
 import argparse
+import glob
 import os
 import re
 import shutil
@@ -34,6 +40,9 @@ import urllib.parse
 import uuid
 
 import yaml
+from spdx_tools.spdx.model import Checksum, ChecksumAlgorithm
+from spdx_tools.spdx.parser.parse_anything import parse_file as parse_spdx_file
+from spdx_tools.spdx.writer.write_anything import write_file as write_spdx_file
 
 REPO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 CORE_ROOT = "ArduinoCore-zephyr"
@@ -251,6 +260,43 @@ def inherit_unit_licenses(component):
     component.concluded_license = normalize_expression(lics_concluded)
 
 
+def convert_to_json(variant_dir):
+    """Write a JSON copy of each SPDX tag-value document in the variant
+    directory and its image subdirectories, as <name>.spdx.json. Documents
+    are written after the ones they refer to, so the references can
+    checksum the JSON copies instead."""
+    docs = {}  # namespace -> (path, document)
+    for spdx_path in sorted(glob.glob(os.path.join(variant_dir, "**", "*.spdx"), recursive=True)):
+        doc = parse_spdx_file(spdx_path)
+        docs[doc.creation_info.document_namespace] = (spdx_path, doc)
+
+    json_sha1 = {}  # namespace -> SHA1 of the JSON copy
+    while len(json_sha1) < len(docs):
+        ready = [
+            namespace
+            for namespace, (_, doc) in docs.items()
+            if namespace not in json_sha1
+            and all(
+                ref.document_uri in json_sha1 or ref.document_uri not in docs
+                for ref in doc.creation_info.external_document_refs
+            )
+        ]
+        if not ready:
+            sys.exit(f"circular document references in {variant_dir}")
+        for namespace in ready:
+            spdx_path, doc = docs[namespace]
+            for ref in doc.creation_info.external_document_refs:
+                if ref.document_uri in json_sha1:
+                    ref.checksum = Checksum(ChecksumAlgorithm.SHA1, json_sha1[ref.document_uri])
+            json_path = spdx_path + ".json"
+            try:
+                write_spdx_file(doc, json_path)
+            except ValueError as e:
+                sys.exit(f"{spdx_path}: cannot convert to JSON: {e}")
+            json_sha1[namespace] = get_hashes(json_path)[0]
+            print(f"Wrote {json_path}")
+
+
 def generate_core(root, variant, args, namespace_prefix):
     """Write the core SPDX document of a variant, from the core package
     extracted to root."""
@@ -428,6 +474,7 @@ def main():
             else:
                 namespace_prefix = f"http://spdx.org/spdxdocs/arduinocore-zephyr-{uuid.uuid4()}"
             generate_core(root, variant, args, namespace_prefix)
+            convert_to_json(os.path.join(args.spdx_dir, variant))
 
 
 if __name__ == "__main__":
