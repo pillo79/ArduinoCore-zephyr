@@ -19,6 +19,10 @@
 # are exact copies of a file of an image build document (e.g. the ELF image) are
 # linked to it.
 #
+# The repository checkout the core is generated from is described as a source
+# package, with its commit. It contains the loader application sources, which
+# the loader SPDX documents list without provenance.
+#
 # Each tag-value document of the variant, including the image ones, is then
 # converted to JSON with the SPDX tools, as <name>.spdx.json next to it. The
 # references between the JSON documents checksum the JSON documents, so each
@@ -219,6 +223,20 @@ def shared_variant_dirs():
     return {e.split("/", 1)[1] for e in entries if e.startswith("variants/")}
 
 
+def repo_revision():
+    """Commit of the repository checkout, with '-dirty' if it has local
+    changes, as recorded by Zephyr for the west projects; empty if
+    unknown."""
+    try:
+        revision = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=REPO_DIR, text=True, stderr=subprocess.DEVNULL
+        ).strip()
+        dirty = subprocess.run(["git", "diff-index", "--quiet", "HEAD", "--"], cwd=REPO_DIR).returncode
+    except (OSError, subprocess.CalledProcessError):
+        return ""
+    return revision + "-dirty" if dirty else revision
+
+
 def api_blob_info():
     module_yml = os.path.join(REPO_DIR, "zephyr", "module.yml")
     with open(module_yml) as f:
@@ -340,12 +358,31 @@ def generate_core(root, variant, args, namespace_prefix):
     graph.add_component(api, doc.name)
     graph.add_relationship(core, api, RelationshipType.CONTAINS)
 
-    # variant firmware and EDK packages
-    variants_dir = os.path.join(root, "variants")
-    other_variants = set(os.listdir(variants_dir)) - shared_variant_dirs() - {variant}
     # links to the image documents:
     # (element, relationship, image, document, target package)
     links = []
+
+    # the repository checkout the core and the loader are built from
+    revision = repo_revision()
+    if revision:
+        sources = SBOMComponent(
+            name="ArduinoCore-zephyr-sources",
+            purpose=ComponentPurpose.SOURCE,
+            revision=revision,
+            url=CORE_URL,
+            supplier=SUPPLIER,
+            comment="ArduinoCore-zephyr repository checkout the core package and the loader are built from",
+        )
+        sources.add_external_reference(f"{CORE_PURL}@{urllib.parse.quote(revision, safe='')}")
+        graph.add_component(sources, doc.name)
+        graph.add_relationship(core, sources, RelationshipType.GENERATED_FROM)
+        links.append((sources, RelationshipType.CONTAINS, "loader", "app", "app-sources"))
+    else:
+        print("warning: repository revision unknown, not describing the sources", file=sys.stderr)
+
+    # variant firmware and EDK packages
+    variants_dir = os.path.join(root, "variants")
+    other_variants = set(os.listdir(variants_dir)) - shared_variant_dirs() - {variant}
 
     fw = SBOMComponent(
         name=f"{variant}-firmware",
