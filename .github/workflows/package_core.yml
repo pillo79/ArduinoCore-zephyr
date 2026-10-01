@@ -398,12 +398,34 @@ jobs:
           # Create the core artifact for this set of boards
           ./extra/package_core.sh ${{ matrix.artifact }} ${CORE_TAG} distrib/${CORE_ARTIFACT}
 
+      # The build environment provides zspdx and the Python venv 'west spdx'
+      # ran with for the image documents
+      - uses: actions/download-artifact@v8
+        if: ${{ matrix.artifact != 'zephyr' }}
+        timeout-minutes: 10 # early error on Github network issues
+        with:
+          path: /home/runner
+          name: build-env.tar.zstd
+
       # One SPDX archive per core package, with the documents of its boards
       # (the umbrella 'zephyr' package is not described)
       - name: Package SPDX documents
         if: ${{ matrix.artifact != 'zephyr' }}
         run: |
+          # Extract only the venv and zspdx from the build environment. They
+          # land where the build-env job created them (the venv refers to its
+          # own absolute path), as this checkout is in the same place.
+          TOPDIR=$(realpath --relative-to=$HOME $(dirname ${GITHUB_WORKSPACE}))
+          REPO=$(basename ${GITHUB_WORKSPACE})
+          (cd && tar --use-compress-program=unzstd -xpf build-env.tar.zstd \
+                  ${TOPDIR}/${REPO}/venv ${TOPDIR}/zephyr/scripts/pylib/zspdx \
+               && rm build-env.tar.zstd)
+          export ZEPHYR_BASE=$(dirname ${GITHUB_WORKSPACE})/zephyr
+
+          # Describe the core package contents of each of its boards in
+          # spdx/<variant>/, next to their image SPDX documents
           VARIANTS=$(jq -r "map(select(.artifact == \"${{ matrix.artifact }}\") | .variant) | unique | .[]" <<< "${ALL_BOARD_DATA}")
+          venv/bin/python extra/gen_core_spdx.py distrib/${CORE_ARTIFACT} spdx ${VARIANTS}
           tar jcf distrib/${SPDX_ARTIFACT} $(for v in ${VARIANTS}; do echo spdx/$v; done)
 
       - uses: actions/upload-artifact@v7

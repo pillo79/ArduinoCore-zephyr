@@ -1,0 +1,27 @@
+# Copyright (c) Arduino s.r.l. and/or its affiliated companies
+# SPDX-License-Identifier: Apache-2.0
+
+# Licensing information for files that cannot carry SPDX tags themselves.
+# Per-file tags always take precedence ("closest"). Also used by
+# extra/gen_core_spdx.py when scanning the core package contents.
+
+version = 1
+
+# ArduinoCore-API, extracted from the zephyr/blobs archive: the files are
+# licensed in prose headers (the last matching annotation wins)
+[[annotations]]
+path = "cores/arduino/api/**"
+precedence = "closest"
+SPDX-License-Identifier = "LGPL-2.1-or-later"
+
+[[annotations]]
+path = "cores/arduino/api/Udp.h"
+precedence = "closest"
+SPDX-License-Identifier = "MIT"
+
+# Top-level metadata and docs
+[[annotations]]
+path = ["*.txt", "*.md", "doc/**"]
+precedence = "closest"
+SPDX-FileCopyrightText = "Copyright (c) Arduino s.r.l. and/or its affiliated companies"
+SPDX-License-Identifier = "Apache-2.0"
