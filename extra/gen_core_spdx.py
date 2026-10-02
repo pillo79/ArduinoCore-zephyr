@@ -28,10 +28,17 @@
 # references between the JSON documents checksum the JSON documents, so each
 # set is consistent on its own.
 #
+# All the documents of the variant are also collapsed into a single document,
+# <spdx-dir>/<variant>/sbom.spdx and sbom.spdx.json, describing the core
+# package. The elements of the image documents get their document as an ID
+# prefix (e.g. SPDXRef-loader-app-app-sources), and the references between the
+# documents become references within it.
+#
 # Uses the 'zspdx' library from Zephyr, located via $ZEPHYR_BASE or the
 # current west workspace.
 
 import argparse
+import copy
 import glob
 import os
 import re
@@ -44,7 +51,7 @@ import urllib.parse
 import uuid
 
 import yaml
-from spdx_tools.spdx.model import Checksum, ChecksumAlgorithm
+from spdx_tools.spdx.model import Checksum, ChecksumAlgorithm, Document
 from spdx_tools.spdx.parser.parse_anything import parse_file as parse_spdx_file
 from spdx_tools.spdx.writer.write_anything import write_file as write_spdx_file
 
@@ -56,6 +63,7 @@ SUPPLIER = "Arduino"
 API_DIR = "cores/arduino/api/"
 API_LICENSE = "LGPL-2.1-or-later"
 SPDX_VERSION = "2.3"
+SBOM_NAME = "sbom"
 
 
 def find_zephyr_base():
@@ -285,6 +293,8 @@ def convert_to_json(variant_dir):
     checksum the JSON copies instead."""
     docs = {}  # namespace -> (path, document)
     for spdx_path in sorted(glob.glob(os.path.join(variant_dir, "**", "*.spdx"), recursive=True)):
+        if spdx_path == os.path.join(variant_dir, f"{SBOM_NAME}.spdx"):
+            continue  # the collapsed document of a previous run
         doc = parse_spdx_file(spdx_path)
         docs[doc.creation_info.document_namespace] = (spdx_path, doc)
 
@@ -313,6 +323,80 @@ def convert_to_json(variant_dir):
                 sys.exit(f"{spdx_path}: cannot convert to JSON: {e}")
             json_sha1[namespace] = get_hashes(json_path)[0]
             print(f"Wrote {json_path}")
+    return docs
+
+
+def collapse_documents(variant_dir, docs):
+    """Write the documents of the variant, as returned by convert_to_json(),
+    as a single document describing the core package, in both formats."""
+    core_path = os.path.join(variant_dir, "core.spdx")
+    # ID prefix of the elements of each document: none for the core one
+    prefixes = {
+        namespace: ""
+        if path == core_path
+        else re.sub(r"[^A-Za-z0-9.-]", "-", os.path.splitext(os.path.relpath(path, variant_dir))[0].replace(os.sep, "-"))
+        for namespace, (path, _) in docs.items()
+    }
+    core = next(doc for path, doc in docs.values() if path == core_path)
+
+    def local_id(namespace, spdx_id):
+        if not prefixes[namespace] or spdx_id == "SPDXRef-DOCUMENT":
+            return spdx_id
+        return f"SPDXRef-{prefixes[namespace]}-{spdx_id.removeprefix('SPDXRef-')}"
+
+    external_refs = {}
+    licenses = {}
+    collapsed = Document(copy.copy(core.creation_info))
+    collapsed.creation_info.creators = list(core.creation_info.creators)
+    for namespace, (path, doc) in docs.items():
+        doc_refs = {ref.document_ref_id: ref for ref in doc.creation_info.external_document_refs}
+
+        def resolve(ref, namespace=namespace, doc_refs=doc_refs):
+            if not isinstance(ref, str):
+                return ref  # NONE or NOASSERTION
+            if ":" not in ref:
+                return local_id(namespace, ref)
+            doc_ref, spdx_id = ref.split(":", 1)
+            target = doc_refs[doc_ref]
+            if target.document_uri in docs:
+                return local_id(target.document_uri, spdx_id)
+            # a document outside the variant: keep referring to it
+            external_refs[target.document_uri] = target
+            return ref
+
+        for element in doc.packages + doc.files + doc.snippets + doc.annotations:
+            element.spdx_id = resolve(element.spdx_id)
+        for snippet in doc.snippets:
+            snippet.file_spdx_id = resolve(snippet.file_spdx_id)
+        for relationship in doc.relationships:
+            if prefixes[namespace] and relationship.spdx_element_id == "SPDXRef-DOCUMENT":
+                continue  # only the core package is described
+            relationship.spdx_element_id = resolve(relationship.spdx_element_id)
+            relationship.related_spdx_element_id = resolve(relationship.related_spdx_element_id)
+            collapsed.relationships.append(relationship)
+        for license_info in doc.extracted_licensing_info:
+            known = licenses.setdefault(license_info.license_id, license_info)
+            if known.extracted_text != license_info.extracted_text:
+                sys.exit(f"{path}: {license_info.license_id} differs from another document")
+        collapsed.packages += doc.packages
+        collapsed.files += doc.files
+        collapsed.snippets += doc.snippets
+        collapsed.annotations += doc.annotations
+        for creator in doc.creation_info.creators:
+            if creator not in collapsed.creation_info.creators:
+                collapsed.creation_info.creators.append(creator)
+
+    info = collapsed.creation_info
+    info.document_namespace = f"{core.creation_info.document_namespace}-{SBOM_NAME}"
+    info.external_document_refs = list(external_refs.values())
+    collapsed.extracted_licensing_info = list(licenses.values())
+    for ext in (".spdx", ".spdx.json"):
+        sbom_path = os.path.join(variant_dir, SBOM_NAME + ext)
+        try:
+            write_spdx_file(collapsed, sbom_path)
+        except ValueError as e:
+            sys.exit(f"{sbom_path}: cannot write the collapsed document: {e}")
+        print(f"Wrote {sbom_path}")
 
 
 def generate_core(root, variant, args, namespace_prefix):
@@ -511,7 +595,8 @@ def main():
             else:
                 namespace_prefix = f"http://spdx.org/spdxdocs/arduinocore-zephyr-{uuid.uuid4()}"
             generate_core(root, variant, args, namespace_prefix)
-            convert_to_json(os.path.join(args.spdx_dir, variant))
+            variant_dir = os.path.join(args.spdx_dir, variant)
+            collapse_documents(variant_dir, convert_to_json(variant_dir))
 
 
 if __name__ == "__main__":
