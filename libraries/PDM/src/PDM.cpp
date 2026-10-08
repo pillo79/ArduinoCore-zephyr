@@ -162,6 +162,8 @@ static void pdm_gain(int gain) {
 #elif PDM_IS_DFSDM
 	/* linear digital gain multiplier, applied per sample in the RX thread */
 	pdm_digital_gain = (gain < 1) ? 1 : gain;
+#else
+	ARG_UNUSED(gain);
 #endif
 }
 
