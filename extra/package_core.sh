@@ -88,6 +88,18 @@ for variant in $INCLUDED_VARIANTS ; do
 	fi
 done
 
+# deduplicate llext-edk headers shared by all included variants
+# (CI only: this modifies the working tree)
+if [ -n "$GITHUB_ACTIONS" ] ; then
+	EDK_VARIANTS=$(for v in $INCLUDED_VARIANTS ; do
+		if [ -d variants/$v/llext-edk/include ] ; then echo $v ; fi
+	done)
+	if [ $(echo $EDK_VARIANTS | wc -w) -ge 2 ] ; then
+		extra/dedupe_includes.py --common-dir include $EDK_VARIANTS
+		echo "variants/include/" >> ${TEMP_INC}
+	fi
+fi
+
 # create the list of files and directories to exclude
 TEMP_EXC=$(mktemp -p . | sed 's/\.\///')
 declutter_file extra/artifacts/_common.exc >> ${TEMP_EXC}
