@@ -423,7 +423,7 @@
   					<&ioport8 5 GPIO_ACTIVE_HIGH>, /*   D57    |   TX4    */
   					<&ioport5 13 GPIO_ACTIVE_HIGH>, /*   D58    |   RX4    */
   					<&ioport5 8 GPIO_ACTIVE_HIGH>, /*   D59    |   RTS4   */
-  					<&ioport5 5 GPIO_ACTIVE_HIGH>, /*   D60    |   CTS4   */
+  					<&ioport5 0 GPIO_ACTIVE_HIGH>, /*   D60    |   CTS4   */
   					<&ioport6 3 GPIO_ACTIVE_HIGH>, /*   D61    |   RTS0   */
   					<&ioport6 4 GPIO_ACTIVE_HIGH>, /*   D62    |   CTS0   */
 
