@@ -278,17 +278,17 @@
 				    <&gpiog 2 GPIO_ACTIVE_HIGH>,	/* TIM4_CH3 */
 
 					/* LED matrix */
-				    <&gpiof 0 GPIO_ACTIVE_HIGH>,
-				    <&gpiof 1 GPIO_ACTIVE_HIGH>,
-				    <&gpiof 2 GPIO_ACTIVE_HIGH>,
-				    <&gpiof 3 GPIO_ACTIVE_HIGH>,
-				    <&gpiof 4 GPIO_ACTIVE_HIGH>,
-				    <&gpiof 5 GPIO_ACTIVE_HIGH>,
-				    <&gpiof 6 GPIO_ACTIVE_HIGH>,
-				    <&gpiof 7 GPIO_ACTIVE_HIGH>,
-				    <&gpiof 8 GPIO_ACTIVE_HIGH>,
-				    <&gpiof 9 GPIO_ACTIVE_HIGH>,
-				    <&gpiof 10 GPIO_ACTIVE_HIGH>,
+				    <&gpioh 2 GPIO_ACTIVE_HIGH>,
+				    <&gpioh 3 GPIO_ACTIVE_HIGH>,
+				    <&gpioh 4 GPIO_ACTIVE_HIGH>,
+				    <&gpioh 5 GPIO_ACTIVE_HIGH>,
+				    <&gpioh 6 GPIO_ACTIVE_HIGH>,
+				    <&gpioh 7 GPIO_ACTIVE_HIGH>,
+				    <&gpioh 9 GPIO_ACTIVE_HIGH>,
+				    <&gpioh 10 GPIO_ACTIVE_HIGH>,
+				    <&gpioh 13 GPIO_ACTIVE_HIGH>,
+				    <&gpioh 14 GPIO_ACTIVE_HIGH>,
+				    <&gpioh 15 GPIO_ACTIVE_HIGH>,
 				    <&gpiog 13 GPIO_ACTIVE_HIGH>,       /* Internal SPI RDY */
 				    <&gpioi 8 GPIO_ACTIVE_HIGH>;        /* Analog switch for VREF */
 
