@@ -13,6 +13,7 @@
 #include <zephyr/usb/usbd.h>
 
 extern "C" struct usbd_context *usbd_init_device(usbd_msg_cb_t msg_cb);
+extern "C" struct usbd_context *usbd_get_context(void);
 
 namespace arduino {
 
