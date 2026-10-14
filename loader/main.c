@@ -25,6 +25,7 @@ LOG_MODULE_REGISTER(sketch);
 #include <zephyr/devicetree/fixed-partitions.h>
 #include "../cores/arduino/zephyr_sketch_header.h"
 #include "ota/ota_sketch_check.h"
+#include "error_led.h"
 
 #define SKETCH_RAM_BUFFER_LEN 131072
 
@@ -134,6 +135,7 @@ static int loader(const struct shell *sh) {
 	rc = flash_area_open(PARTITION_ID(user_sketch), &fa);
 	if (rc) {
 		printk("Failed to open flash area, rc %d\n", rc);
+		recoverable_error_led();
 		return rc;
 	}
 
@@ -147,6 +149,7 @@ static int loader(const struct shell *sh) {
 	rc = flash_area_read(fa, 0, header, sizeof(header));
 	if (rc) {
 		printk("Failed to read header, rc %d\n", rc);
+		recoverable_error_led();
 		return rc;
 	}
 
@@ -271,6 +274,11 @@ static int loader(const struct shell *sh) {
 	}
 #endif
 
+	if (!sketch_valid) {
+		recoverable_error_led();
+		return -EINVAL;
+	}
+
 	size_t sketch_buf_len = sketch_hdr->len;
 
 	if (sketch_hdr->flags & SKETCH_FLAG_LINKED) {
@@ -308,12 +316,14 @@ static int loader(const struct shell *sh) {
 
 	if (!sketch_buf) {
 		printk("Unable to allocate %d bytes\n", sketch_buf_len);
+		recoverable_error_led();
 		return -ENOMEM;
 	}
 
 	rc = flash_area_read(fa, 0, sketch_buf, sketch_buf_len);
 	if (rc) {
 		printk("Failed to read sketch area, rc %d\n", rc);
+		recoverable_error_led();
 		return rc;
 	}
 #else
@@ -334,12 +344,14 @@ static int loader(const struct shell *sh) {
 	res = llext_load(ldr, "sketch", &ext, &ldr_parm);
 	if (res) {
 		printk("Failed to load sketch, rc %d\n", res);
+		recoverable_error_led();
 		return res;
 	}
 
 	void (*main_fn)() = llext_find_sym(&ext->exp_tab, "main");
 	if (!main_fn) {
 		printk("Failed to find main function\n");
+		recoverable_error_led();
 		return -ENOENT;
 	}
 #endif
@@ -365,6 +377,7 @@ static int loader(const struct shell *sh) {
 	res = llext_add_domain(ext, &domain);
 	if (res == -ENOSPC) {
 		printk("Too many memory partitions for this particular hardware\n");
+		recoverable_error_led();
 		return -1;
 	}
 
