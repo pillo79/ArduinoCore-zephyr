@@ -153,7 +153,7 @@
 
 &timers3 {
 	status = "okay";
-	st,prescaler = <16>;
+	st,prescaler = <79>;
 
 	pwm3: pwm {
 		status = "okay";
@@ -167,7 +167,7 @@
 
 &timers4 {
 	status = "okay";
-	st,prescaler = <16>;
+	st,prescaler = <79>;
 
 	pwm4: pwm {
 		status = "okay";
@@ -181,7 +181,7 @@
 
 &timers8 {
 	status = "okay";
-	st,prescaler = <16>;
+	st,prescaler = <79>;
 
 	pwm8: pwm {
 		status = "okay";
@@ -195,7 +195,7 @@
 
 &timers12 {
 	status = "okay";
-	st,prescaler = <16>;
+	st,prescaler = <79>;
 
 	pwm12: pwm {
 		status = "okay";
