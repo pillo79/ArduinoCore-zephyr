@@ -324,6 +324,7 @@ FORCE_EXPORT_SYM(usbd_caps_speed);
 FORCE_EXPORT_SYM(usbd_can_detect_vbus);
 FORCE_EXPORT_SYM(usbd_enable);
 FORCE_EXPORT_SYM(usbd_disable);
+FORCE_EXPORT_SYM(usbd_device_register_vreq);
 #endif
 
 #if defined(CONFIG_SHARED_MULTI_HEAP)

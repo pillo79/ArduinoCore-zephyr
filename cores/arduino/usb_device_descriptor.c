@@ -178,6 +178,15 @@ struct usbd_context *usbd_setup_device(usbd_msg_cb_t msg_cb) {
 	return &usbd;
 }
 
+/*
+ * Returns the USB device context, also before it is initialized. Sketches can
+ * use it from a global constructor (which runs before main() initializes USB)
+ * to register extra features, e.g. vendor requests via usbd_device_register_vreq().
+ */
+struct usbd_context *usbd_get_context(void) {
+	return &usbd;
+}
+
 struct usbd_context *usbd_init_device(usbd_msg_cb_t msg_cb) {
 	int err;
 
