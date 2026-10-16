@@ -20,6 +20,7 @@
 import argparse
 import hashlib
 import os
+import posixpath
 import shutil
 import sys
 from pathlib import Path
@@ -73,8 +74,10 @@ def update_includes_txt(name: str, common_dir: Path, common_rel_paths) -> None:
         return
 
     lines = includes_txt.read_text().splitlines()
+    # Normalize entries such as "a/b/../c" or "a/./b": pathlib keeps ".."
+    # components, so they would never match the deduplicated file paths.
     entries = [
-        (i, line[len(INCLUDE_FLAG) :])
+        (i, posixpath.normpath(line[len(INCLUDE_FLAG) :]))
         for i, line in enumerate(lines)
         if line.startswith(INCLUDE_FLAG)
     ]
