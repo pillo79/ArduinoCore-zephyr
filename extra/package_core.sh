@@ -96,8 +96,11 @@ if [ -n "$GITHUB_ACTIONS" ] ; then
 	done)
 	if [ $(echo $EDK_VARIANTS | wc -w) -ge 2 ] ; then
 		extra/dedupe_includes.py --common-dir include $EDK_VARIANTS
-		echo "variants/include/" >> ${TEMP_INC}
 	fi
+fi
+# shared headers, from the step above or from a synced deduplicated package
+if [ -d variants/include ] ; then
+	echo "variants/include/" >> ${TEMP_INC}
 fi
 
 # create the list of files and directories to exclude
