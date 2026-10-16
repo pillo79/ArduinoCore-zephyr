@@ -9,6 +9,8 @@ source venv/bin/activate
 
 ZEPHYR_BASE=$(west topdir)/zephyr
 
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+
 if [ x$ZEPHYR_SDK_INSTALL_DIR == x"" ]; then
 	SDK_PATH=$(west sdk list | grep path | tail -n 1 | cut -d ':' -f 2 | tr -d ' ')
 	if [ x$SDK_PATH == x ]; then
