@@ -141,15 +141,17 @@ jobs:
         with:
           name: test-data
           path: test-data/
+          overwrite: true
           retention-days: 1
 
       - name: Archive build environment
         uses: actions/upload-artifact@v7
         with:
-          name: build-env
+          name: build-env.tar.zstd
           path: ~/build-env.tar.zstd
-          retention-days: 1
           archive: false
+          overwrite: true
+          retention-days: 1
 
 
 
@@ -245,8 +247,14 @@ jobs:
           ls reports/* >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-          # Preprare an archive of the built binaries (and build dir on failure)
-          [ "${{ job.status }}" == "failure" ] && FULL_BUILD_DIR="build/${{ matrix.variant }}/"
+          # Preprare an archive of the built binaries (and build dir on failure).
+          # Prefix the name with 'failed-' if the build failed, so that it is not removed.
+          BINARIES_FILE=binaries-${ARTIFACT_TAG}.tar.zstd
+          if [ "${{ job.status }}" == "failure" ] ; then
+            FULL_BUILD_DIR="build/${{ matrix.variant }}/"
+            BINARIES_FILE=failed-${BINARIES_FILE}
+          fi
+          echo "BINARIES_FILE=${BINARIES_FILE}" >> $GITHUB_ENV
           sed -e '/^#/d' boards.local.txt > boards.local_${{ matrix.variant }}.txt
           tar chf - \
             firmwares/*${{ matrix.variant }}* \
@@ -254,17 +262,17 @@ jobs:
             boards.local_${{ matrix.variant }}.txt \
             cores/arduino/api/ \
             ${FULL_BUILD_DIR} \
-          | zstd > binaries-${ARTIFACT_TAG}.tar.zstd
+          | zstd > ${BINARIES_FILE}
 
       - name: Archive board binaries
         if: ${{ steps.restore-env.outcome == 'success' && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          # prefix the name with 'failed-' if the build failed, so that it is not removed
-          name: ${{ format('{0}binaries-{1}', (job.status == 'failure') && 'failed-' || '', env.ARTIFACT_TAG) }}
-          path: binaries-${{ env.ARTIFACT_TAG }}.tar.zstd
-          retention-days: 7 # for failed build inspection
+          name: ${{ env.BINARIES_FILE }}
+          path: ${{ env.BINARIES_FILE }}
           archive: false
+          overwrite: true
+          retention-days: 7 # for failed build inspection
 
       - name: Archive build reports
         if: ${{ steps.restore-env.outcome == 'success' && !cancelled() }}
@@ -272,6 +280,7 @@ jobs:
         with:
           name: build-report-${{ env.ARTIFACT_TAG }}
           path: ${{ env.REPORT_FILES }}
+          overwrite: true
           retention-days: 1
 
 
@@ -330,6 +339,7 @@ jobs:
           name: ${{ env.CORE_ARTIFACT }}
           path: distrib/${{ env.CORE_ARTIFACT }}
           archive: false
+          overwrite: true
 
       - name: Archive artifact ID
         run: |
@@ -339,6 +349,7 @@ jobs:
         with:
           name: artifact-id-${{ matrix.artifact }}
           path: ${{ matrix.artifact }}.id
+          overwrite: true
 
 
 
@@ -408,6 +419,7 @@ jobs:
           name: ${{ env.PACKAGE_INDEX_FILE }}
           path: ${{ env.PACKAGE_INDEX_FILE }}
           archive: false
+          overwrite: true
 
       - name: Display final URL in the summary
         run: |
@@ -539,6 +551,7 @@ jobs:
         with:
           name: test-report-${{ env.ARTIFACT_TAG }}
           path: sketches-reports/*
+          overwrite: true
           retention-days: 1
 
 
@@ -614,6 +627,7 @@ jobs:
         with:
           name: build-metadata
           path: build_info.json
+          overwrite: true
           retention-days: 1
 
       # upload comment request artifact (will be retrieved by leave_pr_comment.yml)
@@ -623,6 +637,7 @@ jobs:
         with:
           name: comment-request
           path: comment-request/
+          overwrite: true
           retention-days: 1
 
       # upload size delta report artifact (will be retrieved by report_size_deltas.yml)
@@ -632,6 +647,7 @@ jobs:
         with:
           name: sketches-reports
           path: sketches-reports/
+          overwrite: true
           retention-days: 1
 
       # upload new official test size artifact (for AWS storage)
@@ -639,19 +655,21 @@ jobs:
         uses: actions/upload-artifact@v7
         if: ${{ github.event_name == 'push' }}
         with:
-          name: size-reports
+          name: size-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
           path: size-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
-          retention-days: 1
           archive: false
+          overwrite: true
+          retention-days: 1
 
       # upload input set of build reports artifact (for CI debugging)
       - name: Archive input test reports
         uses: actions/upload-artifact@v7
         with:
-          name: build-reports
+          name: build-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
           path: build-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
-          retention-days: 1
           archive: false
+          overwrite: true
+          retention-days: 1
 
       # The last line makes the job fail if the 'result' file does not contain "PASSED".
       # No further actions are allowed in case of error.
@@ -774,6 +792,7 @@ jobs:
         with:
           name: snippets-${{ env.CORE_TAG }}
           path: snippets/
+          overwrite: true
 
 
 
