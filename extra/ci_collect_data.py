@@ -174,7 +174,7 @@ for board_data in ALL_BOARD_DATA.values():
 
         reports = report_data.get('boards', [{}])[0].get('sketches', [])
         if not reports:
-            log_test(artifact, board, 'CI test', '', [], FAILURE, "Test report for {link_mode} is empty, check CI log.", job_link)
+            log_test(artifact, board, 'CI test', '', [], FAILURE, f"Test report for {link_mode} is empty, check CI log.", job_link)
             continue # Skip to the next board
 
         # Iterate through individual sketch reports

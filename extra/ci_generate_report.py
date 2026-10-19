@@ -111,7 +111,7 @@ def print_summary():
             f_print(f"<td align='center'>{res.status.board_icon}</td>")
             if res.status == FAILURE:
                 f_print(f"<td colspan='5'>")
-                f_print("<br>".join(f"{test.issues[0]} (<a href='{test.job_link}'>full log</a>)" for test in res.tests))
+                f_print("<br>".join(f"{test.issues[0]} (<a href='{test.job_link}'>full log</a>)" for test in res.tests if test.status == FAILURE and test.issues))
                 f_print("</td></tr>")
                 continue
 
