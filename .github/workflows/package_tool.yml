@@ -127,6 +127,7 @@ jobs:
           path: |
             distrib/*.tar.gz
             distrib/*.zip
+          overwrite: true
           retention-days: 7
 
       - name: Upload JSON snippet
@@ -134,6 +135,7 @@ jobs:
         with:
           name: snippet-${{ matrix.tool }}-${{ matrix.version }}
           path: snippets/
+          overwrite: true
 
   # Upload the built tool packages to the S3 bucket for public distribution.
 
