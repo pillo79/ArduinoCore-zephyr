@@ -1,0 +1,203 @@
+# Copyright (c) Arduino s.r.l. and/or its affiliated companies
+# SPDX-License-Identifier: Apache-2.0
+
+# Reusable CI workflow to test the ArduinoCore-zephyr core packages.
+#
+# When called from package_core.yml, the core packages built in the same run
+# are tested. Other callers (e.g. periodic test runs) test the commit they run
+# on, using the core packages built by the package_core.yml push run for that
+# same commit.
+#
+# The calling job must grant 'contents: read' and 'actions: read' permissions.
+
+name: Test core
+
+on:
+  workflow_call:
+    inputs:
+      core-run-id:
+        description: >
+          ID of the workflow run holding the core packages to test. If empty,
+          the latest package_core.yml push run for this commit is used.
+        type: string
+        default: ''
+      core-version:
+        description: >
+          Version of the core being tested. If empty, it is computed again
+          from the current commit.
+        type: string
+        default: ''
+
+env:
+  # use the head SHA for PR hashes, instead of the merge commit
+  HEAD_REF: ${{ github.event.pull_request.head.sha || github.ref }}
+
+jobs:
+
+
+
+  # Compute the core build metadata, locate the core packages to test and
+  # download the test data once for all boards.
+
+  prepare:
+    name: Prepare tests
+    runs-on: ubuntu-latest
+    outputs:
+      CORE_HASH: ${{ env.CORE_HASH }}
+      CORE_VER: ${{ env.CORE_VER }}
+      CORE_BRANCH: ${{ env.CORE_BRANCH }}
+      ALL_BOARD_FQBNS: ${{ env.ALL_BOARD_FQBNS }}
+      CI_BUILDS_URL: ${{ env.CI_BUILDS_URL }}
+      # ID of the workflow run holding the core packages
+      CORE_RUN_ID: ${{ env.CORE_RUN_ID }}
+    steps:
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          fetch-tags: true # needed for get_core_version.sh
+
+      - name: Identify core version and board set
+        env:
+          PINNED_CORE_VERSION: ${{ inputs.core-version }}
+        run: |
+          extra/ci_get_build_info.sh $HEAD_REF
+
+      - name: Find core packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CORE_RUN_ID: ${{ inputs.core-run-id }}
+          CORE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -z "$CORE_RUN_ID" ]; then
+            # look for a package_core push run with all core packages for this commit
+            WANTED=$(jq -c --arg hash "$CORE_HASH" 'map("ArduinoCore-\(.)-\($hash).tar.bz2")' <<< ${ARTIFACTS})
+            RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/package_core.yml/runs?head_sha=$CORE_SHA&event=push&status=completed" --jq '.workflow_runs[].id')
+            for RUN in $RUNS; do
+              if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN/artifacts?per_page=100" \
+                 | jq -e --argjson wanted "$WANTED" '$wanted - [.artifacts[] | select(.expired | not) | .name] | length == 0' > /dev/null ; then
+                CORE_RUN_ID=$RUN
+                break
+              fi
+            done
+            if [ -z "$CORE_RUN_ID" ]; then
+              echo "::error::No package_core run with core packages found for $CORE_SHA"
+              exit 1
+            fi
+            echo "::notice::Testing core packages from $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$CORE_RUN_ID"
+          fi
+          echo "CORE_RUN_ID=$CORE_RUN_ID" >> "$GITHUB_ENV"
+
+      - name: Download test data
+        run: |
+          extra/ci_fetch_tests.sh
+
+      - name: Archive test data
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-data
+          path: test-data/
+          overwrite: true
+          retention-days: 1
+
+
+
+  # For each board and link mode, compile all test sketches using the core
+  # packages. The compilation reports are archived for later inspection.
+  # This step never fails, so that expected errors do not block the CI run.
+
+  test-core:
+    # NOTE: this name is hardcoded in ci_collect_data.py
+    name: Test ${{ matrix.board }}:${{ matrix.link_mode }}
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+    strategy:
+      matrix:
+        include:
+          ${{ fromJSON( needs.prepare.outputs.ALL_BOARD_FQBNS ) }}
+      fail-fast: false
+    env:
+      PLAT: arduino:${{ matrix.subarch }}
+      FQBN: arduino:${{ matrix.subarch }}:${{ matrix.board }}:link_mode=${{ matrix.link_mode }}
+      CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.prepare.outputs.CORE_HASH }}.tar.bz2
+      ARTIFACT_TAG: ${{ needs.prepare.outputs.CORE_HASH }}-${{ matrix.board }}-${{ matrix.link_mode }}
+      CI_BUILDS_URL: ${{ needs.prepare.outputs.CI_BUILDS_URL }}
+    steps:
+
+      # only needs the test list generator and artifact information
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout: |
+            extra/ci_apply_tests.sh
+            extra/artifacts/
+            variants/*/test_setup.sh
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.CORE_ARTIFACT }}
+          run-id: ${{ needs.prepare.outputs.CORE_RUN_ID }}
+          # a token is only needed to access artifacts of other runs
+          github-token: ${{ needs.prepare.outputs.CORE_RUN_ID != github.run_id && github.token || '' }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: test-data
+          path: test-data/
+
+      - name: Set up core
+        run: |
+          tar xf ${CORE_ARTIFACT} # will create ArduinoCore-zephyr/
+          echo "REPORT_FILE=$(echo ${FQBN} | tr ':' '-').json" >> $GITHUB_ENV
+
+      - name: Get test sketches
+        run: |
+          # sets ALL_TESTS and ALL_LIBRARIES env vars in GITHUB_ENV
+          extra/ci_apply_tests.sh ${{ matrix.artifact }} ${{ matrix.variant }}
+
+      - name: Compile tests for ${{ matrix.board }}
+        uses: pillo79/compile-sketches@next
+        with:
+          # Use ci-builds core, if possible, to use the exact set of tools required by the source
+          fqbn: ${{ env.FQBN }}
+          platforms: |
+            # Use Board Manager version first to install the tools
+            - name: ${{ env.PLAT }}
+              ${{ env.CI_BUILDS_URL != '' && format('source-url: {0}', env.CI_BUILDS_URL) || '' }}
+            # ... then replace that with the local version
+            - name: ${{ env.PLAT }}
+              source-path: "ArduinoCore-zephyr"
+          sketch-paths: |
+            ${{ env.ALL_TESTS }}
+          libraries: |
+            ${{ env.ALL_LIBRARIES }}
+          cli-compile-flags: |
+            - '--build-property'
+            - 'compiler.c.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
+            - '--build-property'
+            - 'compiler.cpp.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
+          verbose: 'false'
+          enable-deltas-report: 'false'
+          enable-issues-report: 'true'
+          always-succeed: 'true'
+
+      - name: Prepare log
+        if: ${{ success() || failure() }}
+        run: |
+          # make sure to create an empty report if none was created
+          [ ! -f sketches-reports/${REPORT_FILE} ] && mkdir -p sketches-reports && echo "{}" > sketches-reports/${REPORT_FILE}
+          # remove base path of the core install from all file references to make logs cleaner
+          sed -i -e 's!/home/runner/.arduino15/packages/arduino/hardware/zephyr/[^/]*/!!g' sketches-reports/${REPORT_FILE}
+
+      # archive the compile report for later
+      - uses: actions/upload-artifact@v7
+        if: ${{ success() || failure() }}
+        with:
+          name: test-report-${{ env.ARTIFACT_TAG }}
+          path: sketches-reports/*
+          overwrite: true
+          retention-days: 1
