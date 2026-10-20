@@ -75,25 +75,11 @@ jobs:
       - name: Identify current version and board set
         run: |
           # Set up basic environment for later steps
-          echo "CORE_HASH=$(git describe --always $HEAD_REF)" >> "$GITHUB_ENV"
-          echo "ALL_BOARD_DATA=$(extra/get_board_details.sh | jq -c 'sort_by(.variant)')" >> "$GITHUB_ENV"
-          echo "CORE_VER=$(extra/get_core_version.sh)" >> "$GITHUB_ENV"
+          extra/ci_get_build_info.sh $HEAD_REF
 
-      - name: Map output packages
-        # needs the above env vars
+      - name: Show core version
         run: |
           echo "## Building \`$CORE_VER\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "CORE_TAG=$(git describe --tags --exact-match --exclude '*/*' 2>/dev/null || echo $CORE_HASH)" >> "$GITHUB_ENV"
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            BRANCH=$(git branch -r --contains HEAD --sort=-committerdate --format='%(refname:short)' | sed 's|origin/||' | grep -v HEAD | head -1)
-            [[ -n "$BRANCH" ]] || { echo "::error::No branch found containing tag ${{ github.ref_name }}"; exit 1; }
-            echo "CORE_BRANCH=${BRANCH}" >> "$GITHUB_ENV"
-          else
-            echo "CORE_BRANCH=${{ github.base_ref || github.ref_name }}" >> "$GITHUB_ENV"
-          fi
-          echo "ALL_BOARD_FQBNS=$(jq -c 'map((. + {link_mode: "static"}), (. + {link_mode: "dynamic"}))' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
-          echo "ARTIFACTS=$(jq -c '["zephyr"] + (map(.artifact) | unique)' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
-          echo "SUB_ARCHES=$(jq -c 'map(.subarch) | unique' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
 
       - name: Cache west modules and blobs
         uses: actions/cache@v5
@@ -112,25 +98,6 @@ jobs:
           yes | ./extra/bootstrap.sh -o=--filter=tree:0
           # Archive the build environment for later jobs
           (cd && tar cphf - .cmake work zephyr-sdk-* | zstd > build-env.tar.zstd)
-
-      - name: Get ci-builds package index link
-        if: ${{ github.repository == 'arduino/ArduinoCore-zephyr' }}
-        run: |
-          # for pull requests and pushes to the official Arduino repo, use the latest ci-built core as a reference
-          CI_BUILDS_URL="https://arduino.github.io/core-ci-builds/package_arduino_zephyr_${CORE_BRANCH}_ci_index.json"
-          if ! wget -q --method=HEAD "$CI_BUILDS_URL" >& /dev/null ; then
-            CLOSEST_BRANCH=$(git branch -r | grep -vE "HEAD|/$(git branch --show-current)$" | while read -r b; do \
-                               echo "$(git rev-list --count $b..HEAD) $b" ; \
-                             done | sort -n | head -n 1 | awk '{print $2}' | cut -d / -f 2)
-            [ -z "$CLOSEST_BRANCH" ] && CLOSEST_BRANCH="main"
-            echo "::warning::No ci-builds index found for branch $CORE_BRANCH, using $CLOSEST_BRANCH"
-            CI_BUILDS_URL="https://arduino.github.io/core-ci-builds/package_arduino_zephyr_${CLOSEST_BRANCH}_ci_index.json"
-            if ! wget -q --method=HEAD "$CI_BUILDS_URL" >& /dev/null ; then
-              echo "::warning::No ci-builds index found for branch $CLOSEST_BRANCH, using main"
-              CI_BUILDS_URL="https://arduino.github.io/core-ci-builds/package_arduino_zephyr_main_ci_index.json"
-            fi
-          fi
-          echo "CI_BUILDS_URL=$CI_BUILDS_URL" >> "$GITHUB_ENV"
 
       - name: Download test data
         run: |
