@@ -65,6 +65,8 @@ giga.bootloader.tool.default=dfu-util
 giga.bootloader.pid=0x0366
 giga.loader.file={build.variant}/loader.bin
 giga.bootloader.config=-f target/stm32h7x_dual_bank.cfg
+giga.bootloader.extra_action.preflash=stm32h7x option_write 0 0x01c 0xb86aaf0
+giga.bootloader.burn_pattern={burn_tool.pattern}
 
 giga.debug.tool=gdb
 giga.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -118,6 +120,7 @@ nano33ble.bootloader.tool=bossac
 nano33ble.bootloader.tool.default=bossac
 nano33ble.loader.file={build.variant}/loader.bin
 nano33ble.bootloader.config=-f target/nrf52.cfg
+nano33ble.bootloader.burn_pattern={burn_tool.pattern}
 
 nano33ble.debug.tool=gdb
 nano33ble.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -258,6 +261,8 @@ portentah7.bootloader.tool.default=dfu-util
 portentah7.bootloader.pid=0x035b
 portentah7.loader.file={build.variant}/loader.bin
 portentah7.bootloader.config=-f target/stm32h7x_dual_bank.cfg
+portentah7.bootloader.extra_action.preflash=stm32h7x option_write 0 0x01c 0xb86aaf0
+portentah7.bootloader.burn_pattern={burn_tool.pattern}
 
 portentah7.build.ota.magic=0x2341025B
 portentah7.build.ota.sketch_offset={loader.maximum_size}
@@ -312,6 +317,8 @@ nicla_vision.bootloader.tool.default=dfu-util
 nicla_vision.bootloader.pid=0x035f
 nicla_vision.loader.file={build.variant}/loader.bin
 nicla_vision.bootloader.config=-f target/stm32h7x_dual_bank.cfg
+nicla_vision.bootloader.extra_action.preflash=stm32h7x option_write 0 0x01c 0xb86aaf0
+nicla_vision.bootloader.burn_pattern={burn_tool.pattern}
 
 nicla_vision.build.ota.magic=0x2341025F
 nicla_vision.build.ota.sketch_offset={loader.maximum_size}
@@ -463,6 +470,8 @@ portentac33.bootloader.tool.default=dfu-util
 portentac33.loader.file={build.variant}/loader.bin
 portentac33.bootloader.pid=0x0368
 portentac33.loader.dfuse=
+portentac33.bootloader.target=r7fa6m5bh
+portentac33.bootloader.burn_pattern={tools.pyocd.burn_tool.pattern}
 
 # the space before the extra arguments is important
 portentac33.leave.dfuse={empty} -Q
@@ -515,6 +524,8 @@ opta.bootloader.tool.default=dfu-util
 opta.bootloader.pid=0x0364
 opta.loader.file={build.variant}/loader.bin
 opta.bootloader.config=-f target/stm32h7x_dual_bank.cfg
+opta.bootloader.extra_action.preflash=stm32h7x option_write 0 0x01c 0xb86aaf0
+opta.bootloader.burn_pattern={burn_tool.pattern}
 
 opta.debug.tool=gdb
 opta.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg

@@ -207,7 +207,14 @@ program.artifacts.loader={runtime.platform.path}/firmwares/{build.variant}/loade
 program.artifacts.sketch={build.path}/{build.project_name}.{upload.extension}
 upload.offset=0
 
+# "Burn Bootloader" with a hardware programmer runs bootloader.burn_pattern to
+# write bootloader.burn_image. Boards that ship a bootloader set the pattern
+# and have their image in firmwares/<variant>/bootloader.hex; on the others
+# the placeholder below is not a command, so the action fails showing its name.
 bootloader.config=
+bootloader.extra_action.preflash=
+bootloader.burn_pattern=no-bootloader-available
+bootloader.burn_image={runtime.platform.path}/firmwares/{build.variant}/bootloader.hex
 
 # Expects a {loader.cmd} and a {sketch.cmd} to be defined in the tool's
 # section. The loader is flashed if it does not match the current (maybe
@@ -246,7 +253,8 @@ tools.openocd.program.pattern="{path}/{cmd}" {program.verbose} -s "{path}/share/
 
 tools.openocd.bootloader.params.verbose=-d2
 tools.openocd.bootloader.params.quiet=-d0
-tools.openocd.bootloader.pattern="{path}/{cmd}" -s "{path}/share/openocd/scripts/" {upload.programmer} {upload.config} -c "set filename0 "{upload.artifacts.loader}"" -f "{build.variant.path}/flash_loader.cfg" "{upload.verbose}"
+tools.openocd.bootloader.pattern={bootloader.burn_pattern}
+tools.openocd.burn_tool.pattern="{path}/{cmd}" {bootloader.verbose} -s "{path}/share/openocd/scripts/" -f interface/{programmer.protocol}.cfg -f "{programmer.transport_script}" {bootloader.config} -c "telnet_port disabled; init; reset init; halt; adapter speed 10000; {bootloader.extra_action.preflash}; program {{bootloader.burn_image}}; reset run; shutdown"
 
 
 #
@@ -366,6 +374,7 @@ tools.pyocd.upload.pattern="{cmd}" load --target {upload.target} {upload.artifac
 tools.pyocd.bootloader.params.verbose=
 tools.pyocd.bootloader.params.quiet=
 tools.pyocd.bootloader.pattern="{cmd}" load --target {bootloader.target} "{upload.artifacts.loader}"
+tools.pyocd.burn_tool.pattern="{tools.pyocd.cmd}" load --target {bootloader.target} "{bootloader.burn_image}"
 
 
 #

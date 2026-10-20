@@ -82,6 +82,15 @@ for variant in $INCLUDED_VARIANTS ; do
 	fi
 done
 
+# boards that burn a bootloader need its image
+for board in $(sed -n 's/^\([^#.]*\)\.bootloader\.burn_pattern=.*/\1/p' ${TEMP_BOARDS}) ; do
+	variant=$(sed -n "s/^${board}\.build\.variant=//p" ${TEMP_BOARDS})
+	if [ ! -f firmwares/${variant}/bootloader.hex ] ; then
+		log_msg error "No bootloader image for '${board}' found."
+		RET=3
+	fi
+done
+
 # deduplicate llext-edk headers shared by all included variants
 # (CI only: this modifies the working tree)
 if [ -n "$GITHUB_ACTIONS" ] ; then
