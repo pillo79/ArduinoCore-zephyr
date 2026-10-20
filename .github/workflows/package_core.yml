@@ -123,18 +123,6 @@ jobs:
                 | zstd -T0 -9 --long=27 > build-env.tar.zstd)
           ls -lh ~/build-env.tar.zstd
 
-      - name: Download test data
-        run: |
-          extra/ci_fetch_tests.sh
-
-      - name: Archive test data
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-data
-          path: test-data/
-          overwrite: true
-          retention-days: 1
-
       - name: Archive build environment
         uses: actions/upload-artifact@v7
         with:
@@ -454,103 +442,22 @@ jobs:
 
 
 
-  # For each board and link mode, compile all test sketches using the just
-  # built core. The compilation reports are archived for later inspection.
-  # This step never fails, so that expected errors do not block the CI run.
+  # Test the just built core packages, see test_core.yml for details.
 
   test-core:
-    # NOTE: this name is hardcoded in ci_collect_data.py
-    name: Test ${{ matrix.board }}:${{ matrix.link_mode }}
-    runs-on: ubuntu-latest
+    # NOTE: this name is part of the test job names used in ci_collect_data.py
+    name: Test
     needs:
       - build-env
       - package-core
-    strategy:
-      matrix:
-        include:
-          ${{ fromJSON( needs.build-env.outputs.ALL_BOARD_FQBNS ) }}
-      fail-fast: false
-    env:
-      PLAT: arduino:${{ matrix.subarch }}
-      FQBN: arduino:${{ matrix.subarch }}:${{ matrix.board }}:link_mode=${{ matrix.link_mode }}
-      CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
-      ARTIFACT_TAG: ${{ needs.build-env.outputs.CORE_HASH }}-${{ matrix.board }}-${{ matrix.link_mode }}
-      CI_BUILDS_URL: ${{ needs.build-env.outputs.CI_BUILDS_URL }}
     if: ${{ !cancelled() && needs.build-env.result == 'success' }}
-    steps:
-
-      # only needs the test list generator and artifact information
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          sparse-checkout: |
-            extra/ci_apply_tests.sh
-            extra/artifacts/
-            variants/*/test_setup.sh
-          sparse-checkout-cone-mode: false
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.CORE_ARTIFACT }}
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: test-data
-          path: test-data/
-
-      - name: Set up core
-        run: |
-          tar xf ${CORE_ARTIFACT} # will create ArduinoCore-zephyr/
-          echo "REPORT_FILE=$(echo ${FQBN} | tr ':' '-').json" >> $GITHUB_ENV
-
-      - name: Get test sketches
-        run: |
-          # sets ALL_TESTS and ALL_LIBRARIES env vars in GITHUB_ENV
-          extra/ci_apply_tests.sh ${{ matrix.artifact }} ${{ matrix.variant }}
-
-      - name: Compile tests for ${{ matrix.board }}
-        uses: pillo79/compile-sketches@next
-        with:
-          # Use ci-builds core, if possible, to use the exact set of tools required by the source
-          fqbn: ${{ env.FQBN }}
-          platforms: |
-            # Use Board Manager version first to install the tools
-            - name: ${{ env.PLAT }}
-              ${{ env.CI_BUILDS_URL != '' && format('source-url: {0}', env.CI_BUILDS_URL) || '' }}
-            # ... then replace that with the local version
-            - name: ${{ env.PLAT }}
-              source-path: "ArduinoCore-zephyr"
-          sketch-paths: |
-            ${{ env.ALL_TESTS }}
-          libraries: |
-            ${{ env.ALL_LIBRARIES }}
-          cli-compile-flags: |
-            - '--build-property'
-            - 'compiler.c.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
-            - '--build-property'
-            - 'compiler.cpp.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
-          verbose: 'false'
-          enable-deltas-report: 'false'
-          enable-issues-report: 'true'
-          always-succeed: 'true'
-
-      - name: Prepare log
-        if: ${{ success() || failure() }}
-        run: |
-          # make sure to create an empty report if none was created
-          [ ! -f sketches-reports/${REPORT_FILE} ] && mkdir -p sketches-reports && echo "{}" > sketches-reports/${REPORT_FILE}
-          # remove base path of the core install from all file references to make logs cleaner
-          sed -i -e 's!/home/runner/.arduino15/packages/arduino/hardware/zephyr/[^/]*/!!g' sketches-reports/${REPORT_FILE}
-
-      # archive the compile report for later
-      - uses: actions/upload-artifact@v7
-        if: ${{ success() || failure() }}
-        with:
-          name: test-report-${{ env.ARTIFACT_TAG }}
-          path: sketches-reports/*
-          overwrite: true
-          retention-days: 1
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/test_core.yml
+    with:
+      core-run-id: ${{ github.run_id }}
+      core-version: ${{ needs.build-env.outputs.CORE_VER }}
 
 
 

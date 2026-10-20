@@ -93,7 +93,8 @@ ALL_BOARD_DATA = json.loads(ALL_BOARD_DATA_STR)
 ALL_BOARD_DATA = { b['board']: b for b in ALL_BOARD_DATA }
 
 JOB_URLS = json.loads(WORKFLOW_JOBS_STR)
-JOB_URLS = { j['name']: j['url'] for j in JOB_URLS }
+# jobs in reusable workflows are named '<caller job> / <job>', keep the last part
+JOB_URLS = { j['name'].rsplit(' / ', 1)[-1]: j['url'] for j in JOB_URLS }
 
 REGIONS_BY_SOC = defaultdict(set)     # { soc: set(regions) }
 
