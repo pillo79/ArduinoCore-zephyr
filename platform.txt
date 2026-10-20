@@ -215,6 +215,12 @@ bootloader.config=
 bootloader.extra_action.preflash=
 bootloader.burn_pattern=no-bootloader-available
 bootloader.burn_image={runtime.platform.path}/firmwares/{build.variant}/bootloader.hex
+# "Burn Bootloader" with the burner programmer runs this pattern. Boards
+# that ship a bootloader point it to their upload tool's bootloader pattern,
+# which then uploads firmwares/{build.variant}/burner.bin (built by
+# extra/build.sh).
+# The placeholder below is not a command, so the action fails showing its name.
+bootloader.burner_pattern=no-bootloader-available
 
 # Expects a {loader.cmd} and a {sketch.cmd} to be defined in the tool's
 # section. The loader is flashed if it does not match the current (maybe
