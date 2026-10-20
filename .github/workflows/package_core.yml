@@ -472,6 +472,8 @@ jobs:
     needs:
       - package-core
       - package-index
+    # package-index only runs on PRs, do not skip cleanup when it is skipped
+    if: ${{ !cancelled() && needs.package-core.result == 'success' }}
     steps:
 
       - uses: geekyeggo/delete-artifact@v6
@@ -719,6 +721,7 @@ jobs:
       - build-env
       - package-core
       - verify-core
+
     steps:
 
       - name: Clean up intermediate artifacts
