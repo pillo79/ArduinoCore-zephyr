@@ -64,6 +64,7 @@ giga.bootloader.tool=dfu-util
 giga.bootloader.tool.default=dfu-util
 giga.bootloader.pid=0x0366
 giga.loader.file={build.variant}/loader.bin
+giga.bootloader.config=-f target/stm32h7x_dual_bank.cfg
 
 giga.debug.tool=gdb
 giga.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -116,6 +117,7 @@ nano33ble.upload.offset=0x10000 # bootloader skips its own partition
 nano33ble.bootloader.tool=bossac
 nano33ble.bootloader.tool.default=bossac
 nano33ble.loader.file={build.variant}/loader.bin
+nano33ble.bootloader.config=-f target/nrf52.cfg
 
 nano33ble.debug.tool=gdb
 nano33ble.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -255,6 +257,7 @@ portentah7.bootloader.tool=dfu-util
 portentah7.bootloader.tool.default=dfu-util
 portentah7.bootloader.pid=0x035b
 portentah7.loader.file={build.variant}/loader.bin
+portentah7.bootloader.config=-f target/stm32h7x_dual_bank.cfg
 
 portentah7.build.ota.magic=0x2341025B
 portentah7.build.ota.sketch_offset={loader.maximum_size}
@@ -308,6 +311,7 @@ nicla_vision.bootloader.tool=dfu-util
 nicla_vision.bootloader.tool.default=dfu-util
 nicla_vision.bootloader.pid=0x035f
 nicla_vision.loader.file={build.variant}/loader.bin
+nicla_vision.bootloader.config=-f target/stm32h7x_dual_bank.cfg
 
 nicla_vision.build.ota.magic=0x2341025F
 nicla_vision.build.ota.sketch_offset={loader.maximum_size}
@@ -401,6 +405,11 @@ nicla_sense.bootloader.tool=openocd
 nicla_sense.bootloader.tool.default=openocd
 nicla_sense.loader.file={build.variant}/loader.hex
 nicla_sense.bootloader.target=nrf52
+nicla_sense.bootloader.config=-f target/nrf52.cfg
+
+# onboard probe, used when no hardware programmer is selected
+nicla_sense.programmer.protocol=cmsis-dap
+nicla_sense.programmer.transport_script={runtime.platform.path}/debugger/select_swd.cfg
 
 nicla_sense.debug.tool=gdb
 nicla_sense.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -505,6 +514,7 @@ opta.bootloader.tool=dfu-util
 opta.bootloader.tool.default=dfu-util
 opta.bootloader.pid=0x0364
 opta.loader.file={build.variant}/loader.bin
+opta.bootloader.config=-f target/stm32h7x_dual_bank.cfg
 
 opta.debug.tool=gdb
 opta.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -556,6 +566,11 @@ nano_matter.bootloader.tool=openocd
 nano_matter.bootloader.tool.default=openocd
 nano_matter.loader.file={build.variant}/loader.hex
 nano_matter.bootloader.target=arduino_nano_matter
+nano_matter.bootloader.config=-f target/efm32s2_g23.cfg
+
+# onboard probe, used when no hardware programmer is selected
+nano_matter.programmer.protocol=cmsis-dap
+nano_matter.programmer.transport_script={runtime.platform.path}/debugger/select_swd.cfg
 
 nano_matter.debug.server=openocd
 nano_matter.debug.server.openocd.scripts.0=interface/cmsis-dap.cfg
@@ -662,6 +677,7 @@ nano_connect.upload.familyid=0xe48bff56
 nano_connect.bootloader.tool=picotool
 nano_connect.bootloader.tool.default=picotool
 nano_connect.loader.file={build.variant}/loader.uf2
+nano_connect.bootloader.config=-f target/rp2040.cfg
 
 nano_connect.debug.tool=gdb
 nano_connect.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
