@@ -9,6 +9,7 @@
 # same commit.
 #
 # The calling job must grant 'contents: read' and 'actions: read' permissions.
+# The test results of each run can also be stored in ci-builds.
 
 name: Test core
 
@@ -27,6 +28,15 @@ on:
           from the current commit.
         type: string
         default: ''
+      upload-results:
+        description: >
+          Upload the test results to ci-builds (never done for pull requests).
+          Requires the CI_BUILDS_TOKEN secret and 'id-token: write' permission.
+        type: boolean
+        default: false
+    secrets:
+      CI_BUILDS_TOKEN:
+        required: false
 
 env:
   # use the head SHA for PR hashes, instead of the merge commit
@@ -201,3 +211,63 @@ jobs:
           path: sketches-reports/*
           overwrite: true
           retention-days: 1
+
+
+
+  # Pack the compilation reports of all boards and store them in ci-builds,
+  # to keep track of the results (and sketch sizes) of every test run.
+  # Pull request results are not stored, as they are not part of any branch.
+
+  upload-results:
+    name: Upload test results
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+      - test-core
+    # nothing to upload if no test was run
+    if: ${{ !cancelled() && inputs.upload-results && github.event_name != 'pull_request' && needs.prepare.result == 'success' && needs.test-core.result != 'skipped' }}
+    permissions:
+      id-token: write   # required to obtain the OIDC token
+      contents: read
+      actions: read
+    env:
+      CORE_VER: ${{ needs.prepare.outputs.CORE_VER }}
+      CORE_HASH: ${{ needs.prepare.outputs.CORE_HASH }}
+      CORE_BRANCH: ${{ needs.prepare.outputs.CORE_BRANCH }}
+      ALL_BOARD_FQBNS: ${{ needs.prepare.outputs.ALL_BOARD_FQBNS }}
+      RESULTS_ARTIFACT: test-results-${{ needs.prepare.outputs.CORE_HASH }}-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            extra/ci_pack_test_results.sh
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: reports/
+          pattern: test-report-${{ env.CORE_HASH }}-*
+          merge-multiple: true
+
+      - name: Pack test results
+        run: |
+          extra/ci_pack_test_results.sh reports/ results/metadata/tests-${{ github.run_id }}-${{ github.run_attempt }}.json
+
+      - name: Archive test results
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.RESULTS_ARTIFACT }}
+          path: results/
+          overwrite: true
+          retention-days: 1
+
+      # Run the composite action in this context to create a proper OIDC token
+      # for this repo and start the internal workflows.
+      - uses: arduino/core-ci-builds@main
+        with:
+          token: ${{ secrets.CI_BUILDS_TOKEN }}
+          version: ${{ env.CORE_VER }}
+          artifact: ${{ env.RESULTS_ARTIFACT }}
+          base-branch: ${{ env.CORE_BRANCH }}

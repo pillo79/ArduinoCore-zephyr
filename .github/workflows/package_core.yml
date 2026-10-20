@@ -423,12 +423,16 @@ jobs:
       - package-core
     if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     permissions:
+      id-token: write   # required by ci-builds upload
       contents: read
       actions: read
     uses: ./.github/workflows/test_core.yml
     with:
       core-run-id: ${{ github.run_id }}
       core-version: ${{ needs.build-env.outputs.CORE_VER }}
+      upload-results: ${{ github.repository == 'arduino/ArduinoCore-zephyr' && !startsWith(github.ref_name, 'dependabot/') }}
+    secrets:
+      CI_BUILDS_TOKEN: ${{ secrets.CI_BUILDS_TOKEN }}
 
 
 
