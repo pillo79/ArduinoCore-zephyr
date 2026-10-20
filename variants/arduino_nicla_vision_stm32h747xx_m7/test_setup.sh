@@ -15,4 +15,3 @@ skip_for_this_board libraries/Ethernet
 skip_for_this_board libraries/OTA/examples/OTAEthernet
 skip_for_this_board libraries/OTA/examples/OTAFullEthernet
 skip_for_this_board libraries/CAN
-skip_for_this_board libraries/Camera/examples/CameraDisplay
