@@ -6,13 +6,7 @@
 set -e
 set -o pipefail
 
-log_msg() {
-	if [ -n "$GITHUB_WORKSPACE" ] ; then
-		echo "::$1::$2"
-	else
-		echo " - $2"
-	fi
-}
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 if [ ! -f platform.txt ]; then
   echo Launch this script from the root core folder as ./extra/bootstrap.sh

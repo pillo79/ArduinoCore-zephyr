@@ -22,13 +22,7 @@ ARTIFACT=$1
 VERSION=$2
 OUTPUT_FILE=${3:-distrib/${ARTIFACT}-${VERSION}.tar.bz2}
 
-log_msg() {
-	if [ -n $GITHUB_WORKSPACE ] ; then
-		echo "::$1::$2"
-	else
-		echo "$2"
-	fi
-}
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 # we use variants for include because we filter on file paths
 # and boards for exclude because we want to remove matching lines in boards.txt
