@@ -285,7 +285,8 @@
                             <&gpioj 9 GPIO_ACTIVE_HIGH>, /* D30 PWM tim1 ch3 */
                             <&gpioj 10 GPIO_ACTIVE_HIGH>, /* D31 PWM tim8 ch2 */
                             <&gpioh 15 GPIO_ACTIVE_HIGH>, /* D32 PWM tim8 ch3n */
-                            <&gpioh 6 GPIO_ACTIVE_HIGH>; /* D33 PWM tim12 ch1 */
+                            <&gpioh 6 GPIO_ACTIVE_HIGH>, /* D33 PWM tim12 ch1 */
+			    <&gpiog 10 GPIO_ACTIVE_HIGH>; /* D34 VL53L1CB XSHUT */
 
         adc-pin-gpios = <&gpioc 4 GPIO_ACTIVE_HIGH>,   /* A0 PC4  */
                         <&gpiof 13 GPIO_ACTIVE_HIGH>,   /* A1 PF13 */
