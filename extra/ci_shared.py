@@ -96,6 +96,7 @@ class LoaderEntry:
         Extract memory usage data from the meminfo file.
         Input format: JSON array of region_name, used_bytes, total_bytes tuples
         Output format: dict of { region_name: [ used_bytes, total_bytes ] }
+        A region with a total size of 0 means the file is invalid.
         """
         report_file = f"zephyr-{self.variant}.meminfo"
         try:
@@ -103,6 +104,8 @@ class LoaderEntry:
                 report_data = json.load(f)
                 meminfo = { region.replace(':',''): [used, total] for region, used, total in report_data }
                 meminfo.pop('IDT_LIST', None)
+                if any(total == 0 for used, total in meminfo.values()):
+                    return {}
                 return meminfo
         except Exception as e:
             return {}
