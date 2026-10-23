@@ -97,8 +97,6 @@ static const uint8_t SCK  = PIN_SPI_SCK;
 
 // Wire (I2C)
 // ----------
-#define WIRE_HOWMANY        (1)
-
 #define PIN_WIRE_SDA        (18u)
 #define PIN_WIRE_SCL        (19u)
 
