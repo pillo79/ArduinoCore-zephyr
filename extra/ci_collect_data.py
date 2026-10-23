@@ -22,7 +22,7 @@
 #     - zephyr-<variant>.meminfo: Loader memory usage report
 #     - arduino-<subarch>-<board>-link_mode=<mode>.json: Compilation test report files
 #     - variants/<variant>/known_example_issues.txt: Expected errors for that variant
-#     - prereqs/<id>.json: job completion markers with job log links, see ci_filter_matrix.sh
+#     - prereqs/<id>.json: job completion markers with job status and log links, see ci_filter_matrix.sh
 #
 # This script produces one output file:
 #
@@ -92,12 +92,28 @@ json_file = sys.argv[1] if len(sys.argv) == 2 else "/dev/stdout"
 ALL_BOARD_DATA = json.loads(ALL_BOARD_DATA_STR)
 ALL_BOARD_DATA = { b['board']: b for b in ALL_BOARD_DATA }
 
-# Load job URLs from the job completion markers
+# Load job statuses and URLs from the job completion markers
+JOB_STATUS = {}
 JOB_URLS = {}
 for marker_file in glob.glob("prereqs/*.json"):
     with open(marker_file, 'r') as f:
         marker = json.load(f)
+    JOB_STATUS[marker['id']] = marker['status']
     JOB_URLS[marker['id']] = marker['job_url']
+
+def job_failed(job_id):
+    """
+    Returns True if the job completed without success. Jobs that did not
+    publish a marker are not considered failed, as their status is unknown.
+    """
+    return JOB_STATUS.get(job_id, 'success') != 'success'
+
+def job_succeeded(job_id):
+    """
+    Returns True if the job completed successfully. Jobs that did not
+    publish a marker did not complete, as for ci_filter_matrix.sh.
+    """
+    return JOB_STATUS.get(job_id) == 'success'
 
 REGIONS_BY_SOC = defaultdict(set)     # { soc: set(regions) }
 
@@ -116,6 +132,9 @@ for board_data in ALL_BOARD_DATA.values():
 
     # Read loader build data
     BOARD_LOADERS[board] = LoaderEntry(artifact, board, variant, job_link)
+    if job_failed(board_data['id']):
+        # the build may have failed after producing the core data
+        BOARD_LOADERS[board].status = FAILURE
     if BOARD_LOADERS[board].status == FAILURE:
         track_test(TestEntry.failure("Core data could not be read.", artifact, board))
         continue
@@ -124,6 +143,20 @@ for board_data in ALL_BOARD_DATA.values():
     soc = BOARD_LOADERS[board].config['CONFIG_SOC']
     board_data['soc'] = soc
     REGIONS_BY_SOC[soc].update(BOARD_LOADERS[board].meminfo.keys())
+
+    # Tests are not run if the core package was not built: blame the package
+    # job if it failed, or skip them if a board build prevented the packaging
+    # (the failed build is reported on its own board)
+    package_id = f"package-{artifact}"
+    if job_failed(package_id):
+        track_test(TestEntry.failure("Core package build failed.", artifact, board, JOB_URLS.get(package_id)))
+        continue
+    # (tests that produced a report did run, and are always evaluated)
+    if package_id not in JOB_STATUS \
+       and not glob.glob(f"arduino-{subarch}-{board}-link_mode=*.json") \
+       and any(not job_succeeded(b['id']) for b in ALL_BOARD_DATA.values() if b['artifact'] == artifact):
+        track_test(TestEntry.skipped("Core package was not built, tests skipped.", artifact, board))
+        continue
 
     # Get list of expected errors for this board
     exceptions, warning_filters = load_known_issues(variant)

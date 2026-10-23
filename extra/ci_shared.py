@@ -175,6 +175,13 @@ class TestEntry:
         """
         return cls(artifact, board, 'CI test', '', False, FAILURE, [ message ], job_link)
 
+    @classmethod
+    def skipped(cls, message, artifact='', board=''):
+        """
+        Create an entry for CI tests that were not run.
+        """
+        return cls(artifact, board, 'CI test', '', False, SKIP, [ message ], None)
+
     def to_dict(self):
         return {
             'artifact': self.artifact,
