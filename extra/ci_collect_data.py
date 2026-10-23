@@ -41,6 +41,7 @@ import ci_shared
 from ci_shared import (
     TestStatus, SKIP, PASS, WARNING, EXPECTED_ERROR, INVALID_EXCEPTION, ERROR, FAILURE,
     LoaderEntry, TestEntry, TestGroup,
+    load_known_issues, load_sketch_reports, evaluate_sketch,
 )
 
 # Global Data Structures
@@ -57,24 +58,13 @@ ARTIFACT_TESTS = defaultdict(TestGroup)                     # { artifact: TestGr
 BOARD_TESTS = defaultdict(TestGroup)                        # { board: TestGroup() }
 SKETCH_TESTS = defaultdict(lambda: defaultdict(TestGroup))  # { artifact: { sketch: TestGroup() } }
 
-def log_test(artifact, board, sketch, link_mode, exceptions, status, issues, job_link=None):
+def track_test(test_entry):
     """
-    Logs individual test results into the global test tracking structures.
+    Logs a test entry into the global test tracking structures.
     """
-
-    # Ensure issues is a list
-    if isinstance(issues, str):
-        issues = [ issues ]
-
-    # Create the test entry
-    excepted = any(pattern.match(sketch) for pattern in exceptions)
-    status = EXPECTED_ERROR if excepted and status == ERROR else status
-    test_entry = TestEntry(artifact, board, sketch, link_mode, excepted, status, issues, job_link)
-
-    # Track in global structures
-    ARTIFACT_TESTS[artifact].track(test_entry)
-    BOARD_TESTS[board].track(test_entry)
-    SKETCH_TESTS[artifact][sketch].track(test_entry)
+    ARTIFACT_TESTS[test_entry.artifact].track(test_entry)
+    BOARD_TESTS[test_entry.board].track(test_entry)
+    SKETCH_TESTS[test_entry.artifact][test_entry.sketch].track(test_entry)
     ALL_TESTS.append(test_entry)
 
 # ---------------------------------------------------------------------------
@@ -124,7 +114,7 @@ for board_data in ALL_BOARD_DATA.values():
     # Read loader build data
     BOARD_LOADERS[board] = LoaderEntry(artifact, board, variant, job_link)
     if BOARD_LOADERS[board].status == FAILURE:
-        log_test(artifact, board, 'CI test', '', [], FAILURE, "Core data could not be read.")
+        track_test(TestEntry.failure("Core data could not be read.", artifact, board))
         continue
 
     # Get SoC-specific info from loader config
@@ -133,23 +123,7 @@ for board_data in ALL_BOARD_DATA.values():
     REGIONS_BY_SOC[soc].update(BOARD_LOADERS[board].meminfo.keys())
 
     # Get list of expected errors for this board
-    exceptions = []
-    warning_filters = [] # [ (sketch_pattern, regex), ...]
-    if os.path.exists(f"variants/{variant}/known_example_issues.txt"):
-        with open(f"variants/{variant}/known_example_issues.txt", 'r') as f:
-            for line in f:
-                line = line.split('#')[0].strip()
-                if not line:
-                    continue
-                elif '|' in line:
-                    # this is a warning filter, not an exception
-                    sketch_pattern, warning_pattern = line.split('|', 1)
-                    sketch_pattern = re.compile(f"^(ArduinoCore-zephyr/)?{sketch_pattern}")
-                    warning_pattern = re.compile(warning_pattern)
-                    warning_filters.append(( sketch_pattern, warning_pattern ))
-                else:
-                    # this is an exception
-                    exceptions.append(re.compile(f"^(ArduinoCore-zephyr/)?{line}"))
+    exceptions, warning_filters = load_known_issues(variant)
 
     # Get raw data from report files for both static and dynamic linking modes
     for link_mode in ("static", "dynamic"):
@@ -161,45 +135,17 @@ for board_data in ALL_BOARD_DATA.values():
 
         # Extract data from the report file
         report_file = f"arduino-{subarch}-{board}-link_mode={link_mode}.json"
-        if not os.path.exists(report_file):
-            log_test(artifact, board, 'CI test', '', [], FAILURE, f"Report file for {link_mode} not found.", job_link)
-            continue # Skip to the next board
-
-        try:
-            with open(report_file, 'r') as f:
-                report_data = json.load(f)
-        except Exception as e:
-            log_test(artifact, board, 'CI test', '', [], FAILURE, f"Error reading {link_mode} report file: {e}", job_link)
-            continue # Skip to the next board
-
-        reports = report_data.get('boards', [{}])[0].get('sketches', [])
-        if not reports:
-            log_test(artifact, board, 'CI test', '', [], FAILURE, f"Test report for {link_mode} is empty, check CI log.", job_link)
+        reports, error = load_sketch_reports(report_file)
+        if error:
+            track_test(TestEntry.failure(f"{link_mode.capitalize()} link mode: {error}", artifact, board, job_link))
             continue # Skip to the next board
 
         # Iterate through individual sketch reports
         for report in reports:
-            sketch = report.get('name', 'unknown_sketch')
-            success = report.get('compilation_success', False)
-            issues = report.get('issues', [])
-
-            # Replace long absolute paths with '...' for brevity.
-            sketch_issues = [ re.sub(r'(/.+?)((/[^/]+){3}):', r'...\2:', issue) for issue in issues ]
-
-            # Remove known warnings, if any
-            for sketch_pattern, warning_pattern in warning_filters:
-                if sketch_pattern.match(sketch):
-                    sketch_issues = [ issue for issue in sketch_issues if not warning_pattern.search(issue) ]
-
-            if not success:
-                status = ERROR
-            elif len(sketch_issues): # Implies warnings/non-critical issues
-                status = WARNING
-            else:
-                status = PASS
+            sketch, excepted, status, sketch_issues = evaluate_sketch(report, exceptions, warning_filters)
 
             # Log the test result to all data structures
-            log_test(artifact, board, sketch, link_mode, exceptions, status, sketch_issues, job_link)
+            track_test(TestEntry(artifact, board, sketch, link_mode, excepted, status, sketch_issues, job_link))
 
 ARTIFACTS = sorted(ARTIFACT_TESTS.keys())
 
