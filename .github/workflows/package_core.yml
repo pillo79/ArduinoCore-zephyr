@@ -57,6 +57,9 @@ jobs:
       SUB_ARCHES: ${{ env.SUB_ARCHES }}
       # URL of the latest ci-builds index for this branch, if any
       CI_BUILDS_URL: ${{ env.CI_BUILDS_URL }}
+      # Attempt in which this job last ran: only "Re-run all jobs" runs it
+      # again, so job markers from earlier attempts are no longer valid
+      BUILD_ATTEMPT: ${{ github.run_attempt }}
     steps:
 
       - name: Install OS dependencies
@@ -244,20 +247,9 @@ jobs:
       # publish the outcome of this job for the jobs that depend on it
       - name: Mark build as completed
         if: ${{ !cancelled() }}
-        env:
-          ID: ${{ matrix.id }}
-          STATUS: ${{ job.status }}
-          JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.check_run_id }}
-        run: |
-          mkdir -p prereqs
-          jq -n '{ id: env.ID, status: env.STATUS, job_url: env.JOB_URL }' > prereqs/${ID}.json
-
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
+        uses: ./.github/actions/mark-job-completed
         with:
-          name: prereq-${{ matrix.id }}
-          path: prereqs/
-          overwrite: true # replace the marker of a previous attempt
+          id: ${{ matrix.id }}
           retention-days: 1
 
 
@@ -273,7 +265,10 @@ jobs:
       - build-board
     if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     outputs:
+      # packages to create in this attempt
       PACKAGES: ${{ steps.select.outputs.PACKAGES }}
+      # packages created in this attempt or already in an earlier one
+      READY_PACKAGES: ${{ steps.select.outputs.READY_PACKAGES }}
     steps:
 
       - uses: actions/checkout@v6
@@ -283,19 +278,22 @@ jobs:
             extra/ci_filter_matrix.sh
           sparse-checkout-cone-mode: false
 
+      # build markers, and package markers of earlier attempts
       - uses: actions/download-artifact@v8
         continue-on-error: true # nothing to download if all builds failed
         with:
           path: prereqs/
-          pattern: prereq-build-*
+          pattern: prereq-*
           merge-multiple: true
 
       - name: Select packages
         id: select
         env:
           PACKAGE_DATA: ${{ needs.build-env.outputs.PACKAGE_DATA }}
+          MIN_ATTEMPT: ${{ needs.build-env.outputs.BUILD_ATTEMPT }}
         run: |
-          echo "PACKAGES=$(extra/ci_filter_matrix.sh prereqs/ "$PACKAGE_DATA")" >> $GITHUB_OUTPUT
+          echo "PACKAGES=$(extra/ci_filter_matrix.sh -m $MIN_ATTEMPT prereqs/ "$PACKAGE_DATA")" >> $GITHUB_OUTPUT
+          echo "READY_PACKAGES=$(extra/ci_filter_matrix.sh -a -m $MIN_ATTEMPT prereqs/ "$PACKAGE_DATA" 2>/dev/null)" >> $GITHUB_OUTPUT
 
 
 
@@ -366,24 +364,13 @@ jobs:
           path: ${{ matrix.artifact }}.id
           overwrite: true
 
-      # publish the outcome of this job for the jobs that depend on it
+      # publish the outcome of this job for the jobs that depend on it,
+      # kept as long as the core package for later test runs
       - name: Mark package as completed
         if: ${{ !cancelled() }}
-        env:
-          ID: ${{ matrix.id }}
-          STATUS: ${{ job.status }}
-          JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.check_run_id }}
-        run: |
-          mkdir -p prereqs
-          jq -n '{ id: env.ID, status: env.STATUS, job_url: env.JOB_URL }' > prereqs/${ID}.json
-
-      # kept as long as the core package, for later test runs
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
+        uses: ./.github/actions/mark-job-completed
         with:
-          name: prereq-${{ matrix.id }}
-          path: prereqs/
-          overwrite: true # replace the marker of a previous attempt
+          id: ${{ matrix.id }}
 
 
 
@@ -397,11 +384,12 @@ jobs:
       - build-env
       - select-packages
       - package-core
-    if: ${{ github.event_name == 'pull_request' && needs.build-env.outputs.CI_BUILDS_URL != '' }}
+    # package-core is skipped if all packages were already created in an earlier attempt
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.build-env.outputs.CI_BUILDS_URL != '' && needs.select-packages.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.package-core.result) }}
     env:
       CORE_HASH: ${{ needs.build-env.outputs.CORE_HASH }}
       CORE_BRANCH: ${{ needs.build-env.outputs.CORE_BRANCH }}
-      PACKAGES: ${{ needs.select-packages.outputs.PACKAGES }}
+      PACKAGES: ${{ needs.select-packages.outputs.READY_PACKAGES }}
       CI_BUILDS_URL: ${{ needs.build-env.outputs.CI_BUILDS_URL }}
     steps:
 
@@ -481,7 +469,7 @@ jobs:
       - package-index
     # package-index only runs on PRs, do not skip cleanup when it is skipped;
     # keep everything if any board failed, as it is needed to re-run that build
-    if: ${{ !cancelled() && needs.build-board.result == 'success' && needs.package-core.result == 'success' }}
+    if: ${{ !cancelled() && needs.build-board.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.package-core.result) }}
     steps:
 
       - uses: geekyeggo/delete-artifact@v6
@@ -511,6 +499,7 @@ jobs:
     with:
       core-run-id: ${{ github.run_id }}
       core-version: ${{ needs.build-env.outputs.CORE_VER }}
+      min-attempt: ${{ needs.build-env.outputs.BUILD_ATTEMPT }}
       upload-results: ${{ github.repository == 'arduino/ArduinoCore-zephyr' && !startsWith(github.ref_name, 'dependabot/') }}
     secrets:
       CI_BUILDS_TOKEN: ${{ secrets.CI_BUILDS_TOKEN }}
