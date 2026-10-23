@@ -22,7 +22,7 @@
 #     - zephyr-<variant>.meminfo: Loader memory usage report
 #     - arduino-<subarch>-<board>-link_mode=<mode>.json: Compilation test report files
 #     - variants/<variant>/known_example_issues.txt: Expected errors for that variant
-#     - prereqs/<id>.json: job completion markers with job log links, see .github/actions/mark-job-completed
+#     - prereqs/<id>.json: job completion markers with job log links, see ci_filter_matrix.sh
 #
 # This script produces one output file:
 #
