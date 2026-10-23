@@ -17,10 +17,16 @@
 #  - CORE_TAG: tag (if found) or hash, for user-friendly strings and file names
 #  - CORE_BRANCH: target branch of this build, used for ci-builds tracking
 #  - ALL_BOARD_DATA: JSON describing all boards, from get_board_details.sh
-#  - ALL_BOARD_FQBNS: ALL_BOARD_DATA with link_mode alternatives added
+#  - ALL_BOARD_FQBNS: ALL_BOARD_DATA with link_mode alternatives added, each
+#    requiring the package of its artifact
 #  - ARTIFACTS: list of artifacts, including the "zephyr" umbrella artifact
+#  - PACKAGE_DATA: ARTIFACTS entries, each requiring the builds of its boards
 #  - SUB_ARCHES: list of architectures the artifacts are built for
 #  - CI_BUILDS_URL: latest ci-builds index for this branch (official repo only)
+#
+# Matrix entries in ALL_BOARD_FQBNS and PACKAGE_DATA list the ids of the jobs
+# they depend on in their 'requires' field: "build-<board>" for a board build,
+# "package-<artifact>" for a core package. See ci_filter_matrix.sh.
 #
 # Usage: ci_get_build_info.sh [<ref>]
 #  <ref> is the commit used for CORE_HASH (defaults to HEAD).
@@ -45,8 +51,12 @@ if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
 else
 	CORE_BRANCH=${GITHUB_BASE_REF:-$GITHUB_REF_NAME}
 fi
-ALL_BOARD_FQBNS=$(jq -c 'map((. + {link_mode: "static"}), (. + {link_mode: "dynamic"}))' <<< ${ALL_BOARD_DATA})
+ALL_BOARD_FQBNS=$(jq -c 'map(. + {requires: ["package-\(.artifact)"]}) | map((. + {link_mode: "static"}), (. + {link_mode: "dynamic"}))' <<< ${ALL_BOARD_DATA})
 ARTIFACTS=$(jq -c '["zephyr"] + (map(.artifact) | unique)' <<< ${ALL_BOARD_DATA})
+PACKAGE_DATA=$(jq -c --argjson artifacts "$ARTIFACTS" '. as $boards | $artifacts | map(. as $artifact | {
+		artifact: $artifact,
+		requires: [ $boards[] | select($artifact == "zephyr" or .artifact == $artifact) | "build-\(.board)" ]
+	})' <<< ${ALL_BOARD_DATA})
 SUB_ARCHES=$(jq -c 'map(.subarch) | unique' <<< ${ALL_BOARD_DATA})
 
 CI_BUILDS_URL=
@@ -67,6 +77,6 @@ if [[ "$GITHUB_REPOSITORY" == "arduino/ArduinoCore-zephyr" ]]; then
 	fi
 fi
 
-for VAR in CORE_HASH CORE_VER CORE_TAG CORE_BRANCH ALL_BOARD_DATA ALL_BOARD_FQBNS ARTIFACTS SUB_ARCHES CI_BUILDS_URL; do
+for VAR in CORE_HASH CORE_VER CORE_TAG CORE_BRANCH ALL_BOARD_DATA ALL_BOARD_FQBNS ARTIFACTS PACKAGE_DATA SUB_ARCHES CI_BUILDS_URL; do
 	echo "$VAR=${!VAR}" >> "$OUTPUT"
 done
