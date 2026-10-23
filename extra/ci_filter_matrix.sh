@@ -7,9 +7,17 @@
 # prerequisites were successfully completed.
 #
 # Each entry of the input matrix lists the ids of the jobs it depends on in
-# its 'requires' field (see ci_get_build_info.sh). Each successful job
-# publishes its id as an empty file with that name, which is collected in
-# <ids_dir> before running this script.
+# its 'requires' field (see ci_get_build_info.sh). Each job publishes its
+# outcome as a 'prereq-<id>' artifact containing a <id>.json marker file:
+#
+#   {
+#     "id": "<id>",
+#     "status": "success" | "failure",
+#     "job_url": "<URL of the job log>"
+#   }
+#
+# The markers are collected in <ids_dir> before running this script. They are
+# also used by ci_collect_data.py to link each job log in the CI summary.
 #
 # The filtered matrix is printed to stdout as compact JSON. A warning is
 # emitted for each entry that is removed.
@@ -26,7 +34,8 @@ fi
 IDS_DIR=$1
 MATRIX=$2
 
-AVAILABLE=$(ls -1 "$IDS_DIR" 2>/dev/null | jq -Rcs 'split("\n") | map(select(length > 0))')
+# ids of the jobs that completed successfully
+AVAILABLE=$(cat "$IDS_DIR"/*.json 2>/dev/null | jq -cs 'map(select(.status == "success") | .id)')
 
 jq -r --argjson available "$AVAILABLE" '
 	.[] | (.requires - $available) as $missing | select($missing | length > 0)

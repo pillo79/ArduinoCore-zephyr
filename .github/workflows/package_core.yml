@@ -117,7 +117,6 @@ jobs:
   # for later jobs.
 
   build-board:
-    # NOTE: this name is hardcoded in ci_collect_data.py
     name: Build for ${{ matrix.board }}
     runs-on: ubuntu-latest
     needs:
@@ -242,15 +241,21 @@ jobs:
           overwrite: true
           retention-days: 1
 
-      # publish the success of this job for the jobs that depend on it
+      # publish the outcome of this job for the jobs that depend on it
       - name: Mark build as completed
+        if: ${{ !cancelled() }}
+        env:
+          ID: ${{ matrix.id }}
+          STATUS: ${{ job.status }}
+          JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.check_run_id }}
         run: |
           mkdir -p prereqs
-          echo "build-${{ matrix.board }}" > prereqs/build-${{ matrix.board }}
+          jq -n '{ id: env.ID, status: env.STATUS, job_url: env.JOB_URL }' > prereqs/${ID}.json
 
       - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
         with:
-          name: prereq-build-${{ matrix.board }}
+          name: prereq-${{ matrix.id }}
           path: prereqs/
           overwrite: true # replace the marker of a previous attempt
           retention-days: 1
@@ -361,16 +366,22 @@ jobs:
           path: ${{ matrix.artifact }}.id
           overwrite: true
 
-      # publish the success of this job for the jobs that depend on it
+      # publish the outcome of this job for the jobs that depend on it
       - name: Mark package as completed
+        if: ${{ !cancelled() }}
+        env:
+          ID: ${{ matrix.id }}
+          STATUS: ${{ job.status }}
+          JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.check_run_id }}
         run: |
           mkdir -p prereqs
-          echo "package-${{ matrix.artifact }}" > prereqs/package-${{ matrix.artifact }}
+          jq -n '{ id: env.ID, status: env.STATUS, job_url: env.JOB_URL }' > prereqs/${ID}.json
 
       # kept as long as the core package, for later test runs
       - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
         with:
-          name: prereq-package-${{ matrix.artifact }}
+          name: prereq-${{ matrix.id }}
           path: prereqs/
           overwrite: true # replace the marker of a previous attempt
 
@@ -460,7 +471,6 @@ jobs:
   #  - the Zephyr build environment
   #  - the API and per-board binaries
   #  - the artifact download URLs
-  #  - the board build completion markers
 
   cleanup-build:
     name: Clean up intermediates
@@ -481,7 +491,6 @@ jobs:
             binaries-*
             build-env.tar.zstd
             artifact-id-*
-            prereq-build-*
           failOnError: false
 
 
@@ -489,7 +498,6 @@ jobs:
   # Test the just built core packages, see test_core.yml for details.
 
   test-core:
-    # NOTE: this name is part of the test job names used in ci_collect_data.py
     name: Test
     needs:
       - build-env
@@ -522,8 +530,6 @@ jobs:
     env:
       ALL_BOARD_DATA: ${{ needs.build-env.outputs.ALL_BOARD_DATA }}
       CORE_VER: ${{ needs.build-env.outputs.CORE_VER }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
     steps:
 
       - uses: actions/checkout@v6
@@ -538,10 +544,16 @@ jobs:
           pattern: "*-report-*"
           merge-multiple: true
 
+      # job completion markers, with the links to each job log
+      - uses: actions/download-artifact@v8
+        continue-on-error: true # links are optional
+        with:
+          path: prereqs/
+          pattern: prereq-*
+          merge-multiple: true
+
       - name: Generate workflow summary
         run: |
-          # gather the array of job metadata (especially name and ID) for the current workflow run
-          export WORKFLOW_JOBS=$(gh run view ${{ github.run_id }} --attempt ${{ github.run_attempt }} --json jobs --jq '.jobs')
           # Archive the input set of reports for later inspection
           tar jchf build-reports-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2 zephyr-* arduino-*.json
           # Collect all CI data into a JSON file, then generate the report
@@ -652,6 +664,8 @@ jobs:
           name: |
             build-report-*
             test-report-*
+            prereq-build-*
+            prereq-test-*
           failOnError: false
 
 
