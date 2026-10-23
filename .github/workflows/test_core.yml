@@ -100,7 +100,8 @@ jobs:
 
   # For each board and link mode, compile all test sketches using the core
   # packages. The compilation reports are archived for later inspection.
-  # This step never fails, so that expected errors do not block the CI run.
+  # Each job fails as soon as its own results include unexpected errors, to
+  # give early feedback; the overall verdict is still given by verify-core.
 
   test-core:
     # NOTE: this name is hardcoded in ci_collect_data.py
@@ -128,8 +129,11 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             extra/ci_apply_tests.sh
+            extra/ci_check_test_report.py
+            extra/ci_shared.py
             extra/artifacts/
             variants/*/test_setup.sh
+            variants/*/known_example_issues.txt
           sparse-checkout-cone-mode: false
 
       - uses: actions/download-artifact@v8
@@ -202,3 +206,10 @@ jobs:
           path: sketches-reports/*
           overwrite: true
           retention-days: 1
+
+      # compilation errors do not fail the step above, check them against the
+      # known issues of this variant to fail the job early on unexpected errors
+      - name: Check test results
+        if: ${{ success() || failure() }}
+        run: |
+          extra/ci_check_test_report.py ${{ matrix.variant }} sketches-reports/${REPORT_FILE}
