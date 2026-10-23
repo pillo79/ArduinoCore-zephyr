@@ -133,7 +133,7 @@ for board_data in ALL_BOARD_DATA.values():
         # Get job link for this test
         job_link = JOB_URLS.get(f"test-{board}-{link_mode}")
         if job_link:
-            job_link += "#step:6:1"
+            job_link += "#step:7:1"
 
         # Extract data from the report file
         report_file = f"arduino-{subarch}-{board}-link_mode={link_mode}.json"
