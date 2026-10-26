@@ -1,0 +1,45 @@
+# Copyright (c) Arduino s.r.l. and/or its affiliated companies
+# SPDX-License-Identifier: Apache-2.0
+
+# Re-run the failed jobs of a core CI run when they failed because of
+# infrastructure issues (network timeouts and similar), see
+# extra/ci_rerun_infra_failures.sh for the exact rules.
+#
+# This workflow only reads run data and requests re-runs via the API: no code
+# from the checked run is executed, so it is safe for pull requests from forks.
+
+name: Re-run infrastructure failures
+
+on:
+  workflow_run:
+    workflows: ["Package, test and upload core"]
+    types:
+      - completed
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.id }}
+
+jobs:
+  rerun:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'timed_out' }}
+    steps:
+
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            extra/ci_rerun_infra_failures.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Re-run infrastructure failures
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          extra/ci_rerun_infra_failures.sh
