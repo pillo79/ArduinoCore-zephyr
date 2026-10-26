@@ -108,6 +108,8 @@ jobs:
         timeout-minutes: 10 # early error on Github network issues
         env:
           WEST_CACHE: ${{ runner.temp }}/west-cache
+          # not needed for building, dtc is installed in the build jobs
+          SDK_INSTALL_OPTS: --no-hosttools
         run: |
           # Install Zephyr as a core user would, but faster
           yes | ./extra/bootstrap.sh -o=--filter=tree:0
@@ -126,6 +128,8 @@ jobs:
           # - the core version, passed to the build jobs by this one.
           west list -f '{abspath}' | awk '{ print $1 "/.git" }' \
             | sed "s|^$HOME/||" > ~/build-env.exclude
+          # the SDK host tools are not installed, skip their installer too
+          echo "zephyr-sdk-*/hosttools" >> ~/build-env.exclude
           # Only archive the west workspace: the rest of ~/work belongs to the
           # runner (including the west cache in runner.temp).
           TOPDIR=$(realpath --relative-to=$HOME $(west topdir))
@@ -214,7 +218,7 @@ jobs:
           sudo apt-get remove --purge man-db -y # skips the mandb triggers
           sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt 2>/dev/null || true # unreliable mirror
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build ccache
+          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build ccache device-tree-compiler
           (cd ~ && tar --use-compress-program=unzstd -xpf build-env.tar.zstd && rm build-env.tar.zstd)
 
       - name: ccache
