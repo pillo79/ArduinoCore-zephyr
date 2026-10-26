@@ -112,11 +112,19 @@ jobs:
           # Install Zephyr as a core user would, but faster
           yes | ./extra/bootstrap.sh -o=--filter=tree:0
           # Archive the build environment for later jobs. The .git folders of
-          # west projects are not needed for building, so skip them, except
-          # for the core (version detection) and Zephyr (build version).
+          # west projects are not needed for building: the information builds
+          # take from them is recorded here instead.
           source venv/bin/activate
-          west list -f '{name} {abspath}' \
-            | awk '$1 != "manifest" && $1 != "zephyr" { print $2 "/.git" }' \
+          # - the Zephyr build version, stored in the west configuration;
+          ZEPHYR_BUILD_VERSION=$(git -C $(west list -f '{abspath}' zephyr) describe --abbrev=12 --always)
+          west config build.cmake-args -- "-DBUILD_VERSION=$ZEPHYR_BUILD_VERSION"
+          # - the manifests imported from other projects (Zephyr's provides its
+          #   west commands and modules), which west reads from their git data:
+          #   use a resolved copy of the manifest, which needs no imports;
+          west manifest --resolve --active-only > west-resolved.yml
+          west config manifest.file west-resolved.yml
+          # - the core version, passed to the build jobs by this one.
+          west list -f '{abspath}' | awk '{ print $1 "/.git" }' \
             | sed "s|^$HOME/||" > ~/build-env.exclude
           # Only archive the west workspace: the rest of ~/work belongs to the
           # runner (including the west cache in runner.temp).
@@ -182,6 +190,8 @@ jobs:
       CCACHE_IGNOREOPTIONS: -specs=*
       # build-specific name of the generated artifacts
       ARTIFACT_TAG: ${{ needs.build-env.outputs.CORE_HASH }}-${{ matrix.board }}
+      # the core .git folder is not archived, use the version computed by build-env
+      PINNED_CORE_VERSION: ${{ needs.build-env.outputs.CORE_VER }}
       # report file stem for this board
       REPORT: reports/zephyr-${{ matrix.variant }}
     strategy:
