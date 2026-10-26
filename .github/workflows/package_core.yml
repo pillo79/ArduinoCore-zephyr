@@ -111,8 +111,12 @@ jobs:
         run: |
           # Install Zephyr as a core user would, but faster
           yes | ./extra/bootstrap.sh -o=--filter=tree:0
-          # Archive the build environment for later jobs
-          (cd && tar cphf - .cmake work zephyr-sdk-* | zstd > build-env.tar.zstd)
+          # Archive the build environment for later jobs. Only archive the
+          # west workspace: the rest of ~/work belongs to the runner (including
+          # the west cache in runner.temp).
+          source venv/bin/activate
+          TOPDIR=$(realpath --relative-to=$HOME $(west topdir))
+          (cd && tar cphf - .cmake $TOPDIR zephyr-sdk-* | zstd > build-env.tar.zstd)
 
       - name: Get ci-builds package index link
         if: ${{ github.repository == 'arduino/ArduinoCore-zephyr' }}
