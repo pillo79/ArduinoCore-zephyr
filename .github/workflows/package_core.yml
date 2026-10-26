@@ -59,7 +59,7 @@ jobs:
 
       - name: Install OS dependencies
         working-directory: /opt
-        timeout-minutes: 5 # early error on Github network issues
+        timeout-minutes: 10 # early error on Github network issues
         run: |
           sudo apt-get remove --purge man-db -y # skips the mandb triggers
           sudo apt-get update
@@ -180,14 +180,14 @@ jobs:
     steps:
 
       - uses: actions/download-artifact@v8
-        timeout-minutes: 10 # early error on Github network issues
+        timeout-minutes: 15 # early error on Github network issues
         with:
           path: /home/runner
           name: build-env.tar.zstd
 
       - name: Restore build environment
         id: restore-env
-        timeout-minutes: 5 # early error on Github network issues
+        timeout-minutes: 10 # early error on Github network issues
         run: |
           sudo apt-get remove --purge man-db -y # skips the mandb triggers
           sudo apt-get update
