@@ -62,6 +62,7 @@ jobs:
         timeout-minutes: 5 # early error on Github network issues
         run: |
           sudo apt-get remove --purge man-db -y # skips the mandb triggers
+          sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt 2>/dev/null || true # unreliable mirror
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build
 
@@ -190,6 +191,7 @@ jobs:
         timeout-minutes: 5 # early error on Github network issues
         run: |
           sudo apt-get remove --purge man-db -y # skips the mandb triggers
+          sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt 2>/dev/null || true # unreliable mirror
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build ccache
           (cd ~ && tar --use-compress-program=unzstd -xpf build-env.tar.zstd && rm build-env.tar.zstd)
