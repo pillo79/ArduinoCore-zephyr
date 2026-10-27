@@ -62,6 +62,7 @@ jobs:
         timeout-minutes: 5 # early error on Github network issues
         run: |
           sudo apt-get remove --purge man-db -y # skips the mandb triggers
+          sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt 2>/dev/null || true # unreliable mirror
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build
 
@@ -107,11 +108,34 @@ jobs:
         timeout-minutes: 10 # early error on Github network issues
         env:
           WEST_CACHE: ${{ runner.temp }}/west-cache
+          # not needed for building, dtc is installed in the build jobs
+          SDK_INSTALL_OPTS: --no-hosttools
         run: |
           # Install Zephyr as a core user would, but faster
           yes | ./extra/bootstrap.sh -o=--filter=tree:0
-          # Archive the build environment for later jobs
-          (cd && tar cphf - .cmake work zephyr-sdk-* | zstd > build-env.tar.zstd)
+          # Archive the build environment for later jobs. The .git folders of
+          # west projects are not needed for building: the information builds
+          # take from them is recorded here instead.
+          source venv/bin/activate
+          # - the Zephyr build version, stored in the west configuration;
+          ZEPHYR_BUILD_VERSION=$(git -C $(west list -f '{abspath}' zephyr) describe --abbrev=12 --always)
+          west config build.cmake-args -- "-DBUILD_VERSION=$ZEPHYR_BUILD_VERSION"
+          # - the manifests imported from other projects (Zephyr's provides its
+          #   west commands and modules), which west reads from their git data:
+          #   use a resolved copy of the manifest, which needs no imports;
+          west manifest --resolve --active-only > west-resolved.yml
+          west config manifest.file west-resolved.yml
+          # - the core version, passed to the build jobs by this one.
+          west list -f '{abspath}' | awk '{ print $1 "/.git" }' \
+            | sed "s|^$HOME/||" > ~/build-env.exclude
+          # the SDK host tools are not installed, skip their installer too
+          echo "zephyr-sdk-*/hosttools" >> ~/build-env.exclude
+          # Only archive the west workspace: the rest of ~/work belongs to the
+          # runner (including the west cache in runner.temp).
+          TOPDIR=$(realpath --relative-to=$HOME $(west topdir))
+          (cd && tar cphf - --exclude-from=build-env.exclude .cmake $TOPDIR zephyr-sdk-* \
+                | zstd -T0 -9 --long=27 > build-env.tar.zstd)
+          ls -lh ~/build-env.tar.zstd
 
       - name: Get ci-builds package index link
         if: ${{ github.repository == 'arduino/ArduinoCore-zephyr' }}
@@ -170,6 +194,8 @@ jobs:
       CCACHE_IGNOREOPTIONS: -specs=*
       # build-specific name of the generated artifacts
       ARTIFACT_TAG: ${{ needs.build-env.outputs.CORE_HASH }}-${{ matrix.board }}
+      # the core .git folder is not archived, use the version computed by build-env
+      PINNED_CORE_VERSION: ${{ needs.build-env.outputs.CORE_VER }}
       # report file stem for this board
       REPORT: reports/zephyr-${{ matrix.variant }}
     strategy:
@@ -190,8 +216,9 @@ jobs:
         timeout-minutes: 5 # early error on Github network issues
         run: |
           sudo apt-get remove --purge man-db -y # skips the mandb triggers
+          sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt 2>/dev/null || true # unreliable mirror
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build ccache
+          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build ccache device-tree-compiler
           (cd ~ && tar --use-compress-program=unzstd -xpf build-env.tar.zstd && rm build-env.tar.zstd)
 
       - name: ccache
