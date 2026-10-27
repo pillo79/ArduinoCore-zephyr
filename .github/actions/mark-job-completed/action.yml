@@ -1,0 +1,50 @@
+# Copyright (c) Arduino s.r.l. and/or its affiliated companies
+# SPDX-License-Identifier: Apache-2.0
+
+# Publish the outcome of the current job as a 'prereq-<id>' marker artifact,
+# containing a <id>.json marker file with its final status and the URL of its
+# log:
+#
+#   {
+#     "id": "<id>",
+#     "status": "success" | "failure",
+#     "job_url": "<URL of the job log>"
+#   }
+#
+# The markers are used by ci_collect_data.py to link each job log in the CI
+# summary.
+#
+# Must be the last step of the job, run with 'if: !cancelled()', so that the
+# status of all previous steps is accounted for.
+
+name: Mark job as completed
+description: Publish the outcome of the current job as a marker artifact
+
+inputs:
+  id:
+    description: Id of the job, as listed in the matrix entries
+    required: true
+  retention-days:
+    description: Marker retention, in days (repository default if empty)
+    default: ''
+
+runs:
+  using: composite
+  steps:
+
+    - name: Create marker
+      shell: bash
+      env:
+        ID: ${{ inputs.id }}
+        STATUS: ${{ job.status }}
+        JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.check_run_id }}
+      run: |
+        mkdir -p prereqs
+        jq -n '{ id: env.ID, status: env.STATUS, job_url: env.JOB_URL }' > prereqs/${ID}.json
+
+    - uses: actions/upload-artifact@v7
+      with:
+        name: prereq-${{ inputs.id }}
+        path: prereqs/
+        overwrite: true # replace the marker of a previous attempt
+        retention-days: ${{ inputs.retention-days }}

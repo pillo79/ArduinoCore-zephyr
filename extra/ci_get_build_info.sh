@@ -22,6 +22,9 @@
 #  - SUB_ARCHES: list of architectures the artifacts are built for
 #  - CI_BUILDS_URL: latest ci-builds index for this branch (official repo only)
 #
+# Each entry of ALL_BOARD_DATA and ALL_BOARD_FQBNS has an 'id' naming the job
+# built from it: "build-<board>" and "test-<board>-<link_mode>" respectively.
+#
 # Usage: ci_get_build_info.sh [<ref>]
 #  <ref> is the commit used for CORE_HASH (defaults to HEAD).
 
@@ -36,7 +39,7 @@ REF=${1:-HEAD}
 OUTPUT=${GITHUB_ENV:-/dev/stdout}
 
 CORE_HASH=$(git describe --always $REF)
-ALL_BOARD_DATA=$(extra/get_board_details.sh | jq -c 'sort_by(.variant)')
+ALL_BOARD_DATA=$(extra/get_board_details.sh | jq -c 'sort_by(.variant) | map(. + {id: "build-\(.board)"})')
 CORE_VER=$(extra/get_core_version.sh)
 CORE_TAG=$(git describe --tags --exact-match --exclude '*/*' 2>/dev/null || echo $CORE_HASH)
 if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
@@ -45,7 +48,7 @@ if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
 else
 	CORE_BRANCH=${GITHUB_BASE_REF:-$GITHUB_REF_NAME}
 fi
-ALL_BOARD_FQBNS=$(jq -c 'map((. + {link_mode: "static"}), (. + {link_mode: "dynamic"}))' <<< ${ALL_BOARD_DATA})
+ALL_BOARD_FQBNS=$(jq -c 'map((. + {link_mode: "static"}), (. + {link_mode: "dynamic"})) | map(. + {id: "test-\(.board)-\(.link_mode)"})' <<< ${ALL_BOARD_DATA})
 ARTIFACTS=$(jq -c '["zephyr"] + (map(.artifact) | unique)' <<< ${ALL_BOARD_DATA})
 SUB_ARCHES=$(jq -c 'map(.subarch) | unique' <<< ${ALL_BOARD_DATA})
 

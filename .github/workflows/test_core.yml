@@ -104,8 +104,7 @@ jobs:
   # give early feedback; the overall verdict is still given by verify-core.
 
   test-core:
-    # NOTE: this name is hardcoded in ci_collect_data.py
-    name: Test ${{ matrix.board }}:${{ matrix.link_mode }}
+    name: ${{ matrix.board }}:${{ matrix.link_mode }}
     runs-on: ubuntu-latest
     needs:
       - prepare
@@ -128,6 +127,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           sparse-checkout: |
+            .github/actions/mark-job-completed/
             extra/ci_apply_tests.sh
             extra/ci_check_test_report.py
             extra/ci_shared.py
@@ -213,3 +213,11 @@ jobs:
         if: ${{ success() || failure() }}
         run: |
           extra/ci_check_test_report.py ${{ matrix.variant }} sketches-reports/${REPORT_FILE}
+
+      # publish the outcome of this job, with its log link, for the CI summary
+      - name: Mark test as completed
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/mark-job-completed
+        with:
+          id: ${{ matrix.id }}
+          retention-days: 1
