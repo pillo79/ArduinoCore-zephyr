@@ -12,7 +12,8 @@
 
 #if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
 #include <zephyr/net/tls_credentials.h>
-#define CA_CERTIFICATE_TAG_BASE 1
+#define CA_BUILTIN_TAG 1
+#define CA_CUSTOM_TAG  2
 #endif
 
 #include <cstring>
@@ -183,7 +184,6 @@ bool ZephyrSocketWrapper::connectSSL(const char *host, uint16_t port, const char
 
 	sec_tag_t sec_tag_opt[2];
 	int tag_count = 0;
-	int tag = CA_CERTIFICATE_TAG_BASE;
 
 	struct timeval timeout_opt = {
 		.tv_sec = 0,
@@ -205,26 +205,27 @@ bool ZephyrSocketWrapper::connectSSL(const char *host, uint16_t port, const char
 	}
 
 #if defined(CONFIG_FILE_SYSTEM)
-	// Try to load builtin CA from filesystem (once)
-	if (cadata == nullptr && loadCADataFromFS()) {
-		// Successfully loaded, add with tag (ignore errors)
-		if (tls_credential_add(tag++, TLS_CREDENTIAL_CA_CERTIFICATE, cadata, cadata_len)) {
+	// Load the builtin CA once, but include its tag in every connection.
+	if (cadata != nullptr || loadCADataFromFS()) {
+		ret = tls_credential_add(CA_BUILTIN_TAG, TLS_CREDENTIAL_CA_CERTIFICATE, cadata, cadata_len);
+		if (ret != 0 && ret != -EEXIST) {
 			goto exit;
 		}
+		sec_tag_opt[tag_count++] = CA_BUILTIN_TAG;
 	}
 #endif
 
-	// Add custom CA if provided (uses next available tag)
+	// Replace the previous custom CA without changing the builtin CA's tag.
 	if (cert != nullptr) {
-		if (tls_credential_add(tag++, TLS_CREDENTIAL_CA_CERTIFICATE, cert, strlen(cert) + 1) != 0) {
+		ret = tls_credential_delete(CA_CUSTOM_TAG, TLS_CREDENTIAL_CA_CERTIFICATE);
+		if (ret != 0 && ret != -ENOENT) {
 			goto exit;
 		}
-	}
-
-	// Build sequential tag list
-	tag_count = tag - CA_CERTIFICATE_TAG_BASE;
-	for (int i = 0; i < tag_count; i++) {
-		sec_tag_opt[i] = CA_CERTIFICATE_TAG_BASE + i;
+		if (tls_credential_add(CA_CUSTOM_TAG, TLS_CREDENTIAL_CA_CERTIFICATE, cert,
+							   strlen(cert) + 1) != 0) {
+			goto exit;
+		}
+		sec_tag_opt[tag_count++] = CA_CUSTOM_TAG;
 	}
 
 	raw_sock_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TLS_1_2);
