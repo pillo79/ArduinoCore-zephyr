@@ -40,6 +40,12 @@ int ZephyrClient::connectSSL(const char *host, uint16_t port, const char *cert) 
 #endif
 uint8_t ZephyrClient::connected() {
 	uint8_t buf;
+
+	if (sock_fd == nullptr) {
+		_connected = false;
+		return _connected;
+	}
+
 	int ret = ::recv(*sock_fd, &buf, 1, MSG_PEEK | MSG_DONTWAIT);
 	if (ret == 0) {
 		stop();
