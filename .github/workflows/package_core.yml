@@ -529,7 +529,7 @@ jobs:
       core-run-id: ${{ github.run_id }}
       core-version: ${{ needs.build-env.outputs.CORE_VER }}
       min-attempt: ${{ needs.build-env.outputs.BUILD_ATTEMPT }}
-      upload-results: ${{ github.repository == 'arduino/ArduinoCore-zephyr' && !startsWith(github.ref_name, 'dependabot/') }}
+      upload-results: ${{ github.repository == 'pillo79/ArduinoCore-zephyr' && !startsWith(github.ref_name, 'dependabot/') }} # TEMP (fork test)
     secrets:
       CI_BUILDS_TOKEN: ${{ secrets.CI_BUILDS_TOKEN }}
 

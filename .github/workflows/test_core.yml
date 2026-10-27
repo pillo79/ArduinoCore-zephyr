@@ -330,7 +330,7 @@ jobs:
 
       # Run the composite action in this context to create a proper OIDC token
       # for this repo and start the internal workflows.
-      - uses: arduino/core-ci-builds@main
+      - uses: pillo79/ci-builds@main # TEMP (fork test)
         with:
           token: ${{ secrets.CI_BUILDS_TOKEN }}
           version: ${{ env.CORE_VER }}

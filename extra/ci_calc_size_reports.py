@@ -26,7 +26,7 @@ import requests
 import re
 import sys
 
-REFERENCE_URL = "https://arduino.github.io/core-ci-builds/snippets/arduino/ArduinoCore-zephyr/{}/latest/test_info.json"
+REFERENCE_URL = "https://pillo79.github.io/ci-builds/snippets/pillo79/ArduinoCore-zephyr/{}/latest/test_info.json" # TEMP (fork test)
 
 def update_final_deltas(final, abs_max, delta):
     """

@@ -18,7 +18,7 @@ concurrency:
 env:
   # Branches tested daily. Their names must not contain '/', as they are
   # used as a single path component in ci-builds.
-  DAILY_BRANCHES: main
+  DAILY_BRANCHES: ci-results-test # TEMP (fork test)
 
 jobs:
 
@@ -44,8 +44,28 @@ jobs:
 
 
 
+  # TEMP (fork test): no published core packages on forks, test the ones of
+  # the package_core push run of this commit instead
+  find-core:
+    name: Find core packages
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      run: ${{ steps.find.outputs.run }}
+    steps:
+      - id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/package_core.yml/runs?head_sha=$GITHUB_SHA&event=push&status=completed" --jq '.workflow_runs[0].id // empty')
+          [ -n "$RUN" ] || { echo "::error::No package_core push run for $GITHUB_SHA"; exit 1; }
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+
   test:
     name: Test
+    needs: find-core # TEMP (fork test)
     if: ${{ github.event_name == 'workflow_dispatch' }}
     permissions:
       id-token: write   # required by ci-builds upload
@@ -53,6 +73,7 @@ jobs:
       actions: read
     uses: ./.github/workflows/test_core.yml
     with:
-      upload-results: ${{ github.repository == 'arduino/ArduinoCore-zephyr' }}
+      core-run-id: ${{ needs.find-core.outputs.run }} # TEMP (fork test)
+      upload-results: ${{ github.repository == 'pillo79/ArduinoCore-zephyr' }} # TEMP (fork test)
     secrets:
       CI_BUILDS_TOKEN: ${{ secrets.CI_BUILDS_TOKEN }}
