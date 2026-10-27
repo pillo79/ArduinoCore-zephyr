@@ -1,0 +1,79 @@
+# Copyright (c) Arduino s.r.l. and/or its affiliated companies
+# SPDX-License-Identifier: Apache-2.0
+
+# Run the core tests daily on a set of branches, using the core packages
+# published for the latest commit of each branch (see test_core.yml), and
+# store the results in ci-builds as the reference for later test runs.
+
+name: Daily core tests
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+
+env:
+  # Branches tested daily. Their names must not contain '/', as they are
+  # used as a single path component in ci-builds.
+  DAILY_BRANCHES: ci-results-test # TEMP (fork test)
+
+jobs:
+
+  # Results are stored in ci-builds under the branch of the workflow run, so
+  # each branch is tested by a separate run, dispatched on that branch.
+
+  dispatch:
+    name: Dispatch daily tests
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+
+      - name: Start a test run on each branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for BRANCH in $DAILY_BRANCHES; do
+            gh workflow run daily_tests.yml -R "$GITHUB_REPOSITORY" --ref "$BRANCH" \
+              || echo "::warning::Could not start the daily tests on $BRANCH"
+          done
+
+
+
+  # TEMP (fork test): no published core packages on forks, test the ones of
+  # the package_core push run of this commit instead
+  find-core:
+    name: Find core packages
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      run: ${{ steps.find.outputs.run }}
+    steps:
+      - id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/package_core.yml/runs?head_sha=$GITHUB_SHA&event=push&status=completed" --jq '.workflow_runs[0].id // empty')
+          [ -n "$RUN" ] || { echo "::error::No package_core push run for $GITHUB_SHA"; exit 1; }
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: Test
+    needs: find-core # TEMP (fork test)
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    permissions:
+      id-token: write   # required by ci-builds upload
+      contents: read
+      actions: read
+    uses: ./.github/workflows/test_core.yml
+    with:
+      core-run-id: ${{ needs.find-core.outputs.run }} # TEMP (fork test)
+      upload-results: ${{ github.repository == 'pillo79/ArduinoCore-zephyr' }} # TEMP (fork test)
+    secrets:
+      CI_BUILDS_TOKEN: ${{ secrets.CI_BUILDS_TOKEN }}
