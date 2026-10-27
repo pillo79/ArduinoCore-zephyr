@@ -599,10 +599,12 @@ jobs:
 
       - name: Compute code size changes
         if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_BRANCH: ${{ github.base_ref }}
         run: |
-          export GITHUB_BASE_SHA=$(git rev-list --parents -n 1 HEAD | cut -d' ' -f2)
-          # errors due to race conditions with parallel branch runs should not fail the job
-          extra/ci_calc_size_reports.py ${GITHUB_BASE_SHA} sketches-reports/ || true
+          # compare with the latest test results of the base branch in ci-builds;
+          # errors fetching them should not fail the job
+          extra/ci_calc_size_reports.py "$BASE_BRANCH" sketches-reports/ || true
 
       # upload build metadata artifact, for upload to ci-builds
       - name: Archive build metadata information

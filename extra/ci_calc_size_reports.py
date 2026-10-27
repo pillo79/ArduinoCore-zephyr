@@ -3,76 +3,30 @@
 # Copyright (c) Arduino s.r.l. and/or its affiliated companies
 # SPDX-License-Identifier: Apache-2.0
 
-# Script to analyze CI test logs, download previously generated size reports,
-# and calculate size deltas in the official JSON report format.
+# Script to calculate the size deltas of the current CI test reports against
+# the most recent test results of the base branch, in the official JSON report
+# format.
 #
 # This scripts expects the following arguments:
-#  - <prev_sha>: SHA of the base report to get, used for delta calculation
+#  - <base_branch>: branch whose latest test results are used as reference
 #  - <reports_folder>: directory to populate with the delta reports
 #
 # The script performs the following actions:
-# - downloads the previous report archive from AWS
-# - extracts it in the output folder
-# - for each JSON report file in the output folder:
-#   - calculates the delta with the corresponding report in the
-#     current directory (if it exists and both reports are valid)
-#   - updates the output report file with the delta information.
+# - downloads the latest test results of the base branch from ci-builds (the
+#   most recent daily or push test run, see ci_pack_test_results.sh)
+# - for each JSON report file in the current directory that has a valid
+#   reference, writes a copy with the delta information in the output folder.
 
 from collections import defaultdict
 import copy
+import glob
 import json
 import os
-from pathlib import Path
 import requests
 import re
 import sys
-import tarfile
 
-def extract_url(url, file_pattern, sha, local_path):
-    """
-    Download and extract a tar.bz2 archive from a URL, trying with truncated
-    versions of the SHA until a match is found. The archive is expected to
-    contain size reports in JSON format. The extracted files will be placed in
-    the specified local path. If no archive is found for the given SHA, a
-    FileNotFoundError is raised.
-    """
-
-    session = requests.Session()
-
-    # try with the input SHA, then with truncated versions
-    # until we find a match or run out of characters
-    while len(sha) > 6:
-        file = file_pattern.format(sha)
-        archive_url = f"{url}/{file}"
-        archive_path = Path(local_path) / file
-        try:
-            os.makedirs(local_path, exist_ok=True)
-            response = session.get(archive_url)
-            if response.status_code == 404:
-                sha = sha[:-1]
-                continue
-            # raise other errors
-            response.raise_for_status()
-            with open(archive_path, 'wb') as f:
-                f.write(response.content)
-            print(f"Downloaded {archive_url}")
-            break
-        except Exception as e:
-            print(f"Error downloading {url}: {e}")
-            raise
-
-    if not archive_path.exists():
-        raise FileNotFoundError(f"Could not find size archive for SHA {sha}")
-
-    try:
-        with tarfile.open(archive_path, 'r:bz2') as tar:
-            tar.extractall(path=local_path)
-        print(f"Extracted {archive_path} to {local_path}")
-    except Exception as e:
-        print(f"Error extracting {archive_path}: {e}")
-        raise
-
-    os.remove(archive_path)
+REFERENCE_URL = "https://arduino.github.io/core-ci-builds/snippets/arduino/ArduinoCore-zephyr/{}/latest/test_info.json"
 
 def update_final_deltas(final, abs_max, delta):
     """
@@ -118,44 +72,46 @@ def range_str(delta):
         return f"{dmin_str}..{dmax_str}"
 
 if not len(sys.argv) == 3:
-    print("Usage: ci_size_reports.py <prev_sha> <output_folder>")
+    print("Usage: ci_calc_size_reports.py <base_branch> <output_folder>")
     sys.exit(1)
 
-prev_sha = sys.argv[1]
+base_branch = sys.argv[1]
 output_folder = sys.argv[2]
 
-headers = [ "Package",  "Board",    "Options",  "Flash",    " RAM ",    "Tests",    f"vs {prev_sha}" ]
+# get the latest test results of the base branch
+response = requests.get(REFERENCE_URL.format(base_branch))
+if response.status_code == 404:
+    print(f"::notice::No test results available for '{base_branch}', size deltas not computed")
+    sys.exit(0)
+response.raise_for_status()
+reference = response.json()
+old_reports = reference['reports'] # { fqbn: board report }
+print(f"Reference: {reference['event']} test of {reference['core_version']} ({reference['timestamp']})")
+
+headers = [ "Package",  "Board",    "Options",  "Flash",    " RAM ",    "Tests",    f"vs {reference['event']} {reference['core_version']}" ]
 formats = [ "{{:<{}}}", "{{:<{}}}", "{{:<{}}}", "{{:^{}}}", "{{:^{}}}", "{{:>{}}}", "{{:<{}}}" ]
 data_lines = []
 col_widths = [ len(header) for header in headers ]
 
 name_regexp = re.compile(r'(libraries|examples)/([^/]+)/(examples/|extras/)?(.*)')
 
-# get the previous data to the output folder
-extract_url("https://downloads.arduino.cc/cores/zephyr/size-reports",
-            "size-reports-{}.tar.bz2", prev_sha, output_folder)
-
-# find every JSON file in the output folder
-old_jsons = []
-max_package_len = 0
-max_board_len = 0
-max_mode_len = 0
-for dirent in os.scandir(output_folder):
-    if dirent.is_file() and dirent.name.endswith(".json"):
-        package, board, opts = dirent.name[:-5].split('-')[1:4]
-        old_jsons.append(( package, board, opts, dirent ))
-
-# calculate deltas and update output files
-for package, board, opts, dirent in sorted(old_jsons):
-    with open(dirent.path, 'r') as f:
-        old_report_data = json.load(f)
-    # test if the current file exists
-    if not os.path.exists(dirent.name):
-        # no: remove the old report to prevent confusion
-        os.remove(dirent.path)
-        continue
-    with open(dirent.name, 'r') as f:
+# pair every current report with its reference, by FQBN
+reports = []
+for report_file in glob.glob("arduino-*.json"):
+    with open(report_file, 'r') as f:
         new_report_data = json.load(f)
+    fqbn = new_report_data.get('boards', [{}])[0].get('board')
+    old_board_report = old_reports.get(fqbn)
+    if not old_board_report:
+        # no current results, or no reference for this FQBN
+        continue
+    package, board, opts = fqbn.split(':')[1:4]
+    reports.append(( package, board, opts, report_file, new_report_data, { 'boards': [ old_board_report ] } ))
+
+os.makedirs(output_folder, exist_ok=True)
+
+# calculate deltas and write output files
+for package, board, opts, report_file, new_report_data, old_report_data in sorted(reports, key=lambda r: r[:3]):
 
     # the output file will be a copy of the new data, plus some fields
     output_report_data = copy.deepcopy(new_report_data)
@@ -234,8 +190,8 @@ for package, board, opts, dirent in sorted(old_jsons):
             **final_values
         })
 
-    # overwite old file with new data + valid deltas
-    with open(dirent.path, 'w') as f:
+    # write new data + valid deltas
+    with open(os.path.join(output_folder, report_file), 'w') as f:
         json.dump(output_report_data, f, indent=2)
 
     # generate a line for the summary table
