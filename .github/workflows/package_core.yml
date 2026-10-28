@@ -669,9 +669,9 @@ jobs:
             build-report-*
             test-report-*
             prereq-build-*
-            prereq-package-*
             prereq-test-*
           failOnError: false
+          # TEMP (fork test): prereq-package-* kept for the daily test run
 
 
 
