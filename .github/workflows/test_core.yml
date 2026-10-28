@@ -89,37 +89,49 @@ jobs:
       - name: Find core packages
         env:
           CORE_RUN_ID: ${{ inputs.core-run-id }}
+          GH_TOKEN: ${{ github.token }}
         run: |
+          # Core packages built outside this run cannot change during it: mark
+          # each available one as completed, for ci_filter_matrix.sh -x. Those
+          # of this run are marked by their own jobs.
+          mkdir -p prereqs-ext
           if [ -z "$CORE_RUN_ID" ]; then
-            # test the published core packages for this commit (see publish-core
-            # in package_core.yml): they cannot change during this run, so mark
-            # each available one as completed, for ci_filter_matrix.sh -x
-            mkdir -p prereqs-ext
+            # the published core packages for this commit (see publish-core in
+            # package_core.yml)
             for ARTIFACT in $(jq -r '.[] | select(. != "zephyr")' <<< "$ARTIFACTS"); do
               if wget -q --method=HEAD "$PUBLISHED_CORE_URL/ArduinoCore-$ARTIFACT-$CORE_HASH.tar.bz2" >& /dev/null ; then
                 jq -n --arg id "package-$ARTIFACT" '{ id: $id, status: "success" }' > prereqs-ext/package-$ARTIFACT.json
               fi
             done
+            WHERE="published at $PUBLISHED_CORE_URL"
+          elif [ "$CORE_RUN_ID" != "$GITHUB_RUN_ID" ]; then
+            # the core package artifacts of another workflow run
+            CORE_ARTIFACTS=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$CORE_RUN_ID/artifacts?per_page=100" \
+                               --jq '.artifacts[] | select(.expired | not) | .name')
+            for ARTIFACT in $(jq -r '.[] | select(. != "zephyr")' <<< "$ARTIFACTS"); do
+              if grep -qxF "ArduinoCore-$ARTIFACT-$CORE_HASH.tar.bz2" <<< "$CORE_ARTIFACTS" ; then
+                jq -n --arg id "package-$ARTIFACT" '{ id: $id, status: "success" }' > prereqs-ext/package-$ARTIFACT.json
+              fi
+            done
+            WHERE="of run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$CORE_RUN_ID"
+          fi
+          if [ -n "$WHERE" ]; then
             if [ -z "$(ls prereqs-ext/)" ]; then
-              echo "::error::No published core packages found for $CORE_HASH"
+              echo "::error::No core packages found for $CORE_HASH"
               exit 1
             fi
-            echo "::notice::Testing core packages published at $PUBLISHED_CORE_URL"
+            echo "::notice::Testing core packages $WHERE"
           fi
           echo "CORE_RUN_ID=$CORE_RUN_ID" >> "$GITHUB_ENV"
 
-      # package markers of the run holding the core packages; those of another
-      # run cannot change during this one
+      # package markers of this run
       - uses: actions/download-artifact@v8
-        if: ${{ env.CORE_RUN_ID != '' }}
+        if: ${{ env.CORE_RUN_ID == github.run_id }}
         continue-on-error: true # nothing to download if all packages failed
         with:
-          path: ${{ env.CORE_RUN_ID != github.run_id && 'prereqs-ext/' || 'prereqs/' }}
+          path: prereqs/
           pattern: prereq-package-*
           merge-multiple: true
-          run-id: ${{ env.CORE_RUN_ID }}
-          # a token is only needed to access artifacts of other runs
-          github-token: ${{ env.CORE_RUN_ID != github.run_id && github.token || '' }}
 
       # test markers of earlier attempts of this run
       - uses: actions/download-artifact@v8
