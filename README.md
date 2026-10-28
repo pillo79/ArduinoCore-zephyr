@@ -370,3 +370,5 @@ Contributions are always welcome. The preferred way to receive code contribution
 
 This effort would have been very hard without the [GSoC project](/README.gsoc.md), the Zephyr community and all the contributors to this repo.
 Thanks to everyone who has contributed to this project!
+
+<!-- TEMP: test PR for the CI size deltas, do not merge -->
