@@ -617,7 +617,7 @@ int system_utilities(void) {
 	if (!device_is_ready(fan_pwm)) {
 		return 0;
 	}
-	const uint8_t data = 254; // backup.fan_control_buffer[0x30];
+	const uint8_t data = backup.fan_control_buffer[0x30];
 	pwm_set(fan_pwm, 1, PWM_USEC(2550), PWM_USEC(data * 10), PWM_POLARITY_NORMAL);
 
 	/* TODO Fan TACH input configuration */
