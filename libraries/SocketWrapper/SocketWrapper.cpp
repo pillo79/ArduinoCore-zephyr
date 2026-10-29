@@ -263,6 +263,10 @@ exit:
 #endif
 
 int ZephyrSocketWrapper::available() {
+	if (sock_fd == nullptr || *sock_fd == -1) {
+		return 0;
+	}
+
 	int count = 0;
 	if (is_ssl) {
 		/*
