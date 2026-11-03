@@ -60,16 +60,9 @@ jobs:
       # Attempt in which this job last ran: only "Re-run all jobs" runs it
       # again, so job markers from earlier attempts are no longer valid
       BUILD_ATTEMPT: ${{ github.run_attempt }}
+      # Actions cache key of the build environment archive
+      BUILD_ENV_KEY: ${{ env.BUILD_ENV_KEY }}
     steps:
-
-      - name: Install OS dependencies
-        working-directory: /opt
-        timeout-minutes: 5 # early error on Github network issues
-        run: |
-          sudo apt-get remove --purge man-db -y # skips the mandb triggers
-          sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt 2>/dev/null || true # unreliable mirror
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build
 
       - uses: actions/checkout@v6
         with:
@@ -87,9 +80,38 @@ jobs:
         run: |
           echo "## Building \`$CORE_VER\`" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Compute build environment cache key
+        run: |
+          # Exact west project revisions, plus all files affecting the setup
+          BUILD_ENV_KEY=$(extra/ci_build_env_key.py west.yml boards.txt extra/bootstrap.sh \
+                            extra/artifacts/_common.json extra/ci_build_env_key.py \
+                            .github/workflows/package_core.yml)
+          echo "BUILD_ENV_KEY=$BUILD_ENV_KEY" >> "$GITHUB_ENV"
+
+      # Check if the build environment for this key was already saved: in that
+      # case, all steps preparing it are skipped
+      - name: Look up build environment
+        id: build-env-cache
+        uses: actions/cache/restore@v5
+        with:
+          key: ${{ env.BUILD_ENV_KEY }}
+          path: ~/build-env.tar.zstd
+          lookup-only: true
+
+      - name: Install OS dependencies
+        if: ${{ steps.build-env-cache.outputs.cache-hit != 'true' }}
+        working-directory: /opt
+        timeout-minutes: 5 # early error on Github network issues
+        run: |
+          sudo apt-get remove --purge man-db -y # skips the mandb triggers
+          sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt 2>/dev/null || true # unreliable mirror
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build
+
       # Restore the west cache saved by main (or the latest one, if the
       # manifest changed): west only fetches what is missing from it.
       - name: Restore west modules and blobs
+        if: ${{ steps.build-env-cache.outputs.cache-hit != 'true' }}
         id: west-cache
         uses: actions/cache/restore@v5
         with:
@@ -99,6 +121,7 @@ jobs:
           path: ${{ runner.temp }}/west-cache
 
       - name: Initialize Zephyr environment
+        if: ${{ steps.build-env-cache.outputs.cache-hit != 'true' }}
         timeout-minutes: 10 # early error on Github network issues
         env:
           WEST_CACHE: ${{ runner.temp }}/west-cache
@@ -111,6 +134,9 @@ jobs:
           # west projects are not needed for building: the information builds
           # take from them is recorded here instead.
           source venv/bin/activate
+          TOPDIR=$(realpath --relative-to=$HOME $(west topdir))
+          # (for reference, record the exact revisions of all projects)
+          west manifest --freeze --active-only > ~/$TOPDIR/west-frozen.yml
           # - the Zephyr build version, stored in the west configuration;
           ZEPHYR_BUILD_VERSION=$(git -C $(west list -f '{abspath}' zephyr) describe --abbrev=12 --always)
           west config build.cmake-args -- "-DBUILD_VERSION=$ZEPHYR_BUILD_VERSION"
@@ -125,8 +151,10 @@ jobs:
           # the SDK host tools are not installed, skip their installer too
           echo "zephyr-sdk-*/hosttools" >> ~/build-env.exclude
           # Only archive the west workspace: the rest of ~/work belongs to the
-          # runner (including the west cache in runner.temp).
-          TOPDIR=$(realpath --relative-to=$HOME $(west topdir))
+          # runner (including the west cache in runner.temp). Of the core, only
+          # keep the files created by the setup, the build jobs check it out.
+          CORE=$(realpath --relative-to=$HOME .)
+          git ls-files | sed "s|^|$CORE/|" >> ~/build-env.exclude
           (cd && tar cphf - --exclude-from=build-env.exclude .cmake $TOPDIR zephyr-sdk-* \
                 | zstd -T0 -9 --long=27 > build-env.tar.zstd)
           ls -lh ~/build-env.tar.zstd
@@ -134,20 +162,19 @@ jobs:
       # Caches saved by other branches and PRs are only visible to them, so
       # only main saves a new west cache, shared with all the others.
       - name: Save west modules and blobs
-        if: ${{ github.ref == 'refs/heads/main' && steps.west-cache.outputs.cache-hit != 'true' }}
+        if: ${{ steps.build-env-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main' && steps.west-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v5
         with:
           key: ${{ steps.west-cache.outputs.cache-primary-key }}
           path: ${{ runner.temp }}/west-cache
 
-      - name: Archive build environment
-        uses: actions/upload-artifact@v7
+      # Unlike the west cache, this is needed by the build jobs of every run
+      - name: Save build environment
+        if: ${{ steps.build-env-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v5
         with:
-          name: build-env.tar.zstd
+          key: ${{ env.BUILD_ENV_KEY }}
           path: ~/build-env.tar.zstd
-          archive: false
-          overwrite: true
-          retention-days: 1
 
 
 
@@ -176,11 +203,18 @@ jobs:
       fail-fast: false
     steps:
 
-      - uses: actions/download-artifact@v8
+      # must come first, as it removes any untracked file in the core folder
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Get build environment
+        uses: actions/cache/restore@v5
         timeout-minutes: 10 # early error on Github network issues
         with:
-          path: /home/runner
-          name: build-env.tar.zstd
+          key: ${{ needs.build-env.outputs.BUILD_ENV_KEY }}
+          path: ~/build-env.tar.zstd
+          fail-on-cache-miss: true
 
       - name: Restore build environment
         id: restore-env
@@ -283,9 +317,9 @@ jobs:
           overwrite: true
           retention-days: 1
 
-      # publish the outcome of this job for the jobs that depend on it (the
-      # action comes with the build environment: without it, no marker is
-      # published, and the jobs depending on this one treat it as failed)
+      # publish the outcome of this job for the jobs that depend on it (when
+      # the build environment is missing, no marker is published, and the
+      # jobs depending on this one treat it as failed)
       - name: Mark build as completed
         if: ${{ !cancelled() && steps.restore-env.outcome == 'success' }}
         uses: ./.github/actions/mark-job-completed
@@ -518,7 +552,6 @@ jobs:
           name: |
             arduino-api.tar.zstd
             binaries-*
-            build-env.tar.zstd
             artifact-id-*
           failOnError: false
 
