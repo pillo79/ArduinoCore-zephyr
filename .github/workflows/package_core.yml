@@ -20,6 +20,8 @@ concurrency:
 env:
   # use the head SHA for PR hashes, instead of the merge commit
   HEAD_REF: ${{ github.event.pull_request.head.sha || github.ref }}
+  # SPDX format for the generated SBOMs (2.2, 2.3 or 3.0)
+  SPDX_VERSION: '3.0'
 
 jobs:
 
@@ -128,6 +130,10 @@ jobs:
           # - the manifests imported from other projects (Zephyr's provides its
           #   west commands and modules), which west reads from their git data:
           #   use a resolved copy of the manifest, which needs no imports;
+          # - the git information of each project for the build metadata
+          #   (read by 'west spdx' for SBOMs), which build.sh then uses;
+          python3 $ZEPHYR_DIR/scripts/zephyr_module.py --zephyr-base $ZEPHYR_DIR \
+            --meta-out ~/zephyr-workspace.meta
           west manifest --resolve --active-only > west-resolved.yml
           west config manifest.file west-resolved.yml
           # - the core version, passed to the build jobs by this one.
@@ -138,7 +144,7 @@ jobs:
           # Only archive the west workspace: the rest of ~/work belongs to the
           # runner (including the west cache in runner.temp).
           TOPDIR=$(realpath --relative-to=$HOME $(west topdir))
-          (cd && tar cphf - --exclude-from=build-env.exclude .cmake $TOPDIR zephyr-sdk-* \
+          (cd && tar cphf - --exclude-from=build-env.exclude .cmake zephyr-workspace.meta $TOPDIR zephyr-sdk-* \
                 | zstd -T0 -9 --long=27 > build-env.tar.zstd)
           ls -lh ~/build-env.tar.zstd
 
@@ -169,6 +175,8 @@ jobs:
       ARTIFACT_TAG: ${{ needs.build-env.outputs.CORE_HASH }}-${{ matrix.board }}
       # the core .git folder is not archived, use the version computed by build-env
       PINNED_CORE_VERSION: ${{ needs.build-env.outputs.CORE_VER }}
+      # build metadata of the workspace, recorded by build-env
+      ZEPHYR_WORKSPACE_META: /home/runner/zephyr-workspace.meta
       # report file stem for this board
       REPORT: reports/zephyr-${{ matrix.variant }}
     strategy:
@@ -261,6 +269,7 @@ jobs:
           tar chf - \
             firmwares/*${{ matrix.variant }}* \
             variants/${{ matrix.variant }}/ \
+            spdx/${{ matrix.variant }}/ \
             boards.local_${{ matrix.variant }}.txt \
             cores/arduino/api/ \
             ${FULL_BUILD_DIR} \
@@ -354,6 +363,7 @@ jobs:
     env:
       ALL_BOARD_DATA: ${{ needs.build-env.outputs.ALL_BOARD_DATA }}
       CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
+      SPDX_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-spdx-${{ needs.build-env.outputs.CORE_HASH }}.tar.bz2
       CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
     strategy:
       matrix:
@@ -387,6 +397,21 @@ jobs:
           cat $(ls boards.local_*.txt | sort) >> boards.local.txt
           # Create the core artifact for this set of boards
           ./extra/package_core.sh ${{ matrix.artifact }} ${CORE_TAG} distrib/${CORE_ARTIFACT}
+
+      # One SPDX archive per core package, with the documents of its boards
+      # (the umbrella 'zephyr' package is not described)
+      - name: Package SPDX documents
+        if: ${{ matrix.artifact != 'zephyr' }}
+        run: |
+          VARIANTS=$(jq -r "map(select(.artifact == \"${{ matrix.artifact }}\") | .variant) | unique | .[]" <<< "${ALL_BOARD_DATA}")
+          tar jcf distrib/${SPDX_ARTIFACT} $(for v in ${VARIANTS}; do echo spdx/$v; done)
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ matrix.artifact != 'zephyr' }}
+        with:
+          name: ${{ env.SPDX_ARTIFACT }}
+          path: distrib/${{ env.SPDX_ARTIFACT }}
+          archive: false
 
       - uses: actions/upload-artifact@v7
         id: upload-core
