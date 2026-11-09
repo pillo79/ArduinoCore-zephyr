@@ -31,12 +31,6 @@ SECTIONS {
         KEEP (*(.fini))
     } >FLASH
 
-    .static_thread_data_area : {
-        __static_thread_data_list_start = .;
-        KEEP(*(.static_thread_data_area SORT_BY_NAME(.__static_thread_data.*)));
-        __static_thread_data_list_end = .;
-    } >FLASH
-
     .preinit_array : {
         PROVIDE_HIDDEN (__preinit_array_start = .);
         KEEP (*(.preinit_array*))
@@ -61,6 +55,11 @@ SECTIONS {
         *(.rodata)
         *(.rodata1)
         *(.rodata.*)
+
+        . = ALIGN(4);
+        __static_thread_data_list_start = .;
+        KEEP(*(.static_thread_data_area SORT_BY_NAME(.__static_thread_data.*)));
+        __static_thread_data_list_end = .;
     } >FLASH
 
     .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >FLASH

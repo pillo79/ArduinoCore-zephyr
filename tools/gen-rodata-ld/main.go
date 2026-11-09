@@ -108,10 +108,13 @@ func main() {
 	defer out.Close()
 
 	// Helper function to print a section
-	printSection := func(out *os.File, sectionName string, sections []string) {
+	printSection := func(out *os.File, sectionName string, sections []string, extra ...string) {
 		fmt.Fprintf(out, "    %s : {\n", sectionName)
 		for _, name := range sections {
 			fmt.Fprintf(out, "        *(%s)\n", name)
+		}
+		for _, line := range extra {
+			fmt.Fprintf(out, "%s\n", line)
 		}
 		fmt.Fprintf(out, "    }\n\n")
 	}
@@ -121,8 +124,19 @@ func main() {
 	fmt.Fprintf(out, " */\n\n")
 	fmt.Fprintf(out, "SECTIONS\n{\n")
 
+	// K_THREAD_DEFINE() descriptors are const but always hold pointers, so they
+	// belong with the relocated .rodata. Their start/end symbols must be defined
+	// here: a second .rodata statement in another script would create a
+	// separate output section instead of extending this one.
+	staticThreadData := []string{
+		"        . = ALIGN(4);",
+		"        __static_thread_data_list_start = .;",
+		"        KEEP(*(.static_thread_data_area SORT_BY_NAME(.__static_thread_data.*)))",
+		"        __static_thread_data_list_end = .;",
+	}
+
 	fmt.Fprintf(out, "    /* Read-only data WITH relocations - will be copied to RAM by LLEXT */\n")
-	printSection(out, ".rodata", withRelocs)
+	printSection(out, ".rodata", withRelocs, staticThreadData...)
 
 	fmt.Fprintf(out, "    /* Read-only data WITHOUT relocations - kept in flash by LLEXT */\n")
 	printSection(out, ".llext.rodata.noreloc", withoutRelocs)
