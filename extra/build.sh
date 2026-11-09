@@ -96,6 +96,10 @@ BUILD_DIR=build/${variant}
 VARIANT_DIR=variants/${variant}
 rm -rf ${BUILD_DIR}
 west build -d ${BUILD_DIR} -b ${target} loader -t llext-edk "${args[@]}"
+if [[ $variant == native_sim* ]] ; then
+	# the llext-edk target does not produce the host executable
+	west build -d ${BUILD_DIR}
+fi
 
 # Extract the generated EDK tarball and copy it to the variant directory
 mkdir -p ${VARIANT_DIR} firmwares
@@ -118,7 +122,7 @@ edk_funcs='int32_t k_sleep\(k_timeout_t timeout\)|void k_busy_wait\(uint32_t use
 perl -0pi -e "s/__pinned_func\nstatic inline ($edk_funcs)/$edk_qual \$1/g" "$syscalls_hdr"
 perl -0pi -e "s/__syscall ($edk_funcs);/$edk_qual \$1;/g" "$kernel_hdr"
 
-for ext in elf bin hex uf2; do
+for ext in elf bin hex uf2 exe; do
     rm -f firmwares/zephyr-$variant.$ext
     if [ -f ${BUILD_DIR}/zephyr/zephyr.$ext ]; then
         cp ${BUILD_DIR}/zephyr/zephyr.$ext firmwares/zephyr-$variant.$ext
@@ -129,9 +133,15 @@ cp ${BUILD_DIR}/zephyr/.config firmwares/zephyr-$variant.config
 
 # Generate the provides.ld file for linked builds
 echo "Generating exported symbol scripts"
-extra/gen_provides.py "${BUILD_DIR}/zephyr/zephyr.elf" -T > ${VARIANT_DIR}/tls-syms.S
-extra/gen_provides.py "${BUILD_DIR}/zephyr/zephyr.elf" -L > ${VARIANT_DIR}/syms-dynamic.ld
-extra/gen_provides.py "${BUILD_DIR}/zephyr/zephyr.elf" -LF \
+LOADER_ELF="${BUILD_DIR}/zephyr/zephyr.elf"
+if [ -f "${BUILD_DIR}/zephyr/zephyr.exe" ] ; then
+	# native_sim: zephyr.elf is a partially linked object, final addresses
+	# are only known in the host executable
+	LOADER_ELF="${BUILD_DIR}/zephyr/zephyr.exe"
+fi
+extra/gen_provides.py "${LOADER_ELF}" -T > ${VARIANT_DIR}/tls-syms.S
+extra/gen_provides.py "${LOADER_ELF}" -L > ${VARIANT_DIR}/syms-dynamic.ld
+extra/gen_provides.py "${LOADER_ELF}" -LF \
 	"+kheap_llext_heap" \
 	"+kheap__system_heap" \
 	"*sketch_base_addr=_sketch_start" \
