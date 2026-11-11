@@ -23,6 +23,7 @@ import ci_shared
 from ci_shared import (
     TestStatus, SKIP, PASS, WARNING, EXPECTED_ERROR, INVALID_EXCEPTION, ERROR, FAILURE,
     LoaderEntry, TestEntry, TestGroup,
+    RAN_ICON, RAN_LEGEND, RUN_FAILED_ICON, RUN_FAILED_LEGEND,
 )
 
 BASE_COLOR = 0x20               # darkest tone
@@ -116,7 +117,8 @@ def print_summary():
                 continue
 
             # Memory usage
-            f_print(f"<td align='right'>\n\n{color_entry(BOARD_LOADERS[board].meminfo['RAM'], False)}\n\n</td>")
+            # (empty for boards with no memory regions, as native_sim)
+            f_print(f"<td align='right'>\n\n{color_entry(BOARD_LOADERS[board].meminfo.get('RAM'), False)}\n\n</td>")
 
             # Test count summary
             tests_str = len(res.tests) or "-"
@@ -133,7 +135,14 @@ def print_summary():
     # Print the legend
     f_print("<details><summary>Legend</summary>")
     f_print("<blockquote><br><table><tr><th align='center'>Board</th><th align='center'>Test</th><th>Status description</th></tr>")
+    # (variants of a status, for the sketches that also run on native_sim)
+    run_icons = { PASS: (RAN_ICON, RAN_LEGEND), ERROR: (RUN_FAILED_ICON, RUN_FAILED_LEGEND) }
     for status in reversed(TestStatus): # worst errors first
+        if status in run_icons:
+            icon, legend = run_icons[status]
+            f_print("<tr><td></td>")
+            f_print(f"<td align='center'>{icon}</td>")
+            f_print(f"<td>{legend}</td></tr>")
         f_print(f"<tr><td align='center'>{status.board_icon}</td>")
         f_print(f"<td align='center'>{status.test_icon}</td>")
         f_print(f"<td>{status.legend}</td></tr>")
@@ -146,7 +155,11 @@ def print_summary():
 
         if failed_boards:
             f_print("> [!CAUTION]")
-            f_print(f"> `{artifact}` is blocked due to failures on {', '.join(failed_boards)}!\n")
+            if artifact == 'native_sim':
+                # never published, so not blocked
+                f_print(f"> `{artifact}` tests failed!\n")
+            else:
+                f_print(f"> `{artifact}` is blocked due to failures on {', '.join(failed_boards)}!\n")
 
 def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: True):
     """
@@ -201,7 +214,14 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
                 status = max( [ t.status for t in res.tests if t.board == board ], default=TestStatus.SKIP)
                 if status == INVALID_EXCEPTION:
                     invalid_exceptions[board].add(sample)
-                row_data += f"<td align='center'>{status.test_icon}</td>"
+                # sketches that also ran successfully get their own icon
+                runs = [ t.run_success for t in res.tests if t.board == board ]
+                icon = status.test_icon
+                if status == PASS and True in runs:
+                    icon = RAN_ICON
+                elif status == ERROR and False in runs:
+                    icon = RUN_FAILED_ICON
+                row_data += f"<td align='center'>{icon}</td>"
 
             row_data += "</tr>"
             data_rows.append(row_data)
@@ -404,7 +424,10 @@ with open(full_report_file, 'w') as f:
 
     # Print the test matrix sections, per artifact
     for artifact in ARTIFACTS:
-        artifact_boards = sorted([ board for board in ARTIFACT_TESTS[artifact].boards if BOARD_TESTS[board].status not in (FAILURE, SKIP) ])
+        # boards with test results (a failed test job does not hide the
+        # results of the other jobs)
+        artifact_boards = sorted([ board for board in ARTIFACT_TESTS[artifact].boards
+                                   if any(t.status not in (FAILURE, SKIP) for t in BOARD_TESTS[board].tests) ])
 
         if not artifact_boards:
             continue
@@ -428,22 +451,36 @@ with open(full_report_file, 'w') as f:
             f_print("</table>\n")
             f_print("</blockquote></details>\n")
 
+        # native_sim has no real hardware, so many sketches are known not to
+        # build there: list them with the successful tests, not as issues
+        hide_expected = artifact == 'native_sim'
+        first_issue = INVALID_EXCEPTION if hide_expected else EXPECTED_ERROR
+
         # print failed tests matrix
-        print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status >= EXPECTED_ERROR)
+        print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status >= first_issue)
 
         # print successful tests matrix in a collapsible section
-        successful_tests = ARTIFACT_TESTS[artifact].counts[PASS] + ARTIFACT_TESTS[artifact].counts[WARNING]
-        warning_tests = ARTIFACT_TESTS[artifact].counts[WARNING]
-        if successful_tests:
+        counts = ARTIFACT_TESTS[artifact].counts
+        successful_tests = counts[PASS] + counts[WARNING]
+        warning_tests = counts[WARNING]
+        expected_tests = counts[EXPECTED_ERROR] if hide_expected else 0
+        if successful_tests or expected_tests:
             summary = f"{successful_tests} successful <code>{artifact}</code> tests hidden"
+            details = []
             if warning_tests:
-                summary += f" ({warning_tests} with warnings)"
+                details.append(f"{warning_tests} with warnings")
+            if expected_tests:
+                details.append(f"{expected_tests} known failures")
+            if details:
+                summary += f" ({', '.join(details)})"
 
             f_print(f"<details><summary>{summary}</summary><blockquote><br>\n")
-            print_test_matrix(artifact, artifact_boards, "tests", sketch_filter=lambda res: res.status.built)
+            print_test_matrix(artifact, artifact_boards, "tests", sketch_filter=lambda res: res.status < first_issue and res.status != SKIP)
             f_print("</blockquote></details>\n")
 
-        # print memory usage report in a collapsible section
+        # print memory usage report in a collapsible section, if there is one
+        if not any(BOARD_LOADERS[board].meminfo for board in artifact_boards):
+            continue
         f_print(f"<details><summary>Memory usage report for <code>{artifact}</code></summary><blockquote><br>")
         print_mem_report(artifact, artifact_boards)
         f_print("</blockquote></details>")
