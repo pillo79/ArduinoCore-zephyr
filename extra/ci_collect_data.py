@@ -32,9 +32,12 @@
 #
 #  - <json_file>: JSON file with all collected data, to be consumed by ci_generate_report.py
 #
-# Usage: ci_collect_data.py [<json_file>]
-#  If no argument is given, output is written to /dev/stdout.
+# Usage: ci_collect_data.py [--exclude-artifact <artifact>]... [<json_file>]
+#  If no file is given, output is written to /dev/stdout.
+#  --exclude-artifact leaves the boards and tests of that artifact out of the
+#  output, and out of the overall result.
 
+import argparse
 from collections import defaultdict
 import glob
 import json
@@ -86,11 +89,12 @@ if not ALL_BOARD_DATA_STR or not GITHUB_REPOSITORY or not GITHUB_RUN_ID:
     print("Not in a Github CI run, cannot proceed.")
     sys.exit(0)
 
-if not len(sys.argv) in (1, 2):
-    print("Usage: ci_collect_data.py [<json_file>]")
-    sys.exit(1)
-
-json_file = sys.argv[1] if len(sys.argv) == 2 else "/dev/stdout"
+parser = argparse.ArgumentParser(description="Collect the CI results into a JSON file.")
+parser.add_argument('--exclude-artifact', action='append', default=[], metavar='ARTIFACT',
+                    help="leave the boards and tests of this artifact out of the output")
+parser.add_argument('json_file', nargs='?', default="/dev/stdout")
+args = parser.parse_args()
+json_file = args.json_file
 
 # Load board data from environment variables
 ALL_BOARD_DATA = json.loads(ALL_BOARD_DATA_STR)
@@ -128,9 +132,11 @@ def job_succeeded(job_id):
 
 REGIONS_BY_SOC = defaultdict(set)     # { soc: set(regions) }
 
-def process_board(board_data):
+def process_board(board_data, native_sim_failed):
     """
-    Collects the loader and test data of a board.
+    Collects the loader and test data of a board. native_sim_failed tells
+    whether the native_sim tests failed, so that the core packages were not
+    tested.
     """
     # Extract common fields from board data
     artifact = board_data['artifact']
@@ -191,6 +197,11 @@ def process_board(board_data):
        and any(not job_succeeded(b['id']) for b in ALL_BOARD_DATA.values() if b['artifact'] == artifact):
         track_test(TestEntry.skipped("Core package was not built, tests skipped.", artifact, board))
         return
+    # test-core does not start if the native_sim tests failed: the board
+    # was not tested, which is not a failure of its own
+    if native_sim_failed and not glob.glob(f"arduino-{subarch}-{board}-link_mode=*.json"):
+        track_test(TestEntry.skipped("Tests not run, as the native_sim tests failed.", artifact, board))
+        return
 
     # Get raw data from report files for both static and dynamic linking modes
     for link_mode in ("static", "dynamic"):
@@ -214,13 +225,23 @@ def process_board(board_data):
             track_test(TestEntry(artifact, board, sketch, link_mode, excepted, status, sketch_issues, job_link))
 
 
-# Import and process data for each board
-for board_data in ALL_BOARD_DATA.values():
-    process_board(board_data)
+# Import and process data for each board: native_sim first, as the core
+# packages are not tested if its tests failed
+if 'native_sim' in ALL_BOARD_DATA:
+    process_board(ALL_BOARD_DATA['native_sim'], False)
+native_sim_failed = 'native_sim' in BOARD_TESTS and not BOARD_TESTS['native_sim'].status.passed
+for board, board_data in ALL_BOARD_DATA.items():
+    if board != 'native_sim':
+        process_board(board_data, native_sim_failed)
 
-ARTIFACTS = sorted(ARTIFACT_TESTS.keys())
+# Leave the excluded artifacts out of the output, after all boards were
+# processed (their results may affect the other boards)
+ARTIFACTS = sorted(a for a in ARTIFACT_TESTS.keys() if a not in args.exclude_artifact)
+OUTPUT_BOARDS = { board: board_data for board, board_data in ALL_BOARD_DATA.items()
+                  if board_data['artifact'] not in args.exclude_artifact }
+OUTPUT_SOCS = { board_data.get('soc') for board_data in OUTPUT_BOARDS.values() }
 
-ci_run_status = max(res.status for res in ARTIFACT_TESTS.values())
+ci_run_status = max(ARTIFACT_TESTS[artifact].status for artifact in ARTIFACTS)
 ci_run_passed = ci_run_status.passed
 
 # Serialize all data to JSON
@@ -228,10 +249,10 @@ output = {
     'job_link_stem': JOB_LINK_STEM,
     'artifacts': ARTIFACTS,
     'ci_run_passed': ci_run_passed,
-    'all_board_data': ALL_BOARD_DATA,
-    'regions_by_soc': {soc: list(regions) for soc, regions in REGIONS_BY_SOC.items()},
-    'board_loaders': {board: loader.to_dict() for board, loader in BOARD_LOADERS.items()},
-    'all_tests': [t.to_dict() for t in ALL_TESTS],
+    'all_board_data': OUTPUT_BOARDS,
+    'regions_by_soc': {soc: list(regions) for soc, regions in REGIONS_BY_SOC.items() if soc in OUTPUT_SOCS},
+    'board_loaders': {board: loader.to_dict() for board, loader in BOARD_LOADERS.items() if board in OUTPUT_BOARDS},
+    'all_tests': [t.to_dict() for t in ALL_TESTS if t.artifact not in args.exclude_artifact],
 }
 
 with open(json_file, 'w') as f:

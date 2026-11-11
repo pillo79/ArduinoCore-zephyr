@@ -1,0 +1,274 @@
+# Copyright (c) Arduino s.r.l. and/or its affiliated companies
+# SPDX-License-Identifier: Apache-2.0
+
+# Build the native_sim board, package it and test sketches on the host with
+# the installed package: the loader tests and the test_core sketches selected
+# for native_sim, one job per group of sketches.
+#
+# Called by package_core.yml, without waiting for the other boards: it
+# needs the build environment (build-env.tar.zstd) of the calling run. It
+# fetches the test data and publishes it as test-data for the calling run
+# (test_core.yml reuses it). The results are reported by the calling run
+# (see ci_collect_data.py) from the test-report-native_sim-* artifacts and
+# the job completion markers.
+
+name: Native tests
+
+on:
+  workflow_call:
+    inputs:
+      core-version:
+        description: Version of the core being tested
+        type: string
+        required: true
+      core-tag:
+        description: Tag or hash of the core being tested, for file names
+        type: string
+        required: true
+      ci-builds-url:
+        description: Additional Board Manager index URL for the tools (optional)
+        type: string
+        default: ''
+    outputs:
+      matrix:
+        description: The native_sim test jobs, see ci_native_sim_matrix.sh
+        value: ${{ jobs.build.outputs.MATRIX }}
+
+jobs:
+
+  # Build the native_sim board and package it, then compute the matrix of
+  # native_sim test jobs from the test list. The package is never published,
+  # it is only tested on the host.
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      # native_sim test jobs, see ci_native_sim_matrix.sh
+      MATRIX: ${{ steps.matrix.outputs.MATRIX }}
+    env:
+      # ccache, don't look for the spec file anywhere
+      CCACHE_IGNOREOPTIONS: -specs=*
+      # the core .git folder is not archived, use the version computed by build-env
+      PINNED_CORE_VERSION: ${{ inputs.core-version }}
+      CORE_TAG: ${{ inputs.core-tag }}
+      CORE_ARTIFACT: distrib/native_sim.tar.bz2
+      # report file stem, as for build-board
+      REPORT: reports/zephyr-native_sim_native_64
+    steps:
+
+      - uses: actions/download-artifact@v8
+        timeout-minutes: 10 # early error on Github network issues
+        with:
+          path: /home/runner
+          name: build-env.tar.zstd
+
+      - name: Restore build environment
+        id: restore-env
+        timeout-minutes: 5 # early error on Github network issues
+        run: |
+          sudo apt-get remove --purge man-db -y # skips the mandb triggers
+          sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt 2>/dev/null || true # unreliable mirror
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build ccache device-tree-compiler gcc-14 g++-14
+          # the SDK libstdc++ headers need gcc 14: make it the default host compiler
+          for link in gcc:gcc g++:g++ cc:gcc c++:g++ cpp:cpp ; do
+            sudo ln -sf /usr/bin/${link#*:}-14 /usr/local/bin/${link%:*}
+          done
+          (cd ~ && tar --use-compress-program=unzstd -xpf build-env.tar.zstd && rm build-env.tar.zstd)
+
+      # download the external test repositories once for all the test jobs of
+      # this run, as early as possible. See ci_fetch_tests.sh for details.
+      - name: Fetch test data
+        id: test-data
+        continue-on-error: true # reported as a failed test job below
+        run: |
+          extra/ci_fetch_tests.sh
+
+      - name: Archive test data
+        if: ${{ steps.test-data.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-data
+          path: test-data/
+          overwrite: true
+          retention-days: 1
+
+      - name: ccache
+        uses: actions/cache@v5
+        with:
+          key: ${{ github.job }} # independent cache
+          path: ~/.cache/ccache
+
+      - name: Install host SDK toolchain
+        run: |
+          # native_sim sketches use the picolibc-based libstdc++ of the host
+          # SDK toolchain, which bootstrap.sh does not install
+          source venv/bin/activate
+          SDK_VERSION=$(jq -r '.toolsDependencies[] | select(.name == "arm-zephyr-eabi") | .version' extra/artifacts/_common.json)
+          west sdk install --version $SDK_VERSION -t $(uname -m)-zephyr-elf --no-hosttools
+
+      - name: Build and package native_sim
+        shell: bash
+        run: |
+          mkdir -p reports
+          if ! ./extra/build.sh native_sim 1> >(tee $REPORT.stdout) 2> >(tee $REPORT.stderr >&2) ; then
+            # build failed, capture errors in summary
+            echo "### :x: native_sim build errors" > $GITHUB_STEP_SUMMARY
+            echo >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            cat $REPORT.stderr >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          # look for warnings, as build-board does
+          grep -i "warning:" $REPORT.stdout > $REPORT.warnings || true
+          cp firmwares/zephyr-native_sim_native_64.config $REPORT.config
+          ./extra/package_core.sh native_sim ${CORE_TAG} ${CORE_ARTIFACT}
+
+      - name: Archive core package
+        uses: actions/upload-artifact@v7
+        with:
+          name: native_sim-package
+          path: ${{ env.CORE_ARTIFACT }}
+          overwrite: true
+          retention-days: 1
+
+      - name: Archive build reports
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-report-native_sim
+          path: |
+            ${{ env.REPORT }}.config
+            ${{ env.REPORT }}.warnings
+          overwrite: true
+          retention-days: 1
+
+      - name: Collect test list
+        id: test-list
+        if: ${{ steps.test-data.outcome == 'success' }}
+        continue-on-error: true # reported as a failed test job below
+        run: |
+          # the test list of the package, as test-core would select it
+          tar -xjf $CORE_ARTIFACT
+          extra/ci_apply_tests.sh native_sim native_sim_native_64 lists/
+
+      - name: Compute test matrix
+        id: matrix
+        run: |
+          mkdir -p lists
+          if [ "${{ steps.test-list.outcome }}" == "success" ] ; then
+            echo "MATRIX=$(extra/ci_native_sim_matrix.sh lists/tests.txt)" >> $GITHUB_OUTPUT
+          else
+            # a job with no sketches, that fails to show the problem
+            echo "::error::native_sim test list not available"
+            : > lists/tests.txt
+            echo "MATRIX=$(extra/ci_native_sim_matrix.sh lists/tests.txt |
+              jq -c '. + [{ group: "test-list", id: "test-native_sim-test-list" }]')" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Archive test list
+        uses: actions/upload-artifact@v7
+        with:
+          name: native_sim-test-list
+          path: lists/
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 1
+
+      # publish the outcome of this job for ci_collect_data.py (the action
+      # comes with the build environment)
+      - name: Mark build as completed
+        if: ${{ !cancelled() && steps.restore-env.outcome == 'success' }}
+        uses: ./.github/actions/mark-job-completed
+        with:
+          id: build-native_sim
+          retention-days: 1
+
+
+
+  # Compile the native_sim test sketches with the installed package, one job
+  # per group (see ci_native_sim_matrix.sh), and run the ones that have expect
+  # logic on the host. See loader/native_sim/tests/run_sketches.sh.
+
+  test:
+    name: Test ${{ matrix.group }}
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        include:
+          ${{ fromJSON( needs.build.outputs.MATRIX ) }}
+      fail-fast: false
+    env:
+      # the core package, installed as a sketchbook hardware platform
+      CORE_DIR: /home/runner/Arduino/hardware/arduino-git/native_sim
+      FQBN: arduino-git:native_sim:native_sim
+      # report of this job, for ci_collect_data.py
+      SKETCH_REPORT: ${{ github.workspace }}/native_sim-sketches-${{ matrix.group }}.json
+    steps:
+
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-native-sim
+        with:
+          core-dir: ${{ env.CORE_DIR }}
+          ci-builds-url: ${{ inputs.ci-builds-url }}
+
+      - uses: actions/download-artifact@v8
+        if: ${{ matrix.group != 'loader' }}
+        with:
+          name: native_sim-test-list
+          path: lists/
+
+      - uses: actions/download-artifact@v8
+        if: ${{ matrix.group != 'loader' }}
+        continue-on-error: true # no test-data, no sketches: the test fails
+        with:
+          name: test-data
+          path: test-data/
+
+      - name: Prepare test sketches
+        if: ${{ matrix.group != 'loader' }}
+        run: |
+          # extract the fetched repositories into the installed core, as for
+          # the test list (ci_apply_tests.sh uses this fixed path); the lists
+          # of the build job are used, not the ones written here
+          ln -s $CORE_DIR ArduinoCore-zephyr
+          extra/ci_apply_tests.sh native_sim native_sim_native_64 "$RUNNER_TEMP/lists"
+          sort -u lists/libraries.txt | while read -r lib ; do
+            arduino-cli lib install "$lib" || echo "::warning::cannot install library '$lib'"
+          done
+
+      - name: Run tests
+        env:
+          GROUP: ${{ matrix.group }}
+        run: |
+          case "$GROUP" in
+            loader)
+              loader/native_sim/tests/run_tests.sh ;;
+            *)
+              mapfile -t sketches < <(extra/ci_native_sim_matrix.sh -g "$GROUP" lists/tests.txt)
+              loader/native_sim/tests/run_sketches.sh -n ArduinoCore-zephyr "${sketches[@]}" ;;
+          esac || [ -s "$SKETCH_REPORT" ] # failed sketches, known or not, are evaluated from the report
+
+      - name: Archive test report
+        if: ${{ success() || failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-report-native_sim-${{ matrix.group }}
+          path: ${{ env.SKETCH_REPORT }}
+          if-no-files-found: ignore
+          overwrite: true
+          retention-days: 1
+
+      - name: Mark tests as completed
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/mark-job-completed
+        with:
+          id: ${{ matrix.id }}
+          retention-days: 1
