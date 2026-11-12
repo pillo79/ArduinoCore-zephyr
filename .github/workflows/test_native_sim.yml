@@ -254,7 +254,13 @@ jobs:
             *)
               mapfile -t sketches < <(extra/ci_native_sim_matrix.sh -g "$GROUP" lists/tests.txt)
               loader/native_sim/tests/run_sketches.sh -n ArduinoCore-zephyr "${sketches[@]}" ;;
-          esac || [ -s "$SKETCH_REPORT" ] # failed sketches, known or not, are evaluated from the report
+          esac || [ -s "$SKETCH_REPORT" ] # failed sketches are checked below
+
+      # fail early on results that are not known issues, as test-core does
+      - name: Check test results
+        if: ${{ success() || failure() }}
+        run: |
+          extra/ci_check_test_report.py native_sim_native_64 "$SKETCH_REPORT"
 
       - name: Archive test report
         if: ${{ success() || failure() }}

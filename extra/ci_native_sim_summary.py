@@ -81,7 +81,8 @@ for job in matrix:
     name = f"[`{group}`]({marker['job_url']})" if marker.get('job_url') else f"`{group}`"
 
     reports, error = load_sketch_reports(f"native_sim-sketches-{group}.json")
-    if error or marker.get('status') != 'success':
+    # (a job that wrote its report completed its tests, even if it failed)
+    if error:
         all_passed = False
         lines.append(f":x: {name}: tests did not complete")
         continue
