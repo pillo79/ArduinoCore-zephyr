@@ -20,7 +20,7 @@ import sys
 
 from ci_shared import (
     TestEntry,
-    load_known_issues, load_sketch_reports, evaluate_sketch,
+    load_known_issues, load_sketch_reports, evaluate_test,
 )
 
 def escape_data(s):
@@ -40,8 +40,7 @@ def check_report(variant, report_file):
     exceptions, warning_filters = load_known_issues(variant)
     failed = []
     for report in reports:
-        sketch, excepted, status, issues = evaluate_sketch(report, exceptions, warning_filters)
-        test_entry = TestEntry('', '', sketch, '', excepted, status, issues, None)
+        test_entry = evaluate_test(report, exceptions, warning_filters)
         if not test_entry.status.passed:
             failed.append(test_entry)
 
