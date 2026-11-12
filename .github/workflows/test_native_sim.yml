@@ -272,3 +272,46 @@ jobs:
         with:
           id: ${{ matrix.id }}
           retention-days: 1
+
+
+
+  # Summarize the results of the native_sim test jobs, as soon as they are
+  # all done. See ci_native_sim_summary.py.
+
+  summarize:
+    name: Collect
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - test
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    env:
+      NATIVE_SIM_MATRIX: ${{ needs.build.outputs.MATRIX }}
+    steps:
+
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            extra/
+            variants/native_sim_native_64/known_example_issues.txt
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@v8
+        continue-on-error: true # missing reports are listed as failures
+        with:
+          path: .
+          pattern: test-report-native_sim-*
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        continue-on-error: true # missing markers are listed as failures
+        with:
+          path: prereqs/
+          pattern: prereq-test-native_sim-*
+          merge-multiple: true
+
+      - name: Write summary
+        shell: bash # with pipefail: the job fails if any test job failed
+        run: |
+          extra/ci_native_sim_summary.py | tee -a $GITHUB_STEP_SUMMARY

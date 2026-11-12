@@ -329,3 +329,13 @@ def evaluate_sketch(report, exceptions, warning_filters):
 
     excepted = any(pattern.match(sketch) for pattern in exceptions)
     return sketch, excepted, status, sketch_issues
+
+def evaluate_test(report, exceptions, warning_filters):
+    """
+    Evaluate a single sketch report against the known issues, for the scripts
+    that check the reports of a single test job.
+    Returns its TestEntry, whose status accounts for the exception, with no
+    artifact, board, link mode or job link.
+    """
+    sketch, excepted, status, issues = evaluate_sketch(report, exceptions, warning_filters)
+    return TestEntry('', '', sketch, '', excepted, status, issues, None)
