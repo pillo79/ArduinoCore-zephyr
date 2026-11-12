@@ -20,8 +20,8 @@ manifest:
 
   projects:
     - name: zephyr
-      remote: arduino
-      revision: zephyr-arduino-v4.4.2
+      remote: pillo79
+      revision: llext-edk-include-arduino
       import:
         name-allowlist:
           - cmsis
