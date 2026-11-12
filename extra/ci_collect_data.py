@@ -173,8 +173,10 @@ def process_board(board_data, native_sim_failed):
             group, job_id = job['group'], job['id']
             job_link = JOB_URLS.get(job_id)
             reports, error = load_sketch_reports(f"native_sim-sketches-{group}.json")
-            if error or not job_succeeded(job_id):
-                # shown with the sketches of the group
+            if error:
+                # a job that wrote its report completed its tests, even if it
+                # failed on them: only a missing report is shown, with the
+                # sketches of the group
                 track_test(TestEntry(artifact, board, f"CI test {group}", "static", False, FAILURE,
                                      [ f"{group}: tests did not complete." ], job_link,
                                      group=group, name="CI test"))
