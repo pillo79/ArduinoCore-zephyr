@@ -203,9 +203,10 @@ jobs:
           ${{ fromJSON( needs.build.outputs.MATRIX ) }}
       fail-fast: false
     env:
-      # the core package, installed as a sketchbook hardware platform
+      # the core package, installed as a sketchbook hardware platform, also
+      # under the core architecture names (see setup-native-sim)
       CORE_DIR: /home/runner/Arduino/hardware/arduino-git/native_sim
-      FQBN: arduino-git:native_sim:native_sim
+      FQBN: arduino-git:zephyr:native_sim
       # report of this job, for ci_collect_data.py
       SKETCH_REPORT: ${{ github.workspace }}/native_sim-sketches-${{ matrix.group }}.json
     steps:
