@@ -102,7 +102,8 @@ fi
 TEMP_EXC=$(mktemp -p . | sed 's/\.\///')
 declutter_file extra/artifacts/_common.exc >> ${TEMP_EXC}
 declutter_file extra/artifacts/$ARTIFACT.exc >> ${TEMP_EXC}
-for f in $(ls extra/artifacts/*.only | grep -v "$ARTIFACT.only") ; do
+# (native_sim poses as the boards of all artifacts: it ships their own files)
+[ $ARTIFACT == "native_sim" ] || for f in $(ls extra/artifacts/*.only | grep -v "$ARTIFACT.only") ; do
 	declutter_file $f >> ${TEMP_EXC}
 done
 
