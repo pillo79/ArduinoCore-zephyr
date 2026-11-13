@@ -550,9 +550,10 @@ jobs:
       - build-env
       - package-core
       - test-native-sim
-    # (also runs if some packages failed, to test the others; not if the
-    # native_sim tests failed, as they are faster and catch most issues)
-    if: ${{ !cancelled() && needs.build-env.result == 'success' && needs.test-native-sim.result == 'success' }}
+    # (also runs if some packages failed, to test the others; boards whose
+    # native_sim tests failed are skipped, as they are faster and catch most
+    # issues; all of them if native_sim could not be built)
+    if: ${{ !cancelled() && needs.build-env.result == 'success' && needs.test-native-sim.outputs.matrix != '' }}
     permissions:
       contents: read
       actions: read
@@ -561,6 +562,7 @@ jobs:
       core-run-id: ${{ github.run_id }}
       core-version: ${{ needs.build-env.outputs.CORE_VER }}
       min-attempt: ${{ needs.build-env.outputs.BUILD_ATTEMPT }}
+      native-sim-matrix: ${{ needs.test-native-sim.outputs.matrix }}
 
 
 

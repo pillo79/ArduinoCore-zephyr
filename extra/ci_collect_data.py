@@ -149,8 +149,8 @@ REGIONS_BY_SOC = defaultdict(set)     # { soc: set(regions) }
 def process_board(board_data, native_sim_failed):
     """
     Collects the loader and test data of a board. native_sim_failed tells
-    whether the native_sim tests failed, so that the core packages were not
-    tested.
+    whether the native_sim tests of the board failed, so that its core
+    package was not tested.
     """
     # Extract common fields from board data
     artifact = board_data['artifact']
@@ -253,15 +253,23 @@ def process_board(board_data, native_sim_failed):
 
 
 # Import and process data for each board: native_sim first, as the core
-# packages are not tested if its tests failed
+# package of a board is not tested if the native_sim tests common to all
+# boards, or the ones posing as that board, failed
 for board, board_data in ALL_BOARD_DATA.items():
     if board_data['artifact'] == 'native_sim':
         process_board(board_data, False)
-native_sim_failed = any(not tests.status.passed for board, tests in BOARD_TESTS.items()
-                        if ALL_BOARD_DATA.get(board, {}).get('artifact') == 'native_sim')
+
+def native_sim_failed(board):
+    """
+    Returns True if the native_sim tests that test-core requires for the
+    board failed (see test_core.yml).
+    """
+    return any(b in BOARD_TESTS and not BOARD_TESTS[b].status.passed
+               for b in ('native_sim', mimic_id(board)))
+
 for board, board_data in ALL_BOARD_DATA.items():
     if board_data['artifact'] != 'native_sim':
-        process_board(board_data, native_sim_failed)
+        process_board(board_data, native_sim_failed(board))
 
 # Leave the excluded artifacts out of the output, after all boards were
 # processed (their results may affect the other boards)
