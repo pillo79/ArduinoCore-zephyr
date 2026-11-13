@@ -41,26 +41,11 @@ fi
 LIST_DIR=$(mkdir -p "$1" && realpath "$1")
 TOP_DIR=$(pwd)
 
-# declutter_file <file>: the entries of an artifact file, as package_core.sh
-declutter_file() {
-	[ -f "$1" ] || return 0
-	sed -e 's/\s*#.*//' -e 's/\s*$//' -e 's/\/$//' "$1" | grep -v '^\s*$' || true
-}
-
-# exclusions <artifact>: the exclude patterns of the artifact package
-exclusions() {
-	declutter_file extra/artifacts/_common.exc
-	declutter_file "extra/artifacts/$1.exc"
-	# (native_sim ships the files of all artifacts, see package_core.sh)
-	[ "$1" == "native_sim" ] && return
-	for f in extra/artifacts/*.only ; do
-		[ "$f" == "extra/artifacts/$1.only" ] || declutter_file "$f"
-	done
-}
+source extra/common.sh
 
 # the core libraries missing from the native_sim package, as a regexp that
 # matches their sketches
-UNAVAILABLE_LIBS=$(exclusions native_sim | sed -n -e 's#^libraries/\([^/]*\)$#\1#p' | paste -sd'|')
+UNAVAILABLE_LIBS=$(artifact_exclusions native_sim | sed -n -e 's#^libraries/\([^/]*\)$#\1#p' | paste -sd'|')
 UNAVAILABLE_RE="^ArduinoCore-zephyr/libraries/(${UNAVAILABLE_LIBS:-/})/"
 
 # board_list <board> <artifact> <variant>: write the lists of a board
@@ -72,7 +57,7 @@ board_list() {
 	tests=$LIST_DIR/$board/tests.txt
 	{
 		mkdir -p "$work/ArduinoCore-zephyr" &&
-		tar -cf - -X <(exclusions "$artifact") libraries | tar -xf - -C "$work/ArduinoCore-zephyr" &&
+		tar -cf - -X <(artifact_exclusions "$artifact") libraries | tar -xf - -C "$work/ArduinoCore-zephyr" &&
 		ln -s "$TOP_DIR/extra" "$TOP_DIR/variants" "$TOP_DIR/test-data" "$work/" &&
 		(cd "$work" && extra/ci_apply_tests.sh "$artifact" "$variant" "$LIST_DIR/$board") &&
 		[ -f "$tests" ] &&
