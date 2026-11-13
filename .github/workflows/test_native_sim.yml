@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Build the native_sim board, package it and test sketches on the host with
-# the installed package: the loader tests and the test_core sketches selected
-# for native_sim, one job per group of sketches.
+# the installed package: the loader tests, and for each board of the core
+# artifacts the sketches test_core builds for it, with native_sim posing as
+# that board (see the 'mimic' menu in boards.txt), one job per board.
 #
 # Called by package_core.yml, without waiting for the other boards: it
 # needs the build environment (build-env.tar.zstd) of the calling run. It
@@ -144,26 +145,26 @@ jobs:
           overwrite: true
           retention-days: 1
 
-      - name: Collect test list
+      - name: Collect test lists
         id: test-list
         if: ${{ steps.test-data.outcome == 'success' }}
         continue-on-error: true # reported as a failed test job below
         run: |
-          # the test list of the package, as test-core would select it
-          tar -xjf $CORE_ARTIFACT
-          extra/ci_apply_tests.sh native_sim native_sim_native_64 lists/
+          # the test list of each board native_sim poses as, as test-core
+          # selects it for the board package
+          extra/ci_native_sim_lists.sh lists/
 
       - name: Compute test matrix
         id: matrix
         run: |
           mkdir -p lists
           if [ "${{ steps.test-list.outcome }}" == "success" ] ; then
-            echo "MATRIX=$(extra/ci_native_sim_matrix.sh lists/tests.txt)" >> $GITHUB_OUTPUT
+            echo "MATRIX=$(extra/ci_native_sim_matrix.sh lists/)" >> $GITHUB_OUTPUT
           else
             # a job with no sketches, that fails to show the problem
-            echo "::error::native_sim test list not available"
-            : > lists/tests.txt
-            echo "MATRIX=$(extra/ci_native_sim_matrix.sh lists/tests.txt |
+            echo "::error::native_sim test lists not available"
+            rm -rf lists && mkdir lists && echo "native_sim test lists not available" > lists/none.txt
+            echo "MATRIX=$(extra/ci_native_sim_matrix.sh lists/ |
               jq -c '. + [{ group: "test-list", id: "test-native_sim-test-list" }]')" >> $GITHUB_OUTPUT
           fi
 
@@ -187,9 +188,10 @@ jobs:
 
 
 
-  # Compile the native_sim test sketches with the installed package, one job
-  # per group (see ci_native_sim_matrix.sh), and run the ones that have expect
-  # logic on the host. See loader/native_sim/tests/run_sketches.sh.
+  # Compile the test sketches of each board with the installed package, one
+  # job per board native_sim poses as (see ci_native_sim_matrix.sh), and run
+  # the ones that have expect logic on the host. See
+  # loader/native_sim/tests/run_sketches.sh.
 
   test:
     name: Test ${{ matrix.group }}
@@ -206,7 +208,8 @@ jobs:
       # the core package, installed as a sketchbook hardware platform, also
       # under the core architecture names (see setup-native-sim)
       CORE_DIR: /home/runner/Arduino/hardware/arduino-git/native_sim
-      FQBN: arduino-git:zephyr:native_sim
+      # native_sim posing as the board, under the board architecture
+      FQBN: ${{ matrix.arch && format('arduino-git:{0}:native_sim:mimic={1}', matrix.arch, matrix.group) || 'arduino-git:zephyr:native_sim' }}
       # report of this job, for ci_collect_data.py
       SKETCH_REPORT: ${{ github.workspace }}/native_sim-sketches-${{ matrix.group }}.json
     steps:
@@ -234,14 +237,21 @@ jobs:
           path: test-data/
 
       - name: Prepare test sketches
-        if: ${{ matrix.group != 'loader' }}
+        if: ${{ matrix.arch }}
+        env:
+          ARTIFACT: ${{ matrix.artifact }}
+          VARIANT: ${{ matrix.variant }}
+          GROUP: ${{ matrix.group }}
         run: |
-          # extract the fetched repositories into the installed core, as for
-          # the test list (ci_apply_tests.sh uses this fixed path); the lists
-          # of the build job are used, not the ones written here
+          # extract the fetched repositories of the board into the installed
+          # core, as for its test list (ci_apply_tests.sh uses this fixed
+          # path); the lists of the build job are used, not the ones written
+          # here
+          # (nothing to prepare if the lists of the board failed)
+          [ ! -f "lists/$GROUP/failed" ] || exit 0
           ln -s $CORE_DIR ArduinoCore-zephyr
-          extra/ci_apply_tests.sh native_sim native_sim_native_64 "$RUNNER_TEMP/lists"
-          sort -u lists/libraries.txt | while read -r lib ; do
+          extra/ci_apply_tests.sh "$ARTIFACT" "$VARIANT" "$RUNNER_TEMP/lists"
+          sort -u "lists/$GROUP/libraries.txt" | while read -r lib ; do
             arduino-cli lib install "$lib" || echo "::warning::cannot install library '$lib'"
           done
 
@@ -252,8 +262,15 @@ jobs:
           case "$GROUP" in
             loader)
               loader/native_sim/tests/run_tests.sh ;;
+            test-list)
+              false ;;
             *)
-              mapfile -t sketches < <(extra/ci_native_sim_matrix.sh -g "$GROUP" lists/tests.txt)
+              if [ -f "lists/$GROUP/failed" ] ; then
+                cat "lists/$GROUP/failed"
+                echo "::error::The test list of $GROUP failed, see the build job"
+                exit 1
+              fi
+              mapfile -t sketches < "lists/$GROUP/tests.txt"
               loader/native_sim/tests/run_sketches.sh -n ArduinoCore-zephyr "${sketches[@]}" ;;
           esac || [ -s "$SKETCH_REPORT" ] # failed sketches are checked below
 

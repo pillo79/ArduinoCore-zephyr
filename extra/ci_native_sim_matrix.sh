@@ -3,41 +3,40 @@
 # Copyright (c) Arduino s.r.l. and/or its affiliated companies
 # SPDX-License-Identifier: Apache-2.0
 
-# This script splits the native_sim tests in groups, one per test job.
-# The groups are the ones of the CI report (see TestEntry in ci_shared.py):
-# the name after 'libraries/' or 'examples/' in the sketch path. The loader
-# tests group is not in the test list, and is always present.
+# This script computes the native_sim test jobs: one for the loader tests,
+# and one for each board native_sim poses as (see ci_native_sim_lists.sh),
+# that builds the test list of that board.
 #
-# Usage:
-#   ci_native_sim_matrix.sh <tests.txt>
-#     print the test matrix as a compact JSON array of { group, id }, where
-#     id is the job marker id of the test job
-#   ci_native_sim_matrix.sh -g <group> <tests.txt>
-#     print the sketch directories of that group, one per line
+# Usage: ci_native_sim_matrix.sh <list dir>
+#   print the test matrix as a compact JSON array of objects with:
+#    - group: 'loader', or the board native_sim poses as;
+#    - id: the job marker id of the test job;
+#    - artifact, variant, arch: the core artifact, variant and architecture
+#      of the board (not for 'loader').
 #
-# <tests.txt> is the list written by ci_apply_tests.sh.
+# <list dir> is the one written by ci_native_sim_lists.sh: the boards with
+# sketches there, available or not, get a test job, and so do the boards
+# whose lists failed (their job fails). Run from the root of the core.
 
 set -e
 
-GROUP=
-if [ "$1" == "-g" ]; then
-	GROUP=$2
-	shift 2
-fi
-
 if [ "$#" -ne 1 ]; then
-	echo "Usage: $0 [-g <group>] <tests.txt>" >&2
+	echo "Usage: $0 <list dir>" >&2
 	exit 1
 fi
 
-# "<group> <sketch dir>" lines, as for the report
-groups() {
-	sed -n -E 's#^((ArduinoCore-zephyr/)?(libraries|examples)/([^/]+)/.*)$#\4 \1#p' "$1"
-}
+BOARDS=$({
+	for list in "$1"/*/tests.txt ; do
+		[ -s "$list" ] || [ -s "$(dirname "$list")/unavailable.txt" ] && basename "$(dirname "$list")"
+	done
+	for failed in "$1"/*/failed ; do
+		[ -f "$failed" ] && basename "$(dirname "$failed")"
+	done
+} | jq -R -s -c 'split("\n") | map(select(length > 0)) | unique')
 
-if [ -n "$GROUP" ]; then
-	groups "$1" | awk -v g="$GROUP" '$1 == g && !seen[$0]++ { sub(/^[^ ]* /, ""); print }'
-else
-	{ echo loader; groups "$1" | cut -d' ' -f1; } |
-		LC_ALL=C sort -u | jq -R -c -s 'split("\n") | map(select(length > 0) | { group: ., id: "test-native_sim-\(.)" })'
-fi
+extra/get_board_details.sh | jq -c --argjson boards "$BOARDS" '
+	[ { group: "loader", id: "test-native_sim-loader" } ] +
+	(map(select(.board as $b | $boards | index($b)))
+	 | sort_by(.board)
+	 | map({ group: .board, id: "test-native_sim-\(.board)",
+	         artifact: .artifact, variant: .variant, arch: .subarch }))'
