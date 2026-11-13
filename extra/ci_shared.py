@@ -5,6 +5,7 @@
 
 # Shared constants and data classes for CI log inspection scripts.
 
+import collections
 import enum
 import json
 import os
@@ -255,17 +256,42 @@ class TestGroup:
         self.group_names.add((test_entry.group, test_entry.name))
 
 
-def load_known_issues(variant):
+def known_issues_files(variant, mimic=None):
     """
-    Read the list of known issues for a variant from its known_example_issues.txt file.
+    Returns the known issues files of a variant, as (path, strict) tuples:
+    its known_example_issues.txt. For native_sim posing as a board, mimic is
+    the (board, board variant) tuple, and the files also include the ones of
+    the board variant, and the known_example_issues.<board>.txt of the
+    variant, for the issues of native_sim that are specific to that board.
+
+    The board variant issues are about the real board: they are not strict,
+    i.e. the sketches they list may build on native_sim (see
+    evaluate_sketch()).
+    """
+    files = [ (f"variants/{variant}/known_example_issues.txt", True) ]
+    if mimic:
+        board, board_variant = mimic
+        files += [ (f"variants/{board_variant}/known_example_issues.txt", False),
+                   (f"variants/{variant}/known_example_issues.{board}.txt", True) ]
+    return files
+
+# An expected error: the sketch pattern, and whether the sketch must fail
+KnownIssue = collections.namedtuple('KnownIssue', [ 'pattern', 'strict' ])
+
+def load_known_issues(variant, mimic=None):
+    """
+    Read the list of known issues for a variant from its known issues files
+    (see known_issues_files()), all optional.
     Returns a tuple of:
-     - exceptions: list of sketch patterns whose errors are expected
+     - exceptions: list of KnownIssue, for the sketches whose errors are expected
      - warning_filters: list of (sketch_pattern, warning_pattern) tuples for expected warnings
     """
     exceptions = []
     warning_filters = []
-    if os.path.exists(f"variants/{variant}/known_example_issues.txt"):
-        with open(f"variants/{variant}/known_example_issues.txt", 'r') as f:
+    for issues_file, strict in known_issues_files(variant, mimic):
+        if not os.path.exists(issues_file):
+            continue
+        with open(issues_file, 'r') as f:
             for line in f:
                 line = line.split('#')[0].strip()
                 if not line:
@@ -278,7 +304,7 @@ def load_known_issues(variant):
                     warning_filters.append(( sketch_pattern, warning_pattern ))
                 else:
                     # this is an exception
-                    exceptions.append(re.compile(f"^(ArduinoCore-zephyr/)?{line}"))
+                    exceptions.append(KnownIssue(re.compile(f"^(ArduinoCore-zephyr/)?{line}"), strict))
     return exceptions, warning_filters
 
 def load_sketch_reports(report_file):
@@ -308,6 +334,9 @@ def evaluate_sketch(report, exceptions, warning_filters):
     account for the exception (TestEntry does that).
     """
     sketch = report.get('name', 'unknown_sketch')
+    if report.get('available') is False:
+        # not built, as it cannot be (native_sim)
+        return sketch, False, SKIP, [ "Not available on native_sim." ]
     # built and, if it has expect logic, run (native_sim only)
     success = report.get('compilation_success', False) and report.get('run_success', True)
     issues = report.get('issues', [])
@@ -327,7 +356,10 @@ def evaluate_sketch(report, exceptions, warning_filters):
     else:
         status = PASS
 
-    excepted = any(pattern.match(sketch) for pattern in exceptions)
+    matches = [ issue for issue in exceptions if issue.pattern.match(sketch) ]
+    # (a sketch that builds although expected to fail is an invalid exception,
+    # unless only non-strict known issues list it)
+    excepted = bool(matches) and (not success or any(issue.strict for issue in matches))
     return sketch, excepted, status, sketch_issues
 
 def evaluate_test(report, exceptions, warning_filters):

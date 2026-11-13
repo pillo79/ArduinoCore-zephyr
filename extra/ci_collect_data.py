@@ -38,6 +38,7 @@
 #  output, and out of the overall result.
 
 import argparse
+import copy
 from collections import defaultdict
 import glob
 import json
@@ -103,9 +104,22 @@ ALL_BOARD_DATA = { b['board']: b for b in ALL_BOARD_DATA }
 # native_sim is not part of the core artifacts: its board data comes separately
 NATIVE_SIM_BOARD_DATA_STR = os.environ.get('NATIVE_SIM_BOARD_DATA')
 NATIVE_SIM_MATRIX = json.loads(os.environ.get('NATIVE_SIM_MATRIX') or '[]')
+def mimic_id(board):
+    """
+    Returns the id of the board of native_sim posing as a board.
+    """
+    return f"native_sim:{board}"
+
 if NATIVE_SIM_BOARD_DATA_STR:
     native_sim_data = json.loads(NATIVE_SIM_BOARD_DATA_STR)
     ALL_BOARD_DATA[native_sim_data['board']] = native_sim_data
+    # native_sim posing as each board is reported as a board of its own, in
+    # the native_sim artifact, with the test job of that board
+    for job in NATIVE_SIM_MATRIX:
+        if job.get('variant'):
+            board_id = mimic_id(job['group'])
+            ALL_BOARD_DATA[board_id] = dict(native_sim_data, board=board_id, mimic=job['group'],
+                                            mimic_variant=job['variant'], mimic_job=job['id'])
 
 # Load job statuses and URLs from the job completion markers
 JOB_STATUS = {}
@@ -149,9 +163,16 @@ def process_board(board_data, native_sim_failed):
     if job_link:
         job_link += "#step:5:1"
 
-    # Read loader build data
+    # Read loader build data (native_sim posing as a board shares the loader
+    # of native_sim, processed first: its warnings are only reported once)
     native_sim = artifact == 'native_sim'
-    BOARD_LOADERS[board] = LoaderEntry(artifact, board, variant, job_link, need_meminfo=not native_sim)
+    mimic = board_data.get('mimic')
+    if mimic and 'native_sim' in BOARD_LOADERS:
+        BOARD_LOADERS[board] = copy.copy(BOARD_LOADERS['native_sim'])
+        BOARD_LOADERS[board].board = board
+        BOARD_LOADERS[board].warnings = []
+    else:
+        BOARD_LOADERS[board] = LoaderEntry(artifact, board, variant, job_link, need_meminfo=not native_sim)
     if job_failed(board_data['id']):
         # the build may have failed after producing the core data
         BOARD_LOADERS[board].status = FAILURE
@@ -164,12 +185,16 @@ def process_board(board_data, native_sim_failed):
     board_data['soc'] = soc
     REGIONS_BY_SOC[soc].update(BOARD_LOADERS[board].meminfo.keys())
 
-    # Get list of expected errors for this board
-    exceptions, warning_filters = load_known_issues(variant)
+    # Get list of expected errors for this board (and, for native_sim posing
+    # as a board, the ones of that board)
+    exceptions, warning_filters = load_known_issues(variant, mimic and (mimic, board_data['mimic_variant']))
 
     if native_sim:
-        # one report per test job, built and run with the package of the build job
-        for job in NATIVE_SIM_MATRIX:
+        # one report per test job, built and run with the package of the build
+        # job: the job posing as the board, or the ones common to all boards
+        jobs = [ job for job in NATIVE_SIM_MATRIX if job.get('variant') is None ] if not mimic \
+               else [ job for job in NATIVE_SIM_MATRIX if job['id'] == board_data['mimic_job'] ]
+        for job in jobs:
             group, job_id = job['group'], job['id']
             job_link = JOB_URLS.get(job_id)
             reports, error = load_sketch_reports(f"native_sim-sketches-{group}.json")
@@ -229,11 +254,13 @@ def process_board(board_data, native_sim_failed):
 
 # Import and process data for each board: native_sim first, as the core
 # packages are not tested if its tests failed
-if 'native_sim' in ALL_BOARD_DATA:
-    process_board(ALL_BOARD_DATA['native_sim'], False)
-native_sim_failed = 'native_sim' in BOARD_TESTS and not BOARD_TESTS['native_sim'].status.passed
 for board, board_data in ALL_BOARD_DATA.items():
-    if board != 'native_sim':
+    if board_data['artifact'] == 'native_sim':
+        process_board(board_data, False)
+native_sim_failed = any(not tests.status.passed for board, tests in BOARD_TESTS.items()
+                        if ALL_BOARD_DATA.get(board, {}).get('artifact') == 'native_sim')
+for board, board_data in ALL_BOARD_DATA.items():
+    if board_data['artifact'] != 'native_sim':
         process_board(board_data, native_sim_failed)
 
 # Leave the excluded artifacts out of the output, after all boards were

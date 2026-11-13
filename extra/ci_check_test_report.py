@@ -13,8 +13,10 @@
 # Each unexpected result is printed as a GitHub error annotation, followed by
 # a summary line. The script exits with an error if any test did not pass.
 #
-# Usage: ci_check_test_report.py <variant> <report_file>
-#  Must be run from a directory containing variants/<variant>/.
+# Usage: ci_check_test_report.py <variant> <report_file> [<board> <board variant>]
+#  Must be run from a directory containing variants/<variant>/. For native_sim
+#  posing as a board, <board> and <board variant> add the known issues of
+#  that board (see known_issues_files() in ci_shared.py).
 
 import sys
 
@@ -29,7 +31,7 @@ def escape_data(s):
 def escape_property(s):
     return escape_data(s).replace(':', '%3A').replace(',', '%2C')
 
-def check_report(variant, report_file):
+def check_report(variant, report_file, mimic=None):
     """
     Returns a tuple of (total_tests, list of TestEntry that did not pass).
     """
@@ -37,7 +39,7 @@ def check_report(variant, report_file):
     if error:
         return 0, [ TestEntry.failure(error) ]
 
-    exceptions, warning_filters = load_known_issues(variant)
+    exceptions, warning_filters = load_known_issues(variant, mimic)
     failed = []
     for report in reports:
         test_entry = evaluate_test(report, exceptions, warning_filters)
@@ -46,11 +48,11 @@ def check_report(variant, report_file):
 
     return len(reports), failed
 
-if len(sys.argv) != 3:
-    print("Usage: ci_check_test_report.py <variant> <report_file>")
+if len(sys.argv) not in (3, 5):
+    print("Usage: ci_check_test_report.py <variant> <report_file> [<board> <board variant>]")
     sys.exit(1)
 
-total, failed = check_report(sys.argv[1], sys.argv[2])
+total, failed = check_report(sys.argv[1], sys.argv[2], tuple(sys.argv[3:5]) or None)
 
 for test in failed:
     message = test.status.legend

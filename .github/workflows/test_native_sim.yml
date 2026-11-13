@@ -271,14 +271,18 @@ jobs:
                 exit 1
               fi
               mapfile -t sketches < "lists/$GROUP/tests.txt"
-              loader/native_sim/tests/run_sketches.sh -n ArduinoCore-zephyr "${sketches[@]}" ;;
+              loader/native_sim/tests/run_sketches.sh -n ArduinoCore-zephyr \
+                -u "lists/$GROUP/unavailable.txt" "${sketches[@]}" ;;
           esac || [ -s "$SKETCH_REPORT" ] # failed sketches are checked below
 
       # fail early on results that are not known issues, as test-core does
       - name: Check test results
         if: ${{ success() || failure() }}
+        env:
+          # the known issues of the board native_sim poses as, if any
+          MIMIC: ${{ matrix.arch && format('{0} {1}', matrix.group, matrix.variant) || '' }}
         run: |
-          extra/ci_check_test_report.py native_sim_native_64 "$SKETCH_REPORT"
+          extra/ci_check_test_report.py native_sim_native_64 "$SKETCH_REPORT" $MIMIC
 
       - name: Archive test report
         if: ${{ success() || failure() }}
@@ -318,7 +322,7 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             extra/
-            variants/native_sim_native_64/known_example_issues.txt
+            variants/*/known_example_issues*.txt
           sparse-checkout-cone-mode: false
 
       - uses: actions/download-artifact@v8
