@@ -38,3 +38,5 @@ libraries/Arduino_RPClite/examples/.*
 libraries/Arduino_RouterBridge/examples/.*
 # no video hardware
 libraries/Arduino_Video/examples/.*
+# ARM only: needs cmsis_core.h (UNO Q, Ventuno Q)
+libraries/Arduino_LED_Matrix/examples/.*
