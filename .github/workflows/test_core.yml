@@ -60,7 +60,7 @@ jobs:
 
   prepare:
     name: Prepare tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       CORE_HASH: ${{ env.CORE_HASH }}
       CORE_VER: ${{ env.CORE_VER }}
@@ -184,7 +184,7 @@ jobs:
 
   test-core:
     name: ${{ matrix.board }}:${{ matrix.link_mode }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - prepare
     if: ${{ needs.prepare.outputs.TEST_FQBNS != '[]' }}

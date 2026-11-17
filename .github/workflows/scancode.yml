@@ -7,7 +7,7 @@ on: [pull_request]
 
 jobs:
   verify-licenses:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Scan code for licenses
     steps:
     - name: Checkout the code

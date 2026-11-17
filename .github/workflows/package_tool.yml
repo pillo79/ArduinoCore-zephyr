@@ -35,7 +35,7 @@ jobs:
 
   setup:
     name: Set up build matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       is_release: ${{ steps.set-matrix.outputs.is_release }}
@@ -97,7 +97,7 @@ jobs:
   build-tool:
     name: Build ${{ matrix.tool }} ${{ matrix.version }}
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
     steps:
@@ -141,7 +141,7 @@ jobs:
 
   publish-tool:
     name: Publish tool
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     if: fromJSON(needs.setup.outputs.is_release)
     needs:
       - setup
@@ -173,7 +173,7 @@ jobs:
   # The final verification step always runs to properly get the overall job status.
 
   verify-tool:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     if: always()
     needs:
      - build-tool
@@ -188,7 +188,7 @@ jobs:
   ci-builds-upload:
     name: Upload to ci-builds
     if: fromJSON(needs.setup.outputs.is_release)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - setup
       - build-tool

@@ -31,7 +31,7 @@ jobs:
 
   build-env:
     name: Prepare build environment
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       # User-friendly SemVer-compatible version for the build. Matches the tag
       # name if building a tagged commit, otherwise it is "slightly more" than
@@ -175,7 +175,7 @@ jobs:
 
   build-board:
     name: Build for ${{ matrix.board }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - build-env
     env:
@@ -318,7 +318,7 @@ jobs:
 
   select-packages:
     name: Select packages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - build-env
       - build-board
@@ -364,7 +364,7 @@ jobs:
 
   package-core:
     name: Package ${{ matrix.artifact }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - build-env
       - select-packages
@@ -438,7 +438,7 @@ jobs:
 
   package-index:
     name: Package index URL for offline tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - build-env
       - select-packages
@@ -515,7 +515,7 @@ jobs:
 
   clean-build-temps:
     name: Clean up build intermediates
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - build-board
       - package-core
@@ -566,7 +566,7 @@ jobs:
   # See ci_collect_data.py and ci_generate_report.py for details.
 
   verify-core:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - build-env
       - package-core
@@ -703,7 +703,7 @@ jobs:
 
   clean-test-temps:
     name: Clean up test results
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     if: ${{ needs.verify-core.result == 'success' }}
     needs:
       - build-env
@@ -731,7 +731,7 @@ jobs:
 
   publish-core:
     name: Publish core
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     if: ${{ github.event_name == 'push' && github.repository == 'arduino/ArduinoCore-zephyr' && !startsWith(github.ref_name, 'dependabot/') }}
     needs:
       - build-env
@@ -776,7 +776,7 @@ jobs:
 
   prepare-json:
     name: Prepare jsons
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - build-env
       - package-core
@@ -831,7 +831,7 @@ jobs:
   ci-builds-upload:
     name: Upload to ci-builds
     if: ${{ github.event_name == 'push' && github.repository == 'arduino/ArduinoCore-zephyr' && !startsWith(github.ref_name, 'dependabot/') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - build-env
       - verify-core

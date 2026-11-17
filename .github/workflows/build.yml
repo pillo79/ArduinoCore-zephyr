@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Build native Zephyr samples
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     container: zephyrprojectrtos/ci-base:latest
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
