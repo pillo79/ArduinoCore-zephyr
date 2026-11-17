@@ -47,7 +47,7 @@ runs:
         name: native_sim-package
         path: native_sim-package/
 
-    - uses: arduino/setup-arduino-cli@v2
+    - uses: arduino/setup-arduino-cli@4a9ea9a2ff9464355b80891a3cd4b9f9b3f5ca5f
 
     # The Board Manager core is installed as test-core does (from ci-builds,
     # if possible) to get the exact set of tools the core recipes need. All
