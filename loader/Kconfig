@@ -21,4 +21,12 @@ config MAIN_STACK_REGION
 	help
 	  Specify the memory region for main stack.
 
+config FLASH_BINARY_PADDING
+    int "Flash padding size"
+    depends on !LINKER_LAST_SECTION_ID
+    help
+      Select how the firmware image is padded. Positive values will pad the
+      image to the specified size, while negative values will pad the image to
+      the Devicetree erase block size. 0 will disable padding.
+
 rsource "ota/Kconfig"
