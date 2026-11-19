@@ -199,7 +199,7 @@ upload.pid={bootloader.pid}
 erase.pattern=
 
 # Generated files used at upload time
-upload.artifacts.loader={runtime.platform.path}/firmwares/{bootloader.file}
+upload.artifacts.loader={runtime.platform.path}/firmwares/{loader.file}
 upload.artifacts.sketch={build.path}/{build.project_name}.{upload.extension}
 
 # Expects a {loader.cmd} and a {sketch.cmd} to be defined in the tool's
