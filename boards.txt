@@ -63,7 +63,7 @@ giga.upload.native_usb=true
 giga.bootloader.tool=dfu-util
 giga.bootloader.tool.default=dfu-util
 giga.bootloader.pid=0x0366
-giga.loader.file=zephyr-{build.variant}.bin
+giga.loader.file={build.variant}/loader.bin
 
 giga.debug.tool=gdb
 giga.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -115,7 +115,7 @@ nano33ble.upload.offset=0x10000 # bootloader skips its own partition
 
 nano33ble.bootloader.tool=bossac
 nano33ble.bootloader.tool.default=bossac
-nano33ble.loader.file=zephyr-{build.variant}.bin
+nano33ble.loader.file={build.variant}/loader.bin
 
 nano33ble.debug.tool=gdb
 nano33ble.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -166,7 +166,7 @@ ek_ra8d1.upload.target=R7FA8D1AH
 
 ek_ra8d1.bootloader.tool=pyocd
 ek_ra8d1.bootloader.tool.default=pyocd
-ek_ra8d1.loader.file=zephyr-{build.variant}.elf
+ek_ra8d1.loader.file={build.variant}/loader.elf
 ek_ra8d1.bootloader.target=R7FA8D1AH
 
 
@@ -209,7 +209,7 @@ frdm_mcxn947.upload.native_usb=true
 
 frdm_mcxn947.bootloader.tool=pyocd
 frdm_mcxn947.bootloader.tool.default=pyocd
-frdm_mcxn947.loader.file=zephyr-{build.variant}.elf
+frdm_mcxn947.loader.file={build.variant}/loader.elf
 frdm_mcxn947.bootloader.target=mcxn947vdf
 
 
@@ -254,7 +254,7 @@ portentah7.upload.native_usb=true
 portentah7.bootloader.tool=dfu-util
 portentah7.bootloader.tool.default=dfu-util
 portentah7.bootloader.pid=0x035b
-portentah7.loader.file=zephyr-{build.variant}.bin
+portentah7.loader.file={build.variant}/loader.bin
 
 portentah7.build.ota.magic=0x2341025B
 portentah7.build.ota.sketch_offset={loader.maximum_size}
@@ -307,7 +307,7 @@ nicla_vision.upload.native_usb=true
 nicla_vision.bootloader.tool=dfu-util
 nicla_vision.bootloader.tool.default=dfu-util
 nicla_vision.bootloader.pid=0x035f
-nicla_vision.loader.file=zephyr-{build.variant}.bin
+nicla_vision.loader.file={build.variant}/loader.bin
 
 nicla_vision.build.ota.magic=0x2341025F
 nicla_vision.build.ota.sketch_offset={loader.maximum_size}
@@ -358,7 +358,7 @@ frdm_rw612.upload.native_usb=true
 
 frdm_rw612.bootloader.tool=pyocd
 frdm_rw612.bootloader.tool.default=pyocd
-frdm_rw612.loader.file=zephyr-{build.variant}.elf
+frdm_rw612.loader.file={build.variant}/loader.elf
 frdm_rw612.bootloader.target=rw612
 
 ##########################################################################################
@@ -399,7 +399,7 @@ nicla_sense.upload.target=nrf52
 
 nicla_sense.bootloader.tool=openocd
 nicla_sense.bootloader.tool.default=openocd
-nicla_sense.loader.file=zephyr-{build.variant}.hex
+nicla_sense.loader.file={build.variant}/loader.hex
 nicla_sense.bootloader.target=nrf52
 
 nicla_sense.debug.tool=gdb
@@ -451,7 +451,7 @@ portentac33.upload.dfuse=
 
 portentac33.bootloader.tool=dfu-util
 portentac33.bootloader.tool.default=dfu-util
-portentac33.loader.file=zephyr-{build.variant}.bin
+portentac33.loader.file={build.variant}/loader.bin
 portentac33.bootloader.pid=0x0368
 portentac33.loader.dfuse=
 
@@ -504,7 +504,7 @@ opta.upload.native_usb=true
 opta.bootloader.tool=dfu-util
 opta.bootloader.tool.default=dfu-util
 opta.bootloader.pid=0x0364
-opta.loader.file=zephyr-{build.variant}.bin
+opta.loader.file={build.variant}/loader.bin
 
 opta.debug.tool=gdb
 opta.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -554,7 +554,7 @@ nano_matter.upload.native_usb=false
 
 nano_matter.bootloader.tool=openocd
 nano_matter.bootloader.tool.default=openocd
-nano_matter.loader.file=zephyr-{build.variant}.hex
+nano_matter.loader.file={build.variant}/loader.hex
 nano_matter.bootloader.target=arduino_nano_matter
 
 nano_matter.debug.server=openocd
@@ -615,7 +615,7 @@ unoq.upload.native_usb=true
 
 unoq.bootloader.tool=remoteocd
 unoq.bootloader.tool.default=remoteocd
-unoq.loader.file=zephyr-{build.variant}.elf
+unoq.loader.file={build.variant}/loader.elf
 unoq.bootloader.target=stm32u585zitxq
 
 ##############################################################################################################
@@ -661,7 +661,7 @@ nano_connect.upload.familyid=0xe48bff56
 
 nano_connect.bootloader.tool=picotool
 nano_connect.bootloader.tool.default=picotool
-nano_connect.loader.file=zephyr-{build.variant}.uf2
+nano_connect.loader.file={build.variant}/loader.uf2
 
 nano_connect.debug.tool=gdb
 nano_connect.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -731,5 +731,5 @@ ventunoq.upload.maximum_data_size=523624
 
 ventunoq.bootloader.tool=remoteocd
 ventunoq.bootloader.tool.default=remoteocd
-ventunoq.loader.file=zephyr-{build.variant}.elf
+ventunoq.loader.file={build.variant}/loader.elf
 ventunoq.bootloader.target=stm32h5f5xx
