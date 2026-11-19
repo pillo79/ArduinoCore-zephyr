@@ -239,7 +239,7 @@ tools.openocd.program.pattern="{path}/{cmd}" -s "{path}/share/openocd/scripts/" 
 
 tools.openocd.bootloader.params.verbose=-d2
 tools.openocd.bootloader.params.quiet=-d0
-tools.openocd.bootloader.pattern="{path}/{cmd}" -s "{path}/share/openocd/scripts/" {upload.programmer} {upload.config} -c "set filename0 "{upload.artifacts.loader}"" -f "{build.variant.path}/flash_bootloader.cfg" "{upload.verbose}"
+tools.openocd.bootloader.pattern="{path}/{cmd}" -s "{path}/share/openocd/scripts/" {upload.programmer} {upload.config} -c "set filename0 "{upload.artifacts.loader}"" -f "{build.variant.path}/flash_loader.cfg" "{upload.verbose}"
 
 
 #
@@ -251,7 +251,7 @@ tools.bossac.cmd=bossac
 tools.bossac.cmd.windows=bossac.exe
 
 tools.bossac.sketch.cmd="{path}/{cmd}" {upload.verbose} --port={serial.port.file} -U -i -e -w "{upload.artifacts.sketch}" --offset {upload.address} -R
-tools.bossac.loader.cmd="{path}/{cmd}" {upload.verbose} --port={serial.port.file} -U -i -e -w "{upload.artifacts.loader}" --offset {bootloader.address}
+tools.bossac.loader.cmd="{path}/{cmd}" {upload.verbose} --port={serial.port.file} -U -i -e -w "{upload.artifacts.loader}" --offset {loader.address}
 tools.bossac.loader.args.without_sketch={empty} -R
 
 tools.bossac.upload.params.verbose=-d
@@ -270,12 +270,13 @@ tools.bossac.bootloader.pattern={tools.patterns.flash-loader-only}
 # overridable by boards.txt
 leave.dfuse=:leave
 upload.dfuse=--dfuse-address={upload.address}
-bootloader.dfuse=--dfuse-address={bootloader.address}
+loader.dfuse=--dfuse-address={loader.address}
+loader.interface=0
 
 tools.dfu-util.path={runtime.tools.dfu-util.path}
 tools.dfu-util.cmd=dfu-util
 tools.dfu-util.sketch.cmd="{path}/{cmd}" --device ,{upload.vid}:{upload.pid} -D "{upload.artifacts.sketch}" -a{upload.interface} {upload.dfuse}{leave.dfuse}
-tools.dfu-util.loader.cmd="{path}/{cmd}" --device ,{bootloader.vid}:{bootloader.pid} -D "{upload.artifacts.loader}" -a{bootloader.interface} {bootloader.dfuse}
+tools.dfu-util.loader.cmd="{path}/{cmd}" --device ,{bootloader.vid}:{bootloader.pid} -D "{upload.artifacts.loader}" -a{loader.interface} {loader.dfuse}
 tools.dfu-util.loader.args.without_sketch={leave.dfuse}
 
 tools.dfu-util.upload.params.verbose=-d
@@ -330,7 +331,7 @@ tools.remoteocd.upload.pattern="{path}/{cmd}" upload --adb-path "{runtime.tools.
 
 tools.remoteocd.bootloader.params.verbose=--verbose
 tools.remoteocd.bootloader.params.quiet=
-tools.remoteocd.bootloader.pattern="{path}/{cmd}" upload --adb-path "{runtime.tools.adb.path}/adb" -s "{upload.port.properties.serialNumber}" -f "{build.variant.path}/flash_bootloader.cfg" "{upload.verbose}" "{upload.artifacts.loader}"
+tools.remoteocd.bootloader.pattern="{path}/{cmd}" upload --adb-path "{runtime.tools.adb.path}/adb" -s "{upload.port.properties.serialNumber}" -f "{build.variant.path}/flash_loader.cfg" "{upload.verbose}" "{upload.artifacts.loader}"
 
 tools.remoteocd_network.upload.protocol=network
 tools.remoteocd_network.upload.field.password=Password

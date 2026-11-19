@@ -61,9 +61,8 @@ giga.upload.native_usb=true
 giga.bootloader.tool=dfu-util
 giga.bootloader.tool.default=dfu-util
 giga.bootloader.pid=0x0366
-giga.bootloader.interface=0
 giga.loader.file=zephyr-{build.variant}.bin
-giga.bootloader.address=0x08040000
+giga.loader.address=0x08040000
 
 giga.debug.tool=gdb
 giga.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -73,7 +72,7 @@ giga.debug.cortex-debug.custom.request=attach
 giga.debug.svd_file={runtime.platform.path}/svd/STM32H747_CM7.svd
 
 giga.build.ota.magic=0x23410266
-giga.build.ota.sketch_offset={bootloader.maximum_size}
+giga.build.ota.sketch_offset={loader.maximum_size}
 
 ##########################################################################################
 
@@ -116,7 +115,7 @@ nano33ble.upload.offset=0x10000 # bootloader skips its own partition
 nano33ble.bootloader.tool=bossac
 nano33ble.bootloader.tool.default=bossac
 nano33ble.loader.file=zephyr-{build.variant}.bin
-nano33ble.bootloader.address=0x0000
+nano33ble.loader.address=0x0000
 
 nano33ble.debug.tool=gdb
 nano33ble.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -255,12 +254,11 @@ portentah7.upload.native_usb=true
 portentah7.bootloader.tool=dfu-util
 portentah7.bootloader.tool.default=dfu-util
 portentah7.bootloader.pid=0x035b
-portentah7.bootloader.interface=0
 portentah7.loader.file=zephyr-{build.variant}.bin
-portentah7.bootloader.address=0x08040000
+portentah7.loader.address=0x08040000
 
 portentah7.build.ota.magic=0x2341025B
-portentah7.build.ota.sketch_offset={bootloader.maximum_size}
+portentah7.build.ota.sketch_offset={loader.maximum_size}
 
 portentah7.debug.tool=gdb
 portentah7.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -310,12 +308,11 @@ nicla_vision.upload.native_usb=true
 nicla_vision.bootloader.tool=dfu-util
 nicla_vision.bootloader.tool.default=dfu-util
 nicla_vision.bootloader.pid=0x035f
-nicla_vision.bootloader.interface=0
 nicla_vision.loader.file=zephyr-{build.variant}.bin
-nicla_vision.bootloader.address=0x08040000
+nicla_vision.loader.address=0x08040000
 
 nicla_vision.build.ota.magic=0x2341025F
-nicla_vision.build.ota.sketch_offset={bootloader.maximum_size}
+nicla_vision.build.ota.sketch_offset={loader.maximum_size}
 
 nicla_vision.debug.tool=gdb
 nicla_vision.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -457,10 +454,9 @@ portentac33.upload.dfuse=
 portentac33.bootloader.tool=dfu-util
 portentac33.bootloader.tool.default=dfu-util
 portentac33.loader.file=zephyr-{build.variant}.bin
-portentac33.bootloader.interface=0
-portentac33.bootloader.address=0x10000
+portentac33.loader.address=0x10000
 portentac33.bootloader.pid=0x0368
-portentac33.bootloader.dfuse=
+portentac33.loader.dfuse=
 
 # the space before the extra arguments is important
 portentac33.leave.dfuse={empty} -Q
@@ -468,7 +464,7 @@ portentac33.loader.args.with_sketch={empty} -w
 portentac33.sketch.args.without_loader={empty} -w
 
 portentac33.build.ota.magic=0x23410068
-portentac33.build.ota.sketch_offset={bootloader.maximum_size}
+portentac33.build.ota.sketch_offset={loader.maximum_size}
 
 ##########################################################################################
 
@@ -511,9 +507,8 @@ opta.upload.native_usb=true
 opta.bootloader.tool=dfu-util
 opta.bootloader.tool.default=dfu-util
 opta.bootloader.pid=0x0364
-opta.bootloader.interface=0
 opta.loader.file=zephyr-{build.variant}.bin
-opta.bootloader.address=0x08040000
+opta.loader.address=0x08040000
 
 opta.debug.tool=gdb
 opta.debug.server.openocd.scripts.0=interface/{programmer.protocol}.cfg
@@ -523,7 +518,7 @@ opta.debug.cortex-debug.custom.request=attach
 opta.debug.svd_file={runtime.platform.path}/svd/STM32H747_CM7.svd
 
 opta.build.ota.magic=0x23410064
-opta.build.ota.sketch_offset={bootloader.maximum_size}
+opta.build.ota.sketch_offset={loader.maximum_size}
 
 ##########################################################################################
 
