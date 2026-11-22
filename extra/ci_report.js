@@ -611,12 +611,147 @@ function renderPage(m, view) {
 
 const renderMain = (m, view) => renderFilterBar(m, view) + renderHeader(m) + renderRecap(m, view) + renderTabs(m, view);
 
+// whether two elements are the same control (data attributes), to focus it
+// again after a render
+const CONTROL_KEYS = ['sel', 'kind', 'id', 'tab', 'toggle', 'clear', 'memall', 'copy'];
+const sameControl = (a, b) => CONTROL_KEYS.some((k) => a[k] !== undefined) && CONTROL_KEYS.every((k) => a[k] === b[k]);
+
+// view presets from the URL query (direct links to the page: GitHub drops
+// the query on the artifact link); unknown ids are ignored
+// selection of a sidebar entry: the board (artifact, board, SoC) and the
+// test selections are exclusive; clicking the selected entry, or All,
+// goes back to all
+function selectEntry(view, side, kind, id) {
+  const cur = view[side] ?? { kind: 'all' };
+  const sel = kind === 'all' || (cur.kind === kind && cur.id === id) ? { kind: 'all' } : { kind, id };
+  return { boards: { kind: 'all' }, tests: { kind: 'all' }, [side]: sel };
+}
+
+function readPresets(search, m) {
+  const q = new URLSearchParams(search);
+  const out = {};
+  const boards = new Set(m.artifacts.flatMap((a) => m.boardsByArtifact.get(a)));
+  const sketches = new Set([...m.groups.values()].flat());
+  if (q.get('filter')) out.filter = q.get('filter');
+  if (m.artifacts.includes(q.get('artifact'))) out.boards = { kind: 'artifact', id: q.get('artifact') };
+  if (m.socs.has(q.get('soc'))) out.boards = { kind: 'soc', id: q.get('soc') };
+  if (boards.has(q.get('board'))) out.boards = { kind: 'board', id: q.get('board') };
+  if (q.has('group') && m.groups.has(q.get('group'))) out.tests = { kind: 'group', id: q.get('group') };
+  if (sketches.has(q.get('sketch'))) out.tests = { kind: 'sketch', id: q.get('sketch') };
+  // one selection only (see selectEntry): the test one wins
+  if (out.tests) delete out.boards;
+  return out;
+}
+
 const api = {
   escapeHtml: esc, matches, hl, buildModel, selectTests, badge, issueKey, cardGroups,
   renderSidebar, renderFilterBar, renderHeader, renderRecap, renderTabs, renderIssuesTab,
   renderWarningsTab, renderMemoryTab, memoryCsv, renderKconfigTab, renderSetupTab, renderSizesTab, renderPage,
+  readPresets, selectEntry, sameControl,
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 root.CIReport = api;
+
+// --- DOM layer (browser only)
+
+async function decode(text) {
+  const bytes = Uint8Array.from(atob(text.trim()), (c) => c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return JSON.parse(await new Response(stream).text());
+}
+
+function start(p) {
+  const m = buildModel(p);
+  const view = { filter: '', boards: { kind: 'all' }, tests: { kind: 'all' }, tab: 'issues',
+                 open: new Set(), collapsed: new Set(), ...readPresets(location.search, m) };
+  const app = document.getElementById('app');
+  document.title = `CI report: ${p.run.ci_run_passed ? 'PASSED' : 'FAILED'}`;
+  app.innerHTML = "<aside id='sidebar'></aside><main id='main'></main>";
+  const sidebar = document.getElementById('sidebar');
+  const main = document.getElementById('main');
+
+  function render() {
+    // keep the focus and the caret of the filter box across renders
+    const input = document.activeElement?.id === 'filter' ? document.activeElement : null;
+    const caret = input ? [input.selectionStart, input.selectionEnd] : null;
+    // and of the control that was clicked (keyboard navigation)
+    const active = document.activeElement;
+    const control = active && active !== input && app.contains(active) ? { ...active.dataset } : null;
+    const scroll = sidebar.scrollTop;
+    sidebar.innerHTML = renderSidebar(m, view);
+    sidebar.scrollTop = scroll;
+    main.innerHTML = renderMain(m, view);
+    if (control) {
+      for (const b of app.querySelectorAll('button')) {
+        if (sameControl(b.dataset, control)) { b.focus(); break; }
+      }
+    }
+    if (caret) {
+      const f = document.getElementById('filter');
+      f.focus();
+      f.setSelectionRange(...caret);
+    }
+  }
+
+  const select = (side, kind, id) => Object.assign(view, selectEntry(view, side, kind, id));
+
+  let timer; // debounce of the filter box
+  app.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-sel], [data-clear], [data-toggle], [data-tab], [data-memall], [data-copy], summary, tr[data-board]');
+    if (!el) return;
+    if (el.dataset.copy === 'memory') {
+      // no render: only the button text changes
+      const done = (text) => { el.textContent = text; setTimeout(() => { el.textContent = 'copy as CSV'; }, 1500); };
+      navigator.clipboard.writeText(memoryCsv(m, view)).then(() => done('copied ✓'), () => done('copy failed'));
+      return;
+    }
+    if (el.matches('summary')) {
+      // remember the sections opened or closed by the user
+      const details = el.parentElement;
+      const key = details?.dataset?.key;
+      if (!key) return;
+      view.open.delete(key);
+      view.open.delete(`!${key}`);
+      view.open.add(details.open ? `!${key}` : key);
+      // closed sections have no content: render it (also toggles the section)
+      e.preventDefault();
+    } else if (el.dataset.memall !== undefined) {
+      view.memAll = !view.memAll;
+    } else if (el.dataset.toggle !== undefined) {
+      const key = el.dataset.toggle;
+      if (view.collapsed.has(key)) view.collapsed.delete(key); else view.collapsed.add(key);
+    } else if (el.dataset.sel) {
+      select(el.dataset.sel, el.dataset.kind, el.dataset.id);
+    } else if (el.dataset.clear) {
+      const c = el.dataset.clear;
+      if (c === 'boards' || c === 'all') view.boards = { kind: 'all' };
+      if (c === 'tests' || c === 'all') view.tests = { kind: 'all' };
+      if (c === 'filter' || c === 'all') { clearTimeout(timer); view.filter = ''; view.filterRaw = ''; }
+    } else if (el.dataset.tab) {
+      view.tab = el.dataset.tab;
+    } else if (el.matches('tr[data-board]')) {
+      if (e.target.closest('a')) return; // log links
+      select('boards', 'board', el.dataset.board);
+    }
+    render();
+  });
+
+  app.addEventListener('input', (e) => {
+    if (e.target.id !== 'filter') return;
+    clearTimeout(timer);
+    timer = setTimeout(() => { view.filterRaw = e.target.value; view.filter = e.target.value.trim(); render(); }, 150);
+  });
+
+  render();
+}
+
+if (typeof document !== 'undefined') {
+  const data = document.getElementById('report-data');
+  if (data) {
+    decode(data.textContent).then(start).catch((e) => {
+      document.getElementById('app').innerHTML = `<p>Cannot load the report data: ${esc(e)}</p>`;
+    });
+  }
+}
 
 })(typeof window !== 'undefined' ? window : globalThis);
