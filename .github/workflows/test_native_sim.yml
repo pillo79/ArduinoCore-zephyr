@@ -353,3 +353,17 @@ jobs:
           # (the one line summary, linking here, is for the PR comment)
           { echo "SUMMARY<<EOF_SUMMARY"; cat summary; echo "EOF_SUMMARY"; } >> $GITHUB_OUTPUT
           exit ${rc:-0}
+
+      # the collected data, reused for the report page of the calling run
+      - name: Archive collected data
+        if: ${{ !cancelled() && hashFiles('report.json') != '' }}
+        run: cp report.json native_sim-data.json
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && hashFiles('native_sim-data.json') != '' }}
+        with:
+          name: native_sim-data.json
+          path: native_sim-data.json
+          archive: false
+          overwrite: true
+          retention-days: 1

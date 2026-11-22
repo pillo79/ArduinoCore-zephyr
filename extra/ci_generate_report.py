@@ -11,10 +11,13 @@
 #  - <summary_file>: markdown summary report with overall results
 #  - <full_report_file>: full markdown report with detailed logs
 #
-# Usage: ci_generate_report.py [--native-sim-summary <text>] <json_file> [<results_file> <summary_file> <full_report_file>]
+# Usage: ci_generate_report.py [--native-sim-summary <text>] [--details-url <url>] <json_file> [<results_file> <summary_file> <full_report_file>]
 #  If output files are not specified, summary and full report are written to /dev/stdout
 #  and results to /dev/null. The native_sim summary line (see below), if given,
-#  is printed after the summary title.
+#  is printed after the summary title. With --details-url, the links of the
+#  summary and of the results point to the report page at that URL (see
+#  ci_report_page.py) instead of the full report in the step summary, and the
+#  summary links to it after the title.
 #
 # Usage: ci_generate_report.py --native-sim <json_file> <summary_file> <full_report_file>
 #  For the native_sim tests only (collected with no other boards): write the
@@ -102,6 +105,14 @@ def counts_text(res):
             errors_str += f" <i>(+{res.counts[EXPECTED_ERROR]}*)</i>"
     return f"<td align='right'>{tests_str}</td><td align='right'>{warnings_str}</td><td align='right'>{errors_str}</td>"
 
+def details_link(anchor):
+    """
+    Link to a section of the details: the report page if given (opened at
+    the top: GitHub drops the fragment of artifact links), otherwise the
+    anchor in the step summary of the job.
+    """
+    return details_url or f"{JOB_LINK_STEM}#user-content-{anchor}"
+
 def print_recap_rows(artifact, ram=True):
     """
     Prints the recap table rows of the boards of an artifact, with or without
@@ -111,7 +122,7 @@ def print_recap_rows(artifact, ram=True):
     artifact_boards = sorted(ARTIFACT_TESTS[artifact].boards)
     artifact_status = max(BOARD_TESTS[board].status for board in artifact_boards)
 
-    artifact_text = f"<a href='{JOB_LINK_STEM}#user-content-{artifact}'><code>{artifact}</code></a>"
+    artifact_text = f"<a href='{details_link(artifact)}'><code>{artifact}</code></a>"
     first_row_text = f"<td rowspan='{len(artifact_boards)}'>{artifact_status.board_icon} {artifact_text}</td>"
     for board in artifact_boards:
         # Artifact name (multi-row)
@@ -156,10 +167,10 @@ def print_summary():
 
     # Title
     if ci_run_passed:
-        title = f"# [CI run]({JOB_LINK_STEM}#user-content-summary) PASSED :green_circle:\n"
+        title = f"# [CI run]({details_link('summary')}) PASSED :green_circle:\n"
     else:
         failed_boards = [ f"{res.status.board_icon} `{board}`" for board, res in BOARD_TESTS.items() if not res.status.passed ]
-        title = f"# [CI run]({JOB_LINK_STEM}#user-content-summary) FAILED: {', '.join(failed_boards)}\n"
+        title = f"# [CI run]({details_link('summary')}) FAILED: {', '.join(failed_boards)}\n"
     f_print("<a name='summary'></a>\n")
     f_print(title)
     if native_sim_summary:
@@ -544,6 +555,8 @@ def print_details():
 parser = argparse.ArgumentParser(description="Write the CI reports of the collected data")
 parser.add_argument("--native-sim-summary", type=str.strip,
                     help="short summary of the native_sim tests, printed after the title")
+parser.add_argument("--details-url", type=str.strip,
+                    help="URL of the report page, the target of the links")
 parser.add_argument("--native-sim", action="store_true",
                     help="report of the native_sim tests only (see test_native_sim.yml)")
 parser.add_argument("json_file", help="data collected by ci_collect_data.py")
@@ -554,6 +567,7 @@ if len(args.files) not in ((2,) if args.native_sim else (0, 3)):
     parser.error("wrong number of output files")
 
 native_sim_summary = args.native_sim_summary
+details_url = args.details_url
 native_sim_mode = args.native_sim
 json_file = args.json_file
 if native_sim_mode:
@@ -611,7 +625,7 @@ if native_sim_mode:
 # Update the results file
 with open(results_file, 'w') as f:
     f.write('Tests PASSED.' if ci_run_passed else '::error::Tests FAILED.');
-    f.write(f" See {JOB_LINK_STEM}#user-content-summary for details.\n")
+    f.write(f" See {details_link('summary')} for details.\n")
 
 # Write the summary to the summary file
 with open(summary_file, 'w') as f:
