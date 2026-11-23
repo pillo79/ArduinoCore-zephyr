@@ -365,11 +365,37 @@ function renderFilterBar(m, view) {
     + `<span class='cnt'>${counts}</span>${chips.length ? "<button class='clr' data-clear='all'>Clear all</button>" : ''}</div>`;
 }
 
+const EVENTS = { push: 'push', pull_request: 'pull request', pull_request_target: 'pull request',
+  workflow_dispatch: 'manual run', schedule: 'scheduled run', merge_group: 'merge queue', release: 'release' };
+
+// the information on the CI run (see run_info() in ci_report_page.py):
+// pull request or commit title, then repository, branch, commit, trigger,
+// workflow run (linked) and date
+function runInfo(info, runLink) {
+  if (!info || !Object.keys(info).length) return '';
+  let title = '';
+  if (info.pr_number) title = `${link(info.pr_url, `#${esc(info.pr_number)}`)} ${esc(info.title ?? '')}`;
+  else if (info.title) title = esc(info.title);
+  const parts = [];
+  if (info.repository) parts.push(link(info.repository_url, esc(info.repository)));
+  if (info.branch) parts.push(link(info.branch_url, code(info.branch)) + (info.base ? ` → ${code(info.base)}` : ''));
+  if (info.sha) parts.push(link(info.commit_url, code(info.sha.slice(0, 8))));
+  if (info.event) parts.push(`${esc(EVENTS[info.event] ?? info.event)}${info.actor ? ` by ${esc(info.actor)}` : ''}`);
+  if (info.run_number) parts.push(`${esc(info.workflow ?? 'run')} ${link(runLink, `#${esc(info.run_number)}`)}`
+    + `${info.run_attempt && info.run_attempt !== '1' ? ` (attempt ${esc(info.run_attempt)})` : ''}`);
+  if (info.date) parts.push(esc(info.date.replace('T', ' ').replace(/:\d\dZ$/, ' UTC')));
+  return `<div class='runinfo'>${title ? `<div class='title'>${title}</div>` : ''}`
+    + `${parts.length ? `<div class='meta'>${parts.join(' · ')}</div>` : ''}</div>`;
+}
+
 function renderHeader(m) {
   const p = m.p;
   const run = p.run.ci_run_passed ? `PASSED ${m.status(m.S.PASS).test_icon}` : `FAILED ${m.status(m.S.ERROR).test_icon}`;
-  const ns = p.native_sim.present ? '' : ` · ${m.status(m.S.FAILURE).test_icon} native_sim: not built`;
-  return `<header><h1>${m.nativeOnly ? 'native_sim ' : ''}CI run — ${run}</h1><div class='note'>${link(p.run.job_link_stem, 'workflow run ↗')}${ns}</div></header>`;
+  const ns = p.native_sim.present ? '' : `${m.status(m.S.FAILURE).test_icon} native_sim: not built`;
+  // the workflow run is linked from its number, if known
+  const notes = [p.info?.run_number ? '' : link(p.run.job_link_stem, 'workflow run ↗'), ns].filter(Boolean);
+  return `<header><h1>${m.nativeOnly ? 'native_sim ' : ''}CI run — ${run}</h1>${runInfo(p.info, p.run.job_link_stem)}`
+    + `${notes.length ? `<div class='note'>${notes.join(' · ')}</div>` : ''}</header>`;
 }
 
 const pageTitle = (m) => `${m.nativeOnly ? 'native_sim ' : ''}CI report: ${m.p.run.ci_run_passed ? 'PASSED' : 'FAILED'}`;

@@ -20,9 +20,12 @@
 #  - --deltas: folder of the same reports with the size deltas to the base
 #    commit, see ci_calc_size_reports.py
 #  - --size-deltas: whether the deltas were computed (default: none)
+# The information on the CI run (repository, event, commit, branch or pull
+# request, date) is taken from the GitHub Actions environment, see run_info().
 
 import argparse
 import base64
+from datetime import datetime, timezone
 import glob
 import gzip
 import json
@@ -113,10 +116,53 @@ def read_sizes(current_dir, deltas_dir):
     return sizes
 
 
-def build_payload(build_info, native_sim, sizes, size_deltas):
+def run_info(env, now):
+    """
+    Returns the information on the CI run from the GitHub Actions environment
+    variables and event payload (only the date outside of GitHub Actions):
+    repository, workflow run, event, actor, commit (head commit of a pull
+    request), its title (first line of the pushed commit, or pull request
+    title), branch, or pull request with its base branch.
+    """
+    event = {}
+    try:
+        with open(env.get("GITHUB_EVENT_PATH", "")) as f:
+            event = json.load(f)
+    except (OSError, ValueError):
+        pass
+    server = env.get("GITHUB_SERVER_URL", "https://github.com")
+    repo = env.get("GITHUB_REPOSITORY")
+    url = f"{server}/{repo}" if repo else None
+    pr = event.get("pull_request") or {}
+    sha = pr.get("head", {}).get("sha") or env.get("GITHUB_SHA")
+    info = {
+        "date": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "repository": repo,
+        "repository_url": url,
+        "workflow": env.get("GITHUB_WORKFLOW"),
+        "run_number": env.get("GITHUB_RUN_NUMBER"),
+        "run_attempt": env.get("GITHUB_RUN_ATTEMPT"),
+        "event": env.get("GITHUB_EVENT_NAME"),
+        "actor": env.get("GITHUB_TRIGGERING_ACTOR") or env.get("GITHUB_ACTOR"),
+        "sha": sha,
+        "commit_url": f"{url}/commit/{sha}" if url and sha else None,
+    }
+    if pr:
+        info.update(pr_number=pr.get("number"), title=pr.get("title"), pr_url=pr.get("html_url"),
+                    branch=pr.get("head", {}).get("label"), base=pr.get("base", {}).get("ref"))
+    else:
+        message = (event.get("head_commit") or {}).get("message") or ""
+        branch = env.get("GITHUB_REF_NAME")
+        info.update(title=message.split("\n")[0], branch=branch,
+                    branch_url=f"{url}/tree/{branch}" if url and branch else None)
+    return {k: v for k, v in info.items() if v}
+
+
+def build_payload(build_info, native_sim, sizes, size_deltas, info=None):
     """
     Returns the data embedded in the page, see the module comment. With no
     build_info, the page of the native_sim tests only, with their run data.
+    info: the information on the CI run, see run_info().
     """
     if build_info is None:
         build_info = {"job_link_stem": native_sim["job_link_stem"], "ci_run_passed": native_sim["ci_run_passed"],
@@ -140,6 +186,7 @@ def build_payload(build_info, native_sim, sizes, size_deltas):
             "ci_run_passed": build_info["ci_run_passed"],
             "artifacts": artifacts,
         },
+        "info": info or {},
         "statuses": [{"value": int(s), "name": s.name, "passed": s.passed,
                       "test_icon": icon(s.test_icon), "board_icon": icon(s.board_icon),
                       "legend": s.legend} for s in TestStatus],
@@ -194,7 +241,8 @@ def main():
     if build_info is None and native_sim is None:
         parser.error(f"cannot read {args.native_sim}")
     sizes = read_sizes(args.sizes, args.deltas) if args.sizes else []
-    write_page(build_payload(build_info, native_sim, sizes, args.size_deltas), args.out)
+    info = run_info(os.environ, datetime.now(timezone.utc))
+    write_page(build_payload(build_info, native_sim, sizes, args.size_deltas, info), args.out)
 
 
 if __name__ == "__main__":
