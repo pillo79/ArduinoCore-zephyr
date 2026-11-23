@@ -54,6 +54,20 @@ function buildModel(p) {
   }
   for (const list of socs.values()) list.sort();
 
+  // sketches run on native_sim (false: some run checks failed), by board and
+  // sketch: on the native_sim boards and on the boards they pose as
+  const runs = new Map();
+  const addRun = (board, sketch, ok) => {
+    const k = `${board}\n${sketchKey(sketch)}`;
+    runs.set(k, (runs.get(k) ?? true) && ok);
+  };
+  for (const t of p.tests) {
+    if (typeof t.run_success !== 'boolean') continue;
+    addRun(t.board, t.sketch, t.run_success);
+    const mimic = p.boards[t.board]?.mimic;
+    if (mimic) addRun(mimic, t.sketch, t.run_success);
+  }
+
   return {
     p, statuses, S: byName,
     artifacts,
@@ -65,6 +79,8 @@ function buildModel(p) {
     status: (value) => statuses.get(value) ?? statuses.get(byName.SKIP),
     label: (board) => (p.boards[board]?.mimic ? `${p.boards[board].mimic} (sim)` : board),
     sketchLabel: (t) => (t.group ? `${t.group} ${t.name}` : t.name),
+    // native_sim run of a sketch on a board: true, false, or undefined (not run)
+    ran: (board, sketch) => runs.get(`${board}\n${sketchKey(sketch)}`),
   };
 }
 
@@ -148,7 +164,7 @@ function cardGroups(m, tests) {
     } else {
       const k = sketchKey(t.sketch);
       if (!passed.has(k)) passed.set(k, { sketch: k, label: m.sketchLabel(t), boards: [] });
-      passed.get(k).boards.push({ board: t.board, link_mode: t.link_mode, run_success: t.run_success });
+      passed.get(k).boards.push({ board: t.board, link_mode: t.link_mode });
     }
   }
   const finish = (map) => [...map.values()].map((c) => ({
@@ -209,6 +225,19 @@ function table(head, rows, cls = '') {
   return `<div class='scroll'><table${cls ? ` class='${cls}'` : ''}><thead><tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
 }
 
+// with native_sim collapsed in the recap, the boards it poses as are hidden
+// where the board they pose as is also listed (that carries their run marks)
+function hideTwins(m, view, boards) {
+  if (recapOpen(m, view, 'native_sim')) return boards;
+  const set = new Set(boards);
+  return boards.filter((b) => !set.has(m.p.boards[b]?.mimic));
+}
+
+// icon of the native_sim run of some sketches on a board: failed if any failed
+function ranIcon(m, board, sketches) {
+  const r = sketches.map((s) => m.ran(board, s)).filter((v) => v !== undefined);
+  return !r.length ? '' : r.includes(false) ? ` ${m.p.icons.run_failed}` : ` ${m.p.icons.ran}`;
+}
 const note = (text) => `<p class='note'>${text}</p>`;
 
 // state of a <details> section: the user's choice (view.open has 'key' when
@@ -287,7 +316,7 @@ function renderSidebar(m, view) {
     const list = m.boardsByArtifact.get(a);
     const tests = forBoards.filter((t) => t.artifact === a);
     const key = `artifact:${a}`;
-    const open = expanded(key, true);
+    const open = expanded(key, a !== 'native_sim' || m.nativeOnly);
     boards.push(boardEntry('artifact', a, a, tests, list, toggleBtn(key, open)));
     if (!open) continue;
     for (const b of list) {
@@ -356,6 +385,11 @@ function results(m, tests) {
   add(n(S.WARNING), S.WARNING);
   add(n(S.PASS), S.PASS);
   add(n(S.SKIP), S.SKIP);
+  // sketches run on native_sim, once per board
+  const runs = new Map(tests.map((t) => [`${t.board}\n${sketchKey(t.sketch)}`, m.ran(t.board, t.sketch)]));
+  const nRan = (v) => [...runs.values()].filter((r) => r === v).length;
+  if (nRan(true)) parts.push(`${nRan(true)} ${m.p.icons.ran}`);
+  if (nRan(false)) parts.push(`${nRan(false)} ${m.p.icons.run_failed}`);
   return parts.join(', ');
 }
 
@@ -377,6 +411,16 @@ function recapRow(m, view, b, tests) {
     + `<td class='n'>${ramCell}</td><td>${logs.join(' · ')}</td></tr>`;
 }
 
+// whether the boards of an artifact are shown in the recap (native_sim
+// collapsed by default, but on its own page); with a board selection in a
+// single artifact, there are no artifact headers and all are shown
+function recapOpen(m, view, a) {
+  const kind = (view.boards ?? { kind: 'all' }).kind;
+  if (kind !== 'all' && kind !== 'soc') return true;
+  const def = a !== 'native_sim' || m.nativeOnly;
+  return view.collapsed?.has(`recap:${a}`) ? !def : def;
+}
+
 function renderRecap(m, view) {
   // the tests of the selections and of the text filter, as for the counts
   // of the filter bar; with a test selection or a filter, only the boards
@@ -394,11 +438,9 @@ function renderRecap(m, view) {
     const boards = (m.boardsByArtifact.get(a) ?? []).filter((b) => (sel.kind === 'all' || inSel.has(b)) && shown(b));
     if (!boards.length) continue;
     if (headers) {
-      // collapsible artifact header (native_sim collapsed by default, but
-      // on its own page), with the results of its boards
+      // collapsible artifact header, with the results of its boards
       const key = `recap:${a}`;
-      const def = a !== 'native_sim' || m.nativeOnly;
-      const open = view.collapsed?.has(key) ? !def : def;
+      const open = recapOpen(m, view, a);
       const at = tests.filter((t) => boards.includes(t.board));
       rows.push(`<tr class='art' data-toggle='${esc(key)}'><td colspan='5'><span class='arrow'>${open ? '▾' : '▸'}</span> ${esc(a)}`
         + ` <span class='count'>(${boards.length} boards)</span> ${results(m, at)}</td></tr>`);
@@ -452,8 +494,10 @@ function card(m, view, c, group) {
     const k = `${h.board}\n${h.link_mode}`;
     if (!chips.has(k) || chips.get(k).status < h.status) chips.set(k, h);
   }
-  const chipHtml = [...chips.values()].map((h) => `<a class='chip st-${m.status(h.status).name.toLowerCase()}' href='${esc(h.job_link)}'`
-    + ` title='${esc(m.status(h.status).name)}'>${hl(m.label(h.board), view.filter)}${h.link_mode ? ` ${esc(h.link_mode)}` : ''} ↗</a>`).join('');
+  const shown = new Set(hideTwins(m, view, [...new Set(c.hits.map((h) => h.board))]));
+  const chipHtml = [...chips.values()].filter((h) => shown.has(h.board)).map((h) => `<a class='chip st-${m.status(h.status).name.toLowerCase()}' href='${esc(h.job_link)}'`
+    + ` title='${esc(m.status(h.status).name)}'>${hl(m.label(h.board), view.filter)}${h.link_mode ? ` ${esc(h.link_mode)}` : ''}`
+    + `${ranIcon(m, h.board, c.hits.filter((x) => x.board === h.board).map((x) => x.sketch))} ↗</a>`).join('');
   const more = c.sketches.length > 1 ? ` <span class='count'>— ${c.sketches.length} sketches${c.text ? ', same error' : ''}</span>` : '';
   const rawKey = `raw:${group}:${hashKey(c.key)}`;
   // the full output of the jobs is rendered only when opened (page weight)
@@ -484,9 +528,8 @@ function renderIssuesTab(m, view) {
   const cards = (list, group) => list.map((c) => card(m, view, c, group)).join('');
   const nHits = (list) => list.reduce((n, c) => n + c.hits.length, 0);
   const { issues, known, warnings, passed, skipped } = g;
-  const ran = (b) => (b.run_success === true ? ` ${m.p.icons.ran}` : b.run_success === false ? ` ${m.p.icons.run_failed}` : '');
-  const passedBody = () => `<ul class='list'>${passed.map((r) => `<li>${code(r.label)} — ${[...new Map(r.boards.map((b) => [b.board, b])).values()]
-    .map((b) => `${hl(m.label(b.board), f)}${ran(b)}`).join(', ')}</li>`).join('')}</ul>`;
+  const passedBody = () => `<ul class='list'>${passed.map((r) => `<li>${code(r.label)} — ${hideTwins(m, view, [...new Set(r.boards.map((b) => b.board))])
+    .map((b) => `${hl(m.label(b), f)}${ranIcon(m, b, [r.sketch])}`).join(', ')}</li>`).join('')}</ul>`;
   const skippedBody = () => `<ul class='list'>${skipped.map((r) => `<li>${hl(r.reason, f)} — ${r.sketches.length} sketches`
     + ` (${r.sketches.map((s) => esc(s.split('/').pop())).join(', ')}) on ${r.boards.map((b) => hl(m.label(b), f)).join(', ')}</li>`).join('')}</ul>`;
   return (issues.length ? '' : note(f && anyIssues ? 'no issues match the filter' : 'no issues'))
