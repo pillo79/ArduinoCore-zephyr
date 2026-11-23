@@ -57,6 +57,8 @@ function buildModel(p) {
   return {
     p, statuses, S: byName,
     artifacts,
+    // page of the native_sim tests only (see test_native_sim.yml)
+    nativeOnly: p.run.artifacts.length === 1 && p.run.artifacts[0] === 'native_sim',
     boardsByArtifact,
     groups: new Map([...groups].sort(([a], [b]) => a.localeCompare(b))),
     socs: new Map([...socs].sort(([a], [b]) => a.localeCompare(b))),
@@ -338,8 +340,10 @@ function renderHeader(m) {
   const p = m.p;
   const run = p.run.ci_run_passed ? `PASSED ${m.status(m.S.PASS).test_icon}` : `FAILED ${m.status(m.S.ERROR).test_icon}`;
   const ns = p.native_sim.present ? '' : ` · ${m.status(m.S.FAILURE).test_icon} native_sim: not built`;
-  return `<header><h1>CI run — ${run}</h1><div class='note'>${link(p.run.job_link_stem, 'workflow run ↗')}${ns}</div></header>`;
+  return `<header><h1>${m.nativeOnly ? 'native_sim ' : ''}CI run — ${run}</h1><div class='note'>${link(p.run.job_link_stem, 'workflow run ↗')}${ns}</div></header>`;
 }
+
+const pageTitle = (m) => `${m.nativeOnly ? 'native_sim ' : ''}CI report: ${m.p.run.ci_run_passed ? 'PASSED' : 'FAILED'}`;
 
 function results(m, tests) {
   const S = m.S;
@@ -390,10 +394,11 @@ function renderRecap(m, view) {
     const boards = (m.boardsByArtifact.get(a) ?? []).filter((b) => (sel.kind === 'all' || inSel.has(b)) && shown(b));
     if (!boards.length) continue;
     if (headers) {
-      // collapsible artifact header (native_sim collapsed by default), with
-      // the results of its boards
+      // collapsible artifact header (native_sim collapsed by default, but
+      // on its own page), with the results of its boards
       const key = `recap:${a}`;
-      const open = view.collapsed?.has(key) ? a === 'native_sim' : a !== 'native_sim';
+      const def = a !== 'native_sim' || m.nativeOnly;
+      const open = view.collapsed?.has(key) ? !def : def;
       const at = tests.filter((t) => boards.includes(t.board));
       rows.push(`<tr class='art' data-toggle='${esc(key)}'><td colspan='5'><span class='arrow'>${open ? '▾' : '▸'}</span> ${esc(a)}`
         + ` <span class='count'>(${boards.length} boards)</span> ${results(m, at)}</td></tr>`);
@@ -645,7 +650,7 @@ function readPresets(search, m) {
 
 const api = {
   escapeHtml: esc, matches, hl, buildModel, selectTests, badge, issueKey, cardGroups,
-  renderSidebar, renderFilterBar, renderHeader, renderRecap, renderTabs, renderIssuesTab,
+  renderSidebar, renderFilterBar, renderHeader, pageTitle, renderRecap, renderTabs, renderIssuesTab,
   renderWarningsTab, renderMemoryTab, memoryCsv, renderKconfigTab, renderSetupTab, renderSizesTab, renderPage,
   readPresets, selectEntry, sameControl,
 };
@@ -665,7 +670,7 @@ function start(p) {
   const view = { filter: '', boards: { kind: 'all' }, tests: { kind: 'all' }, tab: 'issues',
                  open: new Set(), collapsed: new Set(), ...readPresets(location.search, m) };
   const app = document.getElementById('app');
-  document.title = `CI report: ${p.run.ci_run_passed ? 'PASSED' : 'FAILED'}`;
+  document.title = pageTitle(m);
   app.innerHTML = "<aside id='sidebar'></aside><main id='main'></main>";
   const sidebar = document.getElementById('sidebar');
   const main = document.getElementById('main');

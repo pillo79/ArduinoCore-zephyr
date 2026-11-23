@@ -571,7 +571,7 @@ jobs:
 
 
   # Collect all build and test reports, analyze them and produce a summary.
-  # See ci_collect_data.py and ci_generate_report.py for details.
+  # See ci_collect_data.py and ci_report_summary.py for details.
 
   verify-core:
     runs-on: ubuntu-latest
@@ -648,7 +648,7 @@ jobs:
       # The full report is a single page, uploaded as a non-zipped artifact
       # that GitHub shows in the browser, and linked from the summary
       # (failures here only lose the page: the summary then links to the
-      # job, and the metadata, comment and publishing are not blocked)
+      # run, and the metadata, comment and publishing are not blocked)
       - name: Generate report page
         continue-on-error: true
         run: |
@@ -670,8 +670,8 @@ jobs:
         env:
           DETAILS_URL: ${{ steps.report-page.outputs.artifact-url }}
         run: |
-          extra/ci_generate_report.py --native-sim-summary "$NATIVE_SIM_SUMMARY" --details-url "$DETAILS_URL" \
-            build_info.json result summary full_log
+          extra/ci_report_summary.py --native-sim-summary "$NATIVE_SIM_SUMMARY" --details-url "$DETAILS_URL" \
+            build_info.json result summary
           cat result
 
           # Display the summary, linking to the report page, in the step summary

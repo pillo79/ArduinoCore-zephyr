@@ -295,8 +295,9 @@ jobs:
 
 
   # Summarize the results of the native_sim test jobs, as soon as they are
-  # all done: the short summary of the jobs, then the details of the tests.
-  # See ci_collect_data.py and ci_generate_report.py.
+  # all done: their report page, then the short summary of the tests, linking
+  # to it.
+  # See ci_collect_data.py, ci_report_page.py and ci_report_summary.py.
 
   summarize:
     name: Collect
@@ -343,14 +344,39 @@ jobs:
         run: |
           extra/ci_download_artifacts.sh prereqs/ 'prereq-*-native_sim*'
 
+      - name: Collect data
+        run: |
+          extra/ci_collect_data.py report.json
+
+      # The report page of the native_sim tests, uploaded as a non-zipped
+      # artifact that GitHub shows in the browser, and linked from their
+      # summary (failures here only lose the page: the summary then links
+      # to the run)
+      - name: Generate report page
+        continue-on-error: true
+        run: |
+          extra/ci_report_page.py native_sim-report.html --native-sim report.json
+
+      - name: Archive report page
+        id: report-page
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: native_sim-report.html
+          path: native_sim-report.html
+          archive: false
+          overwrite: true
+
       - name: Write summary
         id: summary
+        env:
+          DETAILS_URL: ${{ steps.report-page.outputs.artifact-url }}
         run: |
           # the job fails if any test job failed
-          extra/ci_collect_data.py report.json
-          extra/ci_generate_report.py --native-sim report.json summary full_log || rc=$?
-          cat full_log >> $GITHUB_STEP_SUMMARY
-          # (the one line summary, linking here, is for the PR comment)
+          extra/ci_report_summary.py --native-sim --details-url "$DETAILS_URL" report.json summary step_summary || rc=$?
+          cat step_summary >> $GITHUB_STEP_SUMMARY
+          # (the one line summary, linking to the report page, is for the
+          # summary of the calling run and the PR comment)
           { echo "SUMMARY<<EOF_SUMMARY"; cat summary; echo "EOF_SUMMARY"; } >> $GITHUB_OUTPUT
           exit ${rc:-0}
 
