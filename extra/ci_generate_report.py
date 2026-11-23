@@ -22,6 +22,7 @@
 #  the counts of its sketches, to the summary file, and the report itself to
 #  the full report file. Exits with an error if any native_sim test failed.
 
+import argparse
 from collections import defaultdict
 import json
 import sys
@@ -540,29 +541,26 @@ def print_details():
 # Main Logic
 # ---------------------------------------------------------------------------
 
-# (--native-sim-summary: the short summary of the native_sim tests, added
-# to the summary of the other boards, see package_core.yml)
-native_sim_summary = None
-if sys.argv[1:2] == ['--native-sim-summary'] and len(sys.argv) > 2:
-    native_sim_summary = sys.argv.pop(2).strip()
-    sys.argv.pop(1)
-# (--native-sim: the short summary of the native_sim tests, then their
-# details, see test_native_sim.yml)
-native_sim_mode = sys.argv[1:2] == ['--native-sim']
-if len(sys.argv) != (5 if native_sim_mode else 2) and (native_sim_mode or len(sys.argv) != 5):
-    print("Usage: ci_generate_report.py [--native-sim-summary <text>] <json_file> [<results_file> <summary_file> <full_report_file>]")
-    print("       ci_generate_report.py --native-sim <json_file> <summary_file> <full_report_file>")
-    sys.exit(1)
+parser = argparse.ArgumentParser(description="Write the CI reports of the collected data")
+parser.add_argument("--native-sim-summary", type=str.strip,
+                    help="short summary of the native_sim tests, printed after the title")
+parser.add_argument("--native-sim", action="store_true",
+                    help="report of the native_sim tests only (see test_native_sim.yml)")
+parser.add_argument("json_file", help="data collected by ci_collect_data.py")
+parser.add_argument("files", nargs="*", metavar="file",
+                    help="<results_file> <summary_file> <full_report_file>, or with --native-sim <summary_file> <full_report_file>")
+args = parser.parse_args()
+if len(args.files) not in ((2,) if args.native_sim else (0, 3)):
+    parser.error("wrong number of output files")
 
+native_sim_summary = args.native_sim_summary
+native_sim_mode = args.native_sim
+json_file = args.json_file
 if native_sim_mode:
-    json_file, summary_file, full_report_file = sys.argv[2:5]
-elif len(sys.argv) == 5:
-    json_file = sys.argv[1]
-    results_file = sys.argv[2]
-    summary_file = sys.argv[3]
-    full_report_file = sys.argv[4]
+    summary_file, full_report_file = args.files
+elif args.files:
+    results_file, summary_file, full_report_file = args.files
 else:
-    json_file = sys.argv[1]
     results_file = "/dev/null"
     summary_file = full_report_file = "/dev/stdout"
 
