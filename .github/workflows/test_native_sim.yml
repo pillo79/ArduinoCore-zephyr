@@ -296,7 +296,7 @@ jobs:
 
   # Summarize the results of the native_sim test jobs, as soon as they are
   # all done: their report page, then the short summary of the tests, linking
-  # to it.
+  # to it, with the failing sketches.
   # See ci_collect_data.py, ci_report_page.py and ci_report_summary.py.
 
   summarize:

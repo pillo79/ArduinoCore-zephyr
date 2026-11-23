@@ -7,8 +7,8 @@
 #
 # This script reads the JSON file produced by ci_collect_data.py and writes:
 #  - <results_file>: simple text file with "PASSED" or an error message
-#  - <summary_file>: markdown summary with the overall results and a recap
-#    table of the boards
+#  - <summary_file>: markdown summary with the overall results, a recap table
+#    of the boards and the list of the failing sketches
 # The details are in the report page, see ci_report_page.py.
 #
 # Usage: ci_report_summary.py [--native-sim-summary <text>] [--details-url <url>] <json_file> [<results_file> <summary_file>]
@@ -21,8 +21,9 @@
 # Usage: ci_report_summary.py --native-sim [--details-url <url>] <json_file> <summary_file> <step_summary_file>
 #  For the native_sim tests only (collected with no other boards): write the
 #  short summary of the native_sim tests, a line linking to their report page
-#  with the counts of its sketches, to the summary file, and to the step
-#  summary file. Exits with an error if any native_sim test failed.
+#  with the counts of its sketches, to the summary file, and the same line
+#  with the list of the failing sketches to the step summary file. Exits with
+#  an error if any native_sim test failed.
 
 import argparse
 from collections import defaultdict
@@ -166,6 +167,8 @@ def print_summary():
         print_recap_rows(artifact)
     f_print("</table>\n")
 
+    print_failing_sketches()
+
     # Print the legend
     f_print("<details><summary>Legend</summary>")
     f_print("<blockquote><br><table><tr><th align='center'>Board</th><th align='center'>Test</th><th>Status description</th></tr>")
@@ -183,6 +186,25 @@ def print_summary():
         if failed_boards:
             f_print("> [!CAUTION]")
             f_print(f"> `{artifact}` is blocked due to failures on {', '.join(failed_boards)}!\n")
+
+def print_failing_sketches():
+    """
+    Prints the list of the failing sketches (errors and invalid exceptions:
+    not the known failures, nor the CI failures shown in the recap), each
+    with the boards where it fails, linked to their test job.
+    """
+    failing = defaultdict(dict)
+    for test in sorted(ALL_TESTS, key=lambda t: (t.group, t.name, board_label(t.board))):
+        if test.status in (INVALID_EXCEPTION, ERROR):
+            failing[f"{test.group}/{test.name}" if test.group else test.name].setdefault(test.board, test)
+    if not failing:
+        return
+    f_print(f"<b>Failing sketches</b> ({len(failing)})\n")
+    for sketch, tests in failing.items():
+        boards = ", ".join(f"{t.status.test_icon} [`{board_label(b)}`]({t.job_link})" if t.job_link
+                           else f"{t.status.test_icon} `{board_label(b)}`" for b, t in tests.items())
+        f_print(f"- <code>{sketch}</code>: {boards}")
+    f_print("")
 
 # native_sim sketch categories, in display order, with their icon and text
 NATIVE_SIM_CATEGORIES = {
@@ -290,6 +312,8 @@ if native_sim_mode:
     with open(step_summary_file, 'w') as f:
         f_print = lambda *args, **kwargs: print(*args, file=f, **kwargs)
         print_native_sim_summary()
+        f_print("")
+        print_failing_sketches()
     sys.exit(0 if native_sim_passed else 1)
 
 # Update the results file
