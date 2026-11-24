@@ -5,7 +5,10 @@ project as an Arduino tool, so the core can upload images to boards running
 MCUboot.
 
 **None of the code here is original work.** It is a copy of the upstream
-MCUmgr CLI, and all rights to it belong to MCUmgr contributors.
+MCUmgr CLI, and all rights to it belong to MCUmgr contributors. The only
+addition is the `--skip-same` option of `image upload`: it reads the images on
+the device first and skips the upload if one of them has the same SHA-256 as
+the file, so the core only sends the loader when it changed.
 
 [MCUmgr]: https://github.com/apache/mynewt-mcumgr-cli
 

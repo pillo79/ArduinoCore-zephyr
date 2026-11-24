@@ -431,7 +431,7 @@ tools.mcumgr.cmd=mcumgr
 tools.mcumgr.cmd.windows=mcumgr.exe
 tools.mcumgr.conn=--conntype serial --connstring "dev={serial.port},baud=115200,mtu=4096"
 
-tools.mcumgr.loader.cmd="{path}/{cmd}" {conn} image upload -n 1 "{upload.artifacts.loader}"
+tools.mcumgr.loader.cmd="{path}/{cmd}" {conn} image upload --skip-same -n 1 "{upload.artifacts.loader}"
 tools.mcumgr.sketch.cmd="{path}/{cmd}" {conn} image upload -n 2 "{upload.artifacts.sketch}"
 tools.mcumgr.reset.cmd="{path}/{cmd}" {conn} reset
 
